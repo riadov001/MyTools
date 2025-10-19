@@ -1,11 +1,32 @@
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "npm run start",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
-}
+# railway.toml
+[project]
+name = "rest-express"
+# Optionnel : identifiant Railway si tu veux le lier directement
+# id = "ton_project_id"
+
+[env]
+# Variables globales disponibles pour tous les environnements
+NODE_ENV = "production"
+PORT = "5000"
+SESSION_SECRET = "une-chaîne-secrète-forte"
+
+[services.database]
+# Service PostgreSQL déjà créé sur Railway
+type = "postgresql"
+# Host TCP proxy Railway
+host = "yamanote.proxy.rlwy.net"
+port = 26499
+database = "railway"
+user = "postgres"
+password = "VHvloEdEUkqasRNpOgJtvBVwAwGnPupH"
+sslmode = "require"
+
+# Cette variable DATABASE_URL sera automatiquement générée pour ton code Node
+DATABASE_URL = "postgresql://postgres:VHvloEdEUkqasRNpOgJtvBVwAwGnPupH@yamanote.proxy.rlwy.net:26499/railway?sslmode=require"
+
+# Optionnel : config pour le dev local
+[dev]
+NODE_ENV = "development"
+PORT = 5000
+SESSION_SECRET = "une-chaîne-secrète-pour-le-dev"
+DATABASE_URL = "postgresql://postgres:VHvloEdEUkqasRNpOgJtvBVwAwGnPupH@yamanote.proxy.rlwy.net:26499/railway?sslmode=require"
