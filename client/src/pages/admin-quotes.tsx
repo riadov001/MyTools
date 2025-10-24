@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, X, FileText, Calendar, Download, Plus, Pencil } from "lucide-react";
-import { generateQuotePDF } from "@/lib/pdf-generator";
+import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags } from "lucide-react";
+import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { LabelsPreview } from "@/components/labels-preview";
 
 export default function AdminQuotes() {
   const [, setLocation] = useLocation();
@@ -36,6 +37,9 @@ export default function AdminQuotes() {
   const [reservationDialog, setReservationDialog] = useState<Quote | null>(null);
   const [reservationDate, setReservationDate] = useState("");
   const [reservationNotes, setReservationNotes] = useState("");
+
+  const [labelsPreviewOpen, setLabelsPreviewOpen] = useState(false);
+  const [selectedQuoteForLabels, setSelectedQuoteForLabels] = useState<Quote | null>(null);
   
   const [createQuoteDialog, setCreateQuoteDialog] = useState(false);
   const [newQuoteClientId, setNewQuoteClientId] = useState("");
@@ -93,6 +97,30 @@ export default function AdminQuotes() {
       toast({
         title: "Erreur",
         description: "Échec de la génération du PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadLabels = async (quote: Quote) => {
+    setSelectedQuoteForLabels(quote);
+    setLabelsPreviewOpen(true);
+  };
+
+  const handleConfirmDownloadLabels = async () => {
+    if (!selectedQuoteForLabels) return;
+    
+    try {
+      await generateLabelsPDF(selectedQuoteForLabels, 'quote');
+      toast({
+        title: "✅ Étiquettes téléchargées !",
+        description: "5 étiquettes avec QR codes ont été générées et téléchargées avec succès.",
+        duration: 5000,
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Échec de la génération des étiquettes",
         variant: "destructive",
       });
     }
@@ -442,6 +470,16 @@ export default function AdminQuotes() {
                         >
                           <Download className="h-4 w-4 mr-2" />
                           PDF
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadLabels(quote)}
+                          data-testid={`button-download-labels-${quote.id}`}
+                          className="flex-1 sm:flex-none"
+                        >
+                          <Tags className="h-4 w-4 mr-2" />
+                          Étiquettes
                         </Button>
                         <Button
                           size="sm"
@@ -858,6 +896,14 @@ export default function AdminQuotes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LabelsPreview
+        open={labelsPreviewOpen}
+        onOpenChange={setLabelsPreviewOpen}
+        documentNumber={selectedQuoteForLabels?.id || ""}
+        onDownload={handleConfirmDownloadLabels}
+        type="quote"
+      />
     </div>
   );
 }
