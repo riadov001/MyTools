@@ -18,12 +18,15 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, Download, Tags, Pencil } from "lucide-react";
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
+import { LabelsPreview } from "@/components/labels-preview";
 
 export default function AdminInvoices() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [labelsPreviewOpen, setLabelsPreviewOpen] = useState(false);
+  const [selectedInvoiceForLabels, setSelectedInvoiceForLabels] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState({
     quoteId: "",
     clientId: "",
@@ -87,11 +90,19 @@ export default function AdminInvoices() {
   };
 
   const handleDownloadLabels = async (invoice: Invoice) => {
+    setSelectedInvoiceForLabels(invoice);
+    setLabelsPreviewOpen(true);
+  };
+
+  const handleConfirmDownloadLabels = async () => {
+    if (!selectedInvoiceForLabels) return;
+    
     try {
-      await generateLabelsPDF(invoice, 'invoice');
+      await generateLabelsPDF(selectedInvoiceForLabels, 'invoice');
       toast({
-        title: "Succès",
-        description: "Étiquettes générées avec succès",
+        title: "✅ Étiquettes téléchargées !",
+        description: "5 étiquettes avec QR codes ont été générées et téléchargées avec succès.",
+        duration: 5000,
       });
     } catch (error) {
       toast({
@@ -355,6 +366,14 @@ export default function AdminInvoices() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LabelsPreview
+        open={labelsPreviewOpen}
+        onOpenChange={setLabelsPreviewOpen}
+        documentNumber={selectedInvoiceForLabels?.invoiceNumber || ""}
+        onDownload={handleConfirmDownloadLabels}
+        type="invoice"
+      />
     </div>
   );
 }
