@@ -533,7 +533,7 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={!!invoiceDialog} onOpenChange={(open) => !open && setInvoiceDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer une Facture</DialogTitle>
           </DialogHeader>
@@ -669,7 +669,7 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={createQuoteDialog} onOpenChange={setCreateQuoteDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer un Nouveau Devis</DialogTitle>
           </DialogHeader>
