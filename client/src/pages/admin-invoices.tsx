@@ -257,8 +257,8 @@ export default function AdminInvoices() {
                         onClick={() => setLocation(`/admin/invoices/${invoice.id}/edit`)}
                         data-testid={`button-edit-invoice-${invoice.id}`}
                       >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Éditer
+                        <Pencil className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Éditer</span>
                       </Button>
                       <Button
                         size="sm"
@@ -266,8 +266,8 @@ export default function AdminInvoices() {
                         onClick={() => handleDownloadPDF(invoice)}
                         data-testid={`button-download-invoice-pdf-${invoice.id}`}
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        PDF
+                        <Download className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">PDF</span>
                       </Button>
                       <Button
                         size="sm"
@@ -275,8 +275,8 @@ export default function AdminInvoices() {
                         onClick={() => handleDownloadLabels(invoice)}
                         data-testid={`button-download-labels-${invoice.id}`}
                       >
-                        <Tags className="h-4 w-4 mr-2" />
-                        Étiquettes
+                        <Tags className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Étiquettes</span>
                       </Button>
                     </div>
                   </div>

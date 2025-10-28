@@ -458,8 +458,8 @@ export default function AdminQuotes() {
                           data-testid={`button-edit-quote-${quote.id}`}
                           className="flex-1 sm:flex-none"
                         >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Éditer
+                          <Pencil className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Éditer</span>
                         </Button>
                         <Button
                           size="sm"
@@ -468,8 +468,8 @@ export default function AdminQuotes() {
                           data-testid={`button-download-pdf-${quote.id}`}
                           className="flex-1 sm:flex-none"
                         >
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF
+                          <Download className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">PDF</span>
                         </Button>
                         <Button
                           size="sm"
@@ -478,8 +478,8 @@ export default function AdminQuotes() {
                           data-testid={`button-download-labels-${quote.id}`}
                           className="flex-1 sm:flex-none"
                         >
-                          <Tags className="h-4 w-4 mr-2" />
-                          Étiquettes
+                          <Tags className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Étiquettes</span>
                         </Button>
                         <Button
                           size="sm"
@@ -492,8 +492,8 @@ export default function AdminQuotes() {
                           data-testid={`button-create-invoice-${quote.id}`}
                           className="flex-1 sm:flex-none"
                         >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Facture
+                          <FileText className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Facture</span>
                         </Button>
                         <Button
                           size="sm"
@@ -506,8 +506,8 @@ export default function AdminQuotes() {
                           data-testid={`button-create-reservation-${quote.id}`}
                           className="flex-1 sm:flex-none"
                         >
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Réservation
+                          <Calendar className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Réservation</span>
                         </Button>
                       </div>
                     )}
