@@ -529,6 +529,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PDF Download routes for clients
+  app.get("/api/quotes/:id/pdf", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const isUserAdmin = req.user.role === "admin";
+
+      // Get the quote
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+
+      // Check authorization: user must own the quote or be an admin
+      if (!isUserAdmin && quote.clientId !== userId) {
+        return res.status(403).json({ message: "Unauthorized access to this quote" });
+      }
+
+      // Get quote items
+      const items = await storage.getQuoteItems(id);
+
+      // Return quote and items data for client-side PDF generation
+      res.json({ quote, items });
+    } catch (error: any) {
+      console.error("Error fetching quote PDF data:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch quote PDF data" });
+    }
+  });
+
+  app.get("/api/invoices/:id/pdf", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const isUserAdmin = req.user.role === "admin";
+
+      // Get the invoice
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+
+      // Check authorization: user must own the invoice or be an admin
+      if (!isUserAdmin && invoice.clientId !== userId) {
+        return res.status(403).json({ message: "Unauthorized access to this invoice" });
+      }
+
+      // Get invoice items
+      const items = await storage.getInvoiceItems(id);
+
+      // Return invoice and items data for client-side PDF generation
+      res.json({ invoice, items });
+    } catch (error: any) {
+      console.error("Error fetching invoice PDF data:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch invoice PDF data" });
+    }
+  });
+
+  // Reservation CRUD routes for admin
+  app.patch("/api/admin/reservations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertReservationSchema.partial().parse(req.body);
+      const reservation = await storage.updateReservation(id, validatedData);
+
+      // Create notification for client if status changed
+      if (validatedData.status) {
+        await storage.createNotification({
+          userId: reservation.clientId,
+          type: "reservation",
+          title: "Réservation mise à jour",
+          message: `Votre réservation a été mise à jour - Statut: ${validatedData.status}`,
+          relatedId: reservation.id,
+        });
+
+        // Send WebSocket notification
+        const client = wsClients.get(reservation.clientId);
+        if (client && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "reservation_updated",
+            reservationId: reservation.id,
+            status: validatedData.status,
+          }));
+        }
+      }
+
+      res.json(reservation);
+    } catch (error: any) {
+      console.error("Error updating reservation:", error);
+      res.status(400).json({ message: error.message || "Failed to update reservation" });
+    }
+  });
+
+  app.delete("/api/admin/reservations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Get reservation first to notify client
+      const reservation = await storage.getReservation(id);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
+      }
+
+      // Note: We'll need to add deleteReservation to storage interface
+      // For now, we can update status to cancelled
+      await storage.updateReservation(id, { status: "cancelled" });
+
+      // Create notification for client
+      await storage.createNotification({
+        userId: reservation.clientId,
+        type: "reservation",
+        title: "Réservation annulée",
+        message: "Votre réservation a été annulée",
+        relatedId: reservation.id,
+      });
+
+      // Send WebSocket notification
+      const client = wsClients.get(reservation.clientId);
+      if (client && client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: "reservation_cancelled",
+          reservationId: reservation.id,
+        }));
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting reservation:", error);
+      res.status(400).json({ message: error.message || "Failed to delete reservation" });
+    }
+  });
+
   // Admin users route
   app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
