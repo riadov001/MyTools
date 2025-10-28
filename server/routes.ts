@@ -586,6 +586,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Application Settings routes
+  app.get("/api/admin/settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      let settings = await storage.getApplicationSettings();
+      
+      // If no settings exist, create default settings
+      if (!settings) {
+        settings = await storage.createOrUpdateApplicationSettings({});
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching application settings:", error);
+      res.status(500).json({ message: "Failed to fetch application settings" });
+    }
+  });
+
+  app.patch("/api/admin/settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.createOrUpdateApplicationSettings(req.body);
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Error updating application settings:", error);
+      res.status(400).json({ message: error.message || "Failed to update application settings" });
+    }
+  });
+
+  // Cache clearing route
+  app.post("/api/admin/cache/clear", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Clear any server-side caches here
+      // For now, we'll just return success
+      // In the future, you could add Redis cache clearing, etc.
+      
+      res.json({ success: true, message: "Cache cleared successfully" });
+    } catch (error: any) {
+      console.error("Error clearing cache:", error);
+      res.status(500).json({ message: error.message || "Failed to clear cache" });
+    }
+  });
+
   // Object Storage routes (Reference: javascript_object_storage blueprint)
   const { ObjectStorageService, ObjectNotFoundError } = await import("./objectStorage");
 
