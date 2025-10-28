@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,11 +17,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminReservations() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
+  
+  // Dialog states
   const [createReservationDialog, setCreateReservationDialog] = useState(false);
+  const [editReservationDialog, setEditReservationDialog] = useState(false);
+  const [deleteReservationDialog, setDeleteReservationDialog] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  
   const [reservationType, setReservationType] = useState<"direct" | "from-quote">("direct");
   
   // Form state for direct reservation
@@ -34,6 +50,7 @@ export default function AdminReservations() {
   const [taxRate, setTaxRate] = useState<string>("20");
   const [productDetails, setProductDetails] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [reservationStatus, setReservationStatus] = useState<string>("pending");
 
   // Form state for quote-based reservation
   const [selectedQuote, setSelectedQuote] = useState<string>("");
@@ -95,6 +112,51 @@ export default function AdminReservations() {
     },
   });
 
+  const updateReservationMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest("PATCH", `/api/admin/reservations/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Réservation modifiée avec succès",
+      });
+      resetForm();
+      setEditReservationDialog(false);
+      setSelectedReservation(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reservations"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de la modification de la réservation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteReservationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/admin/reservations/${id}`, undefined);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Réservation supprimée avec succès",
+      });
+      setDeleteReservationDialog(false);
+      setSelectedReservation(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reservations"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de la suppression de la réservation",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setReservationType("direct");
     setSelectedClient("");
@@ -107,6 +169,7 @@ export default function AdminReservations() {
     setProductDetails("");
     setNotes("");
     setSelectedQuote("");
+    setReservationStatus("pending");
   };
 
   const handleCreateReservation = () => {
@@ -142,6 +205,7 @@ export default function AdminReservations() {
         taxAmount: quote.taxAmount,
         productDetails: quote.productDetails,
         notes: notes || undefined,
+        status: reservationStatus,
       });
     } else {
       if (!selectedClient || !selectedService || !scheduledDate) {
@@ -168,8 +232,59 @@ export default function AdminReservations() {
         taxAmount: taxAmount || undefined,
         productDetails: productDetails || undefined,
         notes: notes || undefined,
+        status: reservationStatus,
       });
     }
+  };
+
+  const handleEditReservation = () => {
+    if (!selectedReservation) return;
+
+    if (!scheduledDate) {
+      toast({
+        title: "Erreur",
+        description: "La date de réservation est obligatoire",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const taxRateNum = parseFloat(taxRate || "20");
+    const priceHTNum = parseFloat(priceHT || "0");
+    const taxAmount = priceHTNum ? (priceHTNum * taxRateNum / 100).toFixed(2) : undefined;
+
+    updateReservationMutation.mutate({
+      id: selectedReservation.id,
+      data: {
+        scheduledDate,
+        wheelCount: wheelCount ? parseInt(wheelCount) : undefined,
+        diameter: diameter || undefined,
+        priceExcludingTax: priceHT || undefined,
+        taxRate: taxRate || undefined,
+        taxAmount: taxAmount || undefined,
+        productDetails: productDetails || undefined,
+        notes: notes || undefined,
+        status: reservationStatus,
+      },
+    });
+  };
+
+  const openEditDialog = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setScheduledDate(reservation.scheduledDate ? new Date(reservation.scheduledDate).toISOString().slice(0, 16) : "");
+    setWheelCount(reservation.wheelCount?.toString() || "1");
+    setDiameter(reservation.diameter || "");
+    setPriceHT(reservation.priceExcludingTax || "");
+    setTaxRate(reservation.taxRate || "20");
+    setProductDetails(reservation.productDetails || "");
+    setNotes(reservation.notes || "");
+    setReservationStatus(reservation.status);
+    setEditReservationDialog(true);
+  };
+
+  const openDeleteDialog = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+    setDeleteReservationDialog(true);
   };
 
   if (isLoading || !isAdmin) {
@@ -213,44 +328,66 @@ export default function AdminReservations() {
               {reservations.map((reservation) => (
                 <div
                   key={reservation.id}
-                  className="flex flex-col md:flex-row gap-4 p-4 border border-border rounded-md hover-elevate"
+                  className="flex flex-col gap-4 p-4 border border-border rounded-md hover-elevate"
                   data-testid={`reservation-item-${reservation.id}`}
                 >
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                      <p className="font-semibold">Réservation #{reservation.id.slice(0, 8)}</p>
-                      <StatusBadge status={reservation.status as any} />
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <p className="font-semibold">Réservation #{reservation.id.slice(0, 8)}</p>
+                        <StatusBadge status={reservation.status as any} />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Client: {reservation.clientId.slice(0, 8)}</p>
+                      <p className="text-sm text-muted-foreground">Service: {reservation.serviceId.slice(0, 8)}</p>
+                      {reservation.quoteId && (
+                        <p className="text-sm text-muted-foreground">Devis: {reservation.quoteId.slice(0, 8)}</p>
+                      )}
+                      {reservation.wheelCount && (
+                        <p className="text-sm text-muted-foreground">Jantes: {reservation.wheelCount} | Diamètre: {reservation.diameter || "N/A"}</p>
+                      )}
+                      {reservation.createdAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(reservation.createdAt), { addSuffix: true, locale: fr })}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">Client: {reservation.clientId.slice(0, 8)}</p>
-                    <p className="text-sm text-muted-foreground">Service: {reservation.serviceId.slice(0, 8)}</p>
-                    {reservation.quoteId && (
-                      <p className="text-sm text-muted-foreground">Devis: {reservation.quoteId.slice(0, 8)}</p>
-                    )}
-                    {reservation.wheelCount && (
-                      <p className="text-sm text-muted-foreground">Jantes: {reservation.wheelCount} | Diamètre: {reservation.diameter || "N/A"}</p>
-                    )}
-                    {reservation.createdAt && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(reservation.createdAt), { addSuffix: true, locale: fr })}
-                      </p>
-                    )}
+                    <div className="text-left md:text-right">
+                      {reservation.scheduledDate && (
+                        <p className="font-medium text-primary">
+                          {new Date(reservation.scheduledDate).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      )}
+                      {reservation.priceExcludingTax && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Prix HT: {parseFloat(reservation.priceExcludingTax).toFixed(2)} €
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-left md:text-right">
-                    {reservation.scheduledDate && (
-                      <p className="font-medium text-primary">
-                        {new Date(reservation.scheduledDate).toLocaleDateString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    )}
-                    {reservation.priceExcludingTax && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Prix HT: {parseFloat(reservation.priceExcludingTax).toFixed(2)} €
-                      </p>
-                    )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(reservation)}
+                      data-testid={`button-edit-reservation-${reservation.id}`}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Modifier
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openDeleteDialog(reservation)}
+                      data-testid={`button-delete-reservation-${reservation.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Supprimer
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -259,6 +396,7 @@ export default function AdminReservations() {
         </CardContent>
       </Card>
 
+      {/* Create Reservation Dialog */}
       <Dialog open={createReservationDialog} onOpenChange={(open) => {
         if (!open) resetForm();
         setCreateReservationDialog(open);
@@ -327,6 +465,21 @@ export default function AdminReservations() {
                 </div>
 
                 <div>
+                  <Label htmlFor="status-quote">Statut</Label>
+                  <Select value={reservationStatus} onValueChange={setReservationStatus}>
+                    <SelectTrigger className="mt-2" data-testid="select-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">En attente</SelectItem>
+                      <SelectItem value="confirmed">Confirmée</SelectItem>
+                      <SelectItem value="completed">Terminée</SelectItem>
+                      <SelectItem value="cancelled">Annulée</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Label htmlFor="notes-quote">Notes (optionnel)</Label>
                   <Textarea
                     id="notes-quote"
@@ -382,6 +535,21 @@ export default function AdminReservations() {
                     className="mt-2"
                     data-testid="input-scheduled-date-direct"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="status-direct">Statut</Label>
+                  <Select value={reservationStatus} onValueChange={setReservationStatus}>
+                    <SelectTrigger className="mt-2" data-testid="select-status-direct">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">En attente</SelectItem>
+                      <SelectItem value="confirmed">Confirmée</SelectItem>
+                      <SelectItem value="completed">Terminée</SelectItem>
+                      <SelectItem value="cancelled">Annulée</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -501,6 +669,200 @@ export default function AdminReservations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Reservation Dialog */}
+      <Dialog open={editReservationDialog} onOpenChange={(open) => {
+        if (!open) {
+          resetForm();
+          setSelectedReservation(null);
+        }
+        setEditReservationDialog(open);
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier la Réservation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="edit-scheduled-date">Date de réservation *</Label>
+              <Input
+                id="edit-scheduled-date"
+                type="datetime-local"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="mt-2"
+                data-testid="input-edit-scheduled-date"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-status">Statut</Label>
+              <Select value={reservationStatus} onValueChange={setReservationStatus}>
+                <SelectTrigger className="mt-2" data-testid="select-edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="confirmed">Confirmée</SelectItem>
+                  <SelectItem value="completed">Terminée</SelectItem>
+                  <SelectItem value="cancelled">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-wheel-count">Nombre de jantes</Label>
+                <Select value={wheelCount} onValueChange={setWheelCount}>
+                  <SelectTrigger className="mt-2" data-testid="select-edit-wheel-count">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 jante</SelectItem>
+                    <SelectItem value="2">2 jantes</SelectItem>
+                    <SelectItem value="3">3 jantes</SelectItem>
+                    <SelectItem value="4">4 jantes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-diameter">Diamètre</Label>
+                <Input
+                  id="edit-diameter"
+                  type="text"
+                  placeholder="ex: 17 pouces"
+                  value={diameter}
+                  onChange={(e) => setDiameter(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-diameter"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-price-ht">Prix HT (€)</Label>
+                <Input
+                  id="edit-price-ht"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={priceHT}
+                  onChange={(e) => setPriceHT(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-price-ht"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-tax-rate">Taux TVA (%)</Label>
+                <Input
+                  id="edit-tax-rate"
+                  type="number"
+                  step="0.01"
+                  placeholder="20"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-tax-rate"
+                />
+              </div>
+            </div>
+
+            {priceHT && taxRate && (
+              <div className="p-4 bg-muted rounded-md">
+                <p className="text-sm font-semibold">Calcul automatique:</p>
+                <p className="text-sm">Prix HT: {parseFloat(priceHT).toFixed(2)} €</p>
+                <p className="text-sm">TVA ({taxRate}%): {(parseFloat(priceHT) * parseFloat(taxRate) / 100).toFixed(2)} €</p>
+                <p className="text-sm font-semibold">Prix TTC: {(parseFloat(priceHT) * (1 + parseFloat(taxRate) / 100)).toFixed(2)} €</p>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="edit-product-details">Détails produit</Label>
+              <Textarea
+                id="edit-product-details"
+                placeholder="Détails sur les produits et services..."
+                value={productDetails}
+                onChange={(e) => setProductDetails(e.target.value)}
+                className="mt-2"
+                rows={3}
+                data-testid="input-edit-product-details"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Textarea
+                id="edit-notes"
+                placeholder="Notes supplémentaires..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="mt-2"
+                data-testid="input-edit-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setSelectedReservation(null);
+                setEditReservationDialog(false);
+              }}
+              data-testid="button-cancel-edit-reservation"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleEditReservation}
+              disabled={updateReservationMutation.isPending}
+              data-testid="button-save-edit-reservation"
+            >
+              {updateReservationMutation.isPending ? "Modification..." : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Reservation Confirmation Dialog */}
+      <AlertDialog open={deleteReservationDialog} onOpenChange={setDeleteReservationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action est irréversible.
+              {selectedReservation && (
+                <div className="mt-4 p-3 bg-muted rounded-md">
+                  <p className="font-semibold text-foreground">Réservation #{selectedReservation.id.slice(0, 8)}</p>
+                  {selectedReservation.scheduledDate && (
+                    <p className="text-sm text-foreground">
+                      Date: {new Date(selectedReservation.scheduledDate).toLocaleDateString('fr-FR')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-reservation">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedReservation) {
+                  deleteReservationMutation.mutate(selectedReservation.id);
+                }
+              }}
+              disabled={deleteReservationMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete-reservation"
+            >
+              {deleteReservationMutation.isPending ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

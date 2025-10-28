@@ -547,11 +547,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to this quote" });
       }
 
-      // Get quote items
+      // Get related data
       const items = await storage.getQuoteItems(id);
+      const client = await storage.getUser(quote.clientId);
+      const service = await storage.getService(quote.serviceId);
 
-      // Return quote and items data for client-side PDF generation
-      res.json({ quote, items });
+      // Return all data for client-side PDF generation
+      res.json({ quote, items, client, service });
     } catch (error: any) {
       console.error("Error fetching quote PDF data:", error);
       res.status(500).json({ message: error.message || "Failed to fetch quote PDF data" });
@@ -575,11 +577,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized access to this invoice" });
       }
 
-      // Get invoice items
+      // Get related data
       const items = await storage.getInvoiceItems(id);
+      const client = await storage.getUser(invoice.clientId);
+      const quote = await storage.getQuote(invoice.quoteId);
 
-      // Return invoice and items data for client-side PDF generation
-      res.json({ invoice, items });
+      // Return all data for client-side PDF generation
+      res.json({ invoice, items, client, quote });
     } catch (error: any) {
       console.error("Error fetching invoice PDF data:", error);
       res.status(500).json({ message: error.message || "Failed to fetch invoice PDF data" });

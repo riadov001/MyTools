@@ -37,12 +37,11 @@ export default function ClientQuotes() {
 
   const downloadPDFMutation = useMutation({
     mutationFn: async (quoteId: string) => {
-      const response = await apiRequest("GET", `/api/quotes/${quoteId}/pdf`, undefined);
-      return response;
+      return await apiRequest("GET", `/api/quotes/${quoteId}/pdf`, undefined);
     },
-    onSuccess: async (data: { quote: Quote; items: QuoteItem[] }, quoteId: string) => {
+    onSuccess: async (data: any) => {
       try {
-        await generateQuotePDF(data.quote, data.items);
+        await generateQuotePDF(data.quote, data.client, data.service, data.items);
         toast({
           title: "Succès",
           description: "Le devis a été téléchargé",
