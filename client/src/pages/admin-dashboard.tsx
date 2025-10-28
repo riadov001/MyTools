@@ -96,61 +96,69 @@ export default function AdminDashboard() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="hover-elevate bg-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-            <CardTitle className="text-base font-medium">Réservations</CardTitle>
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-500" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-admin-reservations-count">
-              {reservationsLoading ? <Skeleton className="h-9 w-16" /> : totalReservations}
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/reservations" data-testid="card-link-reservations">
+          <Card className="hover-elevate active-elevate-2 bg-card cursor-pointer transition-all">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-base font-medium">Réservations</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold" data-testid="text-admin-reservations-count">
+                {reservationsLoading ? <Skeleton className="h-9 w-16" /> : totalReservations}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="hover-elevate bg-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-            <CardTitle className="text-base font-medium">Devis</CardTitle>
-            <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-              <FileText className="h-6 w-6 text-green-500" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-admin-quotes-count">
-              {quotesLoading ? <Skeleton className="h-9 w-16" /> : totalQuotes}
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/quotes" data-testid="card-link-quotes">
+          <Card className="hover-elevate active-elevate-2 bg-card cursor-pointer transition-all">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-base font-medium">Devis</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-green-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold" data-testid="text-admin-quotes-count">
+                {quotesLoading ? <Skeleton className="h-9 w-16" /> : totalQuotes}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="hover-elevate bg-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-            <CardTitle className="text-base font-medium">Factures</CardTitle>
-            <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-              <Receipt className="h-6 w-6 text-yellow-500" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" data-testid="text-admin-invoices-count">
-              {invoicesLoading ? <Skeleton className="h-9 w-16" /> : totalInvoices}
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/invoices" data-testid="card-link-invoices">
+          <Card className="hover-elevate active-elevate-2 bg-card cursor-pointer transition-all">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-base font-medium">Factures</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                <Receipt className="h-6 w-6 text-yellow-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold" data-testid="text-admin-invoices-count">
+                {invoicesLoading ? <Skeleton className="h-9 w-16" /> : totalInvoices}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="hover-elevate bg-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-            <CardTitle className="text-base font-medium">Chiffre d'affaires</CardTitle>
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold font-mono" data-testid="text-admin-revenue">
-              {invoicesLoading ? <Skeleton className="h-9 w-32" /> : `${totalRevenue.toFixed(2)} €`}
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/invoices" data-testid="card-link-revenue">
+          <Card className="hover-elevate active-elevate-2 bg-card cursor-pointer transition-all">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+              <CardTitle className="text-base font-medium">Chiffre d'affaires</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold font-mono" data-testid="text-admin-revenue">
+                {invoicesLoading ? <Skeleton className="h-9 w-32" /> : `${totalRevenue.toFixed(2)} €`}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Quick Actions */}

@@ -12,10 +12,14 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import type { Notification } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLocation } from "wouter";
 
 export function NotificationBell() {
+  const [, setLocation] = useLocation();
+  
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
   });
@@ -28,6 +32,37 @@ export function NotificationBell() {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
     },
   });
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read first
+    if (!notification.isRead) {
+      markAsRead.mutate(notification.id);
+    }
+
+    // Navigate to related page based on notification type and relatedId
+    if (notification.relatedId) {
+      switch (notification.type) {
+        case "quote":
+          // Navigate to specific quote edit page
+          setLocation(`/admin/quotes/${notification.relatedId}/edit`);
+          break;
+        case "invoice":
+          // Navigate to specific invoice edit page
+          setLocation(`/admin/invoices/${notification.relatedId}/edit`);
+          break;
+        case "reservation":
+          // Navigate to reservations list (no detail page exists yet)
+          setLocation("/admin/reservations");
+          break;
+        case "service":
+          // Navigate to services list
+          setLocation("/admin/services");
+          break;
+        default:
+          break;
+      }
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -68,7 +103,7 @@ export function NotificationBell() {
                 className={`flex flex-col items-start p-4 cursor-pointer ${
                   !notification.isRead ? "bg-accent/50" : ""
                 }`}
-                onClick={() => !notification.isRead && markAsRead.mutate(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
                 data-testid={`notification-${notification.id}`}
               >
                 <div className="flex items-start justify-between w-full gap-2">
@@ -81,7 +116,7 @@ export function NotificationBell() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {formatDistanceToNow(new Date(notification.createdAt!), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(notification.createdAt!), { addSuffix: true, locale: fr })}
                 </p>
               </DropdownMenuItem>
             ))}
