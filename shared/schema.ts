@@ -192,6 +192,24 @@ export const invoiceMedia = pgTable("invoice_media", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Application Settings (singleton table for app-wide configuration)
+export const applicationSettings = pgTable("application_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  defaultWheelCount: integer("default_wheel_count").notNull().default(4), // Default: 4 jantes
+  defaultDiameter: varchar("default_diameter", { length: 50 }).notNull().default("17"), // Default diameter
+  defaultTaxRate: decimal("default_tax_rate", { precision: 5, scale: 2 }).notNull().default("20.00"), // Default: 20% TVA
+  wheelCountOptions: varchar("wheel_count_options").notNull().default("1,2,3,4"), // Available options (comma-separated)
+  diameterOptions: text("diameter_options").notNull().default("14,15,16,17,18,19,20,21,22"), // Available diameters (comma-separated)
+  companyName: varchar("company_name", { length: 255 }).notNull().default("MyJantes"),
+  companyAddress: text("company_address"),
+  companyPhone: varchar("company_phone", { length: 50 }),
+  companyEmail: varchar("company_email", { length: 255 }),
+  companySiret: varchar("company_siret", { length: 14 }),
+  companyTvaNumber: varchar("company_tva_number", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   quotes: many(quotes),
@@ -318,6 +336,7 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export const insertInvoiceCounterSchema = createInsertSchema(invoiceCounters).omit({ id: true, updatedAt: true });
 export const insertQuoteMediaSchema = createInsertSchema(quoteMedia).omit({ id: true, createdAt: true });
 export const insertInvoiceMediaSchema = createInsertSchema(invoiceMedia).omit({ id: true, createdAt: true });
+export const insertApplicationSettingsSchema = createInsertSchema(applicationSettings).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -342,3 +361,5 @@ export type InsertQuoteMedia = z.infer<typeof insertQuoteMediaSchema>;
 export type QuoteMedia = typeof quoteMedia.$inferSelect;
 export type InsertInvoiceMedia = z.infer<typeof insertInvoiceMediaSchema>;
 export type InvoiceMedia = typeof invoiceMedia.$inferSelect;
+export type InsertApplicationSettings = z.infer<typeof insertApplicationSettingsSchema>;
+export type ApplicationSettings = typeof applicationSettings.$inferSelect;
