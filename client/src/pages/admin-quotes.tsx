@@ -426,7 +426,7 @@ export default function AdminQuotes() {
                       <p className="font-mono font-bold text-lg whitespace-nowrap">{quote.quoteAmount} €</p>
                     )}
                     {quote.status === "pending" && (
-                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           onClick={() => {
@@ -435,7 +435,6 @@ export default function AdminQuotes() {
                             setNotes(quote.notes || "");
                           }}
                           data-testid={`button-respond-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           Répondre
                         </Button>
@@ -456,7 +455,6 @@ export default function AdminQuotes() {
                           variant="outline"
                           onClick={() => setLocation(`/admin/quotes/${quote.id}/edit`)}
                           data-testid={`button-edit-quote-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           <Pencil className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Éditer</span>
@@ -466,7 +464,6 @@ export default function AdminQuotes() {
                           variant="outline"
                           onClick={() => handleDownloadPDF(quote)}
                           data-testid={`button-download-pdf-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
@@ -476,7 +473,6 @@ export default function AdminQuotes() {
                           variant="outline"
                           onClick={() => handleDownloadLabels(quote)}
                           data-testid={`button-download-labels-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           <Tags className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Étiquettes</span>
@@ -490,7 +486,6 @@ export default function AdminQuotes() {
                             setInvoiceNotes("");
                           }}
                           data-testid={`button-create-invoice-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           <FileText className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Facture</span>
@@ -504,7 +499,6 @@ export default function AdminQuotes() {
                             setReservationNotes("");
                           }}
                           data-testid={`button-create-reservation-${quote.id}`}
-                          className="flex-1 sm:flex-none"
                         >
                           <Calendar className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Réservation</span>

@@ -208,76 +208,78 @@ export default function AdminInvoices() {
               {invoices.map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-md hover-elevate"
+                  className="p-4 border border-border rounded-md hover-elevate"
                   data-testid={`invoice-item-${invoice.id}`}
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <p className="font-semibold font-mono">{invoice.invoiceNumber}</p>
-                      <StatusBadge status={invoice.status as any} />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Client: {invoice.clientId.slice(0, 8)}</p>
-                    <p className="text-sm text-muted-foreground">Devis: {invoice.quoteId.slice(0, 8)}</p>
-                    {invoice.wheelCount && (
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium">Jantes:</span> {invoice.wheelCount} 
-                        {invoice.diameter && <span> | <span className="font-medium">Diamètre:</span> {invoice.diameter}</span>}
-                      </p>
-                    )}
-                    {invoice.priceExcludingTax && (
-                      <p className="text-sm text-muted-foreground">
-                        <span className="font-medium">Prix HT:</span> {parseFloat(invoice.priceExcludingTax).toFixed(2)} € 
-                        {invoice.taxRate && <span> | <span className="font-medium">TVA:</span> {parseFloat(invoice.taxRate).toFixed(0)}%</span>}
-                      </p>
-                    )}
-                    {invoice.productDetails && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                        <span className="font-medium">Produits:</span> {invoice.productDetails}
-                      </p>
-                    )}
-                    {invoice.createdAt && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true, locale: fr })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-mono font-bold text-xl">{invoice.amount} €</p>
-                      {invoice.dueDate && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="font-semibold font-mono">{invoice.invoiceNumber}</p>
+                        <StatusBadge status={invoice.status as any} />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Client: {invoice.clientId.slice(0, 8)}</p>
+                      <p className="text-sm text-muted-foreground">Devis: {invoice.quoteId.slice(0, 8)}</p>
+                      {invoice.wheelCount && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Jantes:</span> {invoice.wheelCount} 
+                          {invoice.diameter && <span> | <span className="font-medium">Diamètre:</span> {invoice.diameter}</span>}
+                        </p>
+                      )}
+                      {invoice.priceExcludingTax && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Prix HT:</span> {parseFloat(invoice.priceExcludingTax).toFixed(2)} € 
+                          {invoice.taxRate && <span> | <span className="font-medium">TVA:</span> {parseFloat(invoice.taxRate).toFixed(0)}%</span>}
+                        </p>
+                      )}
+                      {invoice.productDetails && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          <span className="font-medium">Produits:</span> {invoice.productDetails}
+                        </p>
+                      )}
+                      {invoice.createdAt && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Échéance: {new Date(invoice.dueDate).toLocaleDateString('fr-FR')}
+                          {formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true, locale: fr })}
                         </p>
                       )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setLocation(`/admin/invoices/${invoice.id}/edit`)}
-                        data-testid={`button-edit-invoice-${invoice.id}`}
-                      >
-                        <Pencil className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Éditer</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadPDF(invoice)}
-                        data-testid={`button-download-invoice-pdf-${invoice.id}`}
-                      >
-                        <Download className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">PDF</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadLabels(invoice)}
-                        data-testid={`button-download-labels-${invoice.id}`}
-                      >
-                        <Tags className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Étiquettes</span>
-                      </Button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t">
+                      <div>
+                        <p className="font-mono font-bold text-xl">{invoice.amount} €</p>
+                        {invoice.dueDate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Échéance: {new Date(invoice.dueDate).toLocaleDateString('fr-FR')}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation(`/admin/invoices/${invoice.id}/edit`)}
+                          data-testid={`button-edit-invoice-${invoice.id}`}
+                        >
+                          <Pencil className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Éditer</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPDF(invoice)}
+                          data-testid={`button-download-invoice-pdf-${invoice.id}`}
+                        >
+                          <Download className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">PDF</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadLabels(invoice)}
+                          data-testid={`button-download-labels-${invoice.id}`}
+                        >
+                          <Tags className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Étiquettes</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
