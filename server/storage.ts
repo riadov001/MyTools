@@ -9,6 +9,7 @@ import {
   reservations,
   notifications,
   invoiceCounters,
+  applicationSettings,
   type User,
   type UpsertUser,
   type Service,
@@ -27,6 +28,8 @@ import {
   type InsertNotification,
   type InvoiceCounter,
   type InsertInvoiceCounter,
+  type ApplicationSettings,
+  type InsertApplicationSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -93,6 +96,10 @@ export interface IStorage {
   // Media operations
   createQuoteMedia(media: { quoteId: string; filePath: string; fileType: string; fileName?: string }): Promise<void>;
   createInvoiceMedia(media: { invoiceId: string; filePath: string; fileType: string; fileName?: string }): Promise<void>;
+
+  // Application settings operations
+  getApplicationSettings(): Promise<ApplicationSettings | undefined>;
+  createOrUpdateApplicationSettings(settings: Partial<InsertApplicationSettings>): Promise<ApplicationSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -435,6 +442,37 @@ export class DatabaseStorage implements IStorage {
       fileType: media.fileType as "image" | "video",
       fileName: media.fileName || media.filePath.split('/').pop() || 'unknown',
     });
+  }
+
+  // Application settings operations
+  async getApplicationSettings(): Promise<ApplicationSettings | undefined> {
+    const [settings] = await db.select().from(applicationSettings).limit(1);
+    return settings;
+  }
+
+  async createOrUpdateApplicationSettings(settingsData: Partial<InsertApplicationSettings>): Promise<ApplicationSettings> {
+    // Check if settings exist
+    const existing = await this.getApplicationSettings();
+    
+    if (existing) {
+      // Update existing settings
+      const [updated] = await db
+        .update(applicationSettings)
+        .set({
+          ...settingsData,
+          updatedAt: new Date(),
+        })
+        .where(eq(applicationSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new settings
+      const [created] = await db
+        .insert(applicationSettings)
+        .values(settingsData as InsertApplicationSettings)
+        .returning();
+      return created;
+    }
   }
 }
 
