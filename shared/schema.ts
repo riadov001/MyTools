@@ -303,13 +303,13 @@ export const insertReservationSchema = createInsertSchema(reservations)
     scheduledDate: z.union([z.date(), z.string()]).transform(val => 
       typeof val === 'string' ? new Date(val) : val
     ),
-    quoteId: z.string().optional(),
-    wheelCount: z.number().min(1).max(4).optional(),
-    diameter: z.string().optional(),
-    priceExcludingTax: z.string().optional(),
-    taxRate: z.string().optional(),
-    taxAmount: z.string().optional(),
-    productDetails: z.string().optional(),
+    quoteId: z.string().nullable().optional(),
+    wheelCount: z.number().min(1).max(4).nullable().optional(),
+    diameter: z.string().nullable().optional(),
+    priceExcludingTax: z.string().nullable().optional(),
+    taxRate: z.string().nullable().optional(),
+    taxAmount: z.string().nullable().optional(),
+    productDetails: z.string().nullable().optional(),
   });
 
 export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({ id: true, createdAt: true, updatedAt: true });
