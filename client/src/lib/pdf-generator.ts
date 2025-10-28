@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import type { Quote, Invoice, InvoiceItem, QuoteItem } from '@shared/schema';
+import logoImage from '@assets/logo-myjantes-n2iUZrkN_1759796960103.png';
 
 interface PDFData {
   type: 'quote' | 'invoice';
@@ -43,9 +44,39 @@ const COMPANY_INFO = {
   tva: 'FR73913678199',
 };
 
-export function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
+// Helper function to load logo as base64
+async function getLogoBase64(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = logoImage;
+  });
+}
+
+export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  
+  // Add logo
+  try {
+    const logoBase64 = await getLogoBase64();
+    doc.addImage(logoBase64, 'PNG', pageWidth - 60, 10, 40, 20);
+  } catch (error) {
+    console.error('Failed to load logo:', error);
+  }
   
   // Header with logo space
   doc.setFontSize(20);
@@ -217,9 +248,17 @@ export function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any
   doc.save(`devis-${quoteNumber}.pdf`);
 }
 
-export function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
+export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  
+  // Add logo
+  try {
+    const logoBase64 = await getLogoBase64();
+    doc.addImage(logoBase64, 'PNG', pageWidth - 60, 10, 40, 20);
+  } catch (error) {
+    console.error('Failed to load logo:', error);
+  }
   
   // Header with logo space
   doc.setFontSize(20);

@@ -92,7 +92,7 @@ export default function AdminQuotes() {
         name: `Client-${quote.clientId.slice(0, 8)}`,
         email: 'client@myjantes.fr'
       };
-      generateQuotePDF(quote, clientInfo, service, quoteItems);
+      await generateQuotePDF(quote, clientInfo, service, quoteItems);
     } catch (error) {
       toast({
         title: "Erreur",

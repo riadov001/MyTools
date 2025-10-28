@@ -79,7 +79,7 @@ export default function AdminInvoices() {
       const itemsRes = await fetch(`/api/admin/invoices/${invoice.id}/items`, { credentials: 'include' });
       const invoiceItems = itemsRes.ok ? await itemsRes.json() : [];
       
-      generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems);
+      await generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems);
     } catch (error) {
       toast({
         title: "Erreur",
