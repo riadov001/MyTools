@@ -16,6 +16,8 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import ClientDashboard from "@/pages/client-dashboard";
+import ClientQuotes from "@/pages/client-quotes";
+import ClientInvoices from "@/pages/client-invoices";
 import AdminDashboard from "@/pages/admin-dashboard";
 import Services from "@/pages/services";
 import AdminQuotes from "@/pages/admin-quotes";
@@ -114,6 +116,8 @@ function Router() {
         <Switch>
           <Route path="/" component={ClientDashboard} />
           <Route path="/services" component={Services} />
+          <Route path="/quotes" component={ClientQuotes} />
+          <Route path="/invoices" component={ClientInvoices} />
           <Route path="/login">
             <Redirect to="/" />
           </Route>

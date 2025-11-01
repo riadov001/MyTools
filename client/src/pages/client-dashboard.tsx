@@ -113,8 +113,13 @@ export default function ClientDashboard() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
           <CardTitle>Devis récents</CardTitle>
+          {quotes.length > 0 && (
+            <Button asChild variant="outline" size="sm" data-testid="button-view-all-quotes">
+              <Link href="/quotes">Voir tous</Link>
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {quotesLoading ? (
@@ -140,16 +145,64 @@ export default function ClientDashboard() {
                   data-testid={`quote-card-${quote.id}`}
                 >
                   <div className="flex-1">
-                    <p className="font-medium">Quote #{quote.id.slice(0, 8)}</p>
+                    <p className="font-medium">Devis #{quote.id.slice(0, 8)}</p>
                     <p className="text-sm text-muted-foreground">
                       {quote.createdAt && formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true, locale: fr })}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
                     {quote.quoteAmount && (
-                      <p className="font-mono font-semibold">${quote.quoteAmount}</p>
+                      <p className="font-mono font-semibold">{parseFloat(quote.quoteAmount).toFixed(2)} €</p>
                     )}
                     <StatusBadge status={quote.status as any} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
+          <CardTitle>Factures récentes</CardTitle>
+          {invoices.length > 0 && (
+            <Button asChild variant="outline" size="sm" data-testid="button-view-all-invoices">
+              <Link href="/invoices">Voir tous</Link>
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {invoicesLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20" />
+              ))}
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Aucune facture pour le moment.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {invoices.slice(0, 5).map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center justify-between p-4 border border-border rounded-md hover-elevate"
+                  data-testid={`invoice-card-${invoice.id}`}
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">Facture #{invoice.invoiceNumber || invoice.id.slice(0, 8)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {invoice.createdAt && formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true, locale: fr })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {invoice.amount && (
+                      <p className="font-mono font-semibold">{parseFloat(invoice.amount).toFixed(2)} €</p>
+                    )}
+                    <StatusBadge status={invoice.status as any} />
                   </div>
                 </div>
               ))}
