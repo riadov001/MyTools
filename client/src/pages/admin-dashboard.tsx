@@ -90,8 +90,8 @@ export default function AdminDashboard() {
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-admin-dashboard-title">Dashboard Admin</h1>
-        <p className="text-muted-foreground mt-1">Vue d'ensemble de votre activité</p>
+        <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-admin-dashboard-title">Dashboard Admin</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Vue d'ensemble de votre activité</p>
       </div>
 
       {/* Statistics Cards */}

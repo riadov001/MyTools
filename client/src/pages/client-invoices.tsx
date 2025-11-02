@@ -90,8 +90,8 @@ export default function ClientInvoices() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-client-invoices-title">Mes Factures</h1>
-        <p className="text-muted-foreground mt-1">Consultez et téléchargez vos factures</p>
+        <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-client-invoices-title">Mes Factures</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Consultez et téléchargez vos factures</p>
       </div>
 
       {invoicesLoading ? (

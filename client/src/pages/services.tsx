@@ -97,10 +97,10 @@ export default function Services() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-services-title">Nos Services</h1>
-        <p className="text-muted-foreground">Parcourez nos services et demandez un devis</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-services-title">Nos Services</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Parcourez nos services et demandez un devis</p>
       </div>
 
       {servicesLoading ? (

@@ -342,13 +342,14 @@ export default function AdminInvoices() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold" data-testid="text-admin-invoices-title">Gestion des Factures</h1>
-        <div className="flex gap-2">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-admin-invoices-title">Gestion des Factures</h1>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button
             onClick={() => setIsDialogOpen(true)}
             variant="outline"
+            className="w-full sm:w-auto"
             data-testid="button-create-invoice-from-quote"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -356,6 +357,7 @@ export default function AdminInvoices() {
           </Button>
           <Button
             onClick={() => setCreateDirectInvoiceDialog(true)}
+            className="w-full sm:w-auto"
             data-testid="button-create-direct-invoice"
           >
             <Plus className="h-4 w-4 mr-2" />

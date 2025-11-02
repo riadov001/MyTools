@@ -63,10 +63,10 @@ export default function ClientDashboard() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Tableau de bord</h1>
-        <Button asChild data-testid="button-new-quote">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-dashboard-title">Tableau de bord</h1>
+        <Button asChild className="w-full sm:w-auto" data-testid="button-new-quote">
           <Link href="/services">
             <Plus className="h-4 w-4 mr-2" />
             Demander un devis
@@ -141,7 +141,7 @@ export default function ClientDashboard() {
               {quotes.slice(0, 5).map((quote) => (
                 <div
                   key={quote.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-md hover-elevate"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border border-border rounded-md hover-elevate"
                   data-testid={`quote-card-${quote.id}`}
                 >
                   <div className="flex-1">
@@ -150,7 +150,7 @@ export default function ClientDashboard() {
                       {quote.createdAt && formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true, locale: fr })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     {quote.quoteAmount && (
                       <p className="font-mono font-semibold">{parseFloat(quote.quoteAmount).toFixed(2)} €</p>
                     )}
@@ -189,7 +189,7 @@ export default function ClientDashboard() {
               {invoices.slice(0, 5).map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-md hover-elevate"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border border-border rounded-md hover-elevate"
                   data-testid={`invoice-card-${invoice.id}`}
                 >
                   <div className="flex-1">
@@ -198,7 +198,7 @@ export default function ClientDashboard() {
                       {invoice.createdAt && formatDistanceToNow(new Date(invoice.createdAt), { addSuffix: true, locale: fr })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     {invoice.amount && (
                       <p className="font-mono font-semibold">{parseFloat(invoice.amount).toFixed(2)} €</p>
                     )}
