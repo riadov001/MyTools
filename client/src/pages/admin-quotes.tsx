@@ -717,11 +717,11 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={!!invoiceDialog} onOpenChange={(open) => !open && setInvoiceDialog(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Créer une Facture</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
               <Label htmlFor="invoice-amount">Montant ($)</Label>
               <Input
@@ -853,11 +853,11 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={createQuoteDialog} onOpenChange={setCreateQuoteDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Créer un Nouveau Devis</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="flex items-center justify-between p-3 border border-border rounded-md">
               <div className="flex-1">
                 <Label htmlFor="is-new-client" className="font-semibold">Créer un nouveau client</Label>
