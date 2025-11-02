@@ -102,10 +102,19 @@
 
 #### Créer un devis manuellement
 1. Cliquez "Créer un devis"
-2. Sélectionnez un client
-3. Sélectionnez un service
-4. Remplissez les détails
-5. Enregistrez
+2. **Choisir le type de client** :
+   - **Client existant** : Sélectionnez dans la liste déroulante
+   - **Nouveau client** : Activez le switch "Créer un nouveau client"
+3. Si nouveau client, remplissez :
+   - Email (requis)
+   - Prénom et nom (requis)
+   - Type : **Particulier** ou **Professionnel**
+   - Si professionnel : nom entreprise, SIRET, TVA, adresse
+   - 💡 Mot de passe par défaut : **client123** (à changer à la première connexion)
+4. Sélectionnez un service
+5. Remplissez les détails du devis
+6. Téléchargez au moins 6 images
+7. Enregistrez
 
 ### 4. Gestion des Factures
 **Menu : Factures**

@@ -692,6 +692,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin route to create a new client (professionnel or particulier) without password
+  app.post("/api/admin/clients", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const createClientSchema = z.object({
+        email: z.string().email(),
+        firstName: z.string().min(1, "Le prénom est requis"),
+        lastName: z.string().min(1, "Le nom est requis"),
+        role: z.enum(["client", "client_professionnel"]),
+        companyName: z.string().optional(),
+        siret: z.string().optional(),
+        tvaNumber: z.string().optional(),
+        companyAddress: z.string().optional(),
+      });
+
+      const validatedData = createClientSchema.parse(req.body);
+
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmail(validatedData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Cet email est déjà utilisé" });
+      }
+
+      // Generate a default password that can be changed later
+      const { hashPassword } = await import("./localAuth");
+      const defaultPassword = await hashPassword("client123");
+
+      const userData: any = {
+        email: validatedData.email,
+        password: defaultPassword,
+        firstName: validatedData.firstName || null,
+        lastName: validatedData.lastName || null,
+        role: validatedData.role,
+      };
+
+      // Add company fields if professional client
+      if (validatedData.role === "client_professionnel") {
+        userData.companyName = validatedData.companyName || null;
+        userData.siret = validatedData.siret || null;
+        userData.tvaNumber = validatedData.tvaNumber || null;
+        userData.companyAddress = validatedData.companyAddress || null;
+      }
+
+      const newClient = await storage.createUser(userData);
+
+      res.json(sanitizeUser(newClient));
+    } catch (error: any) {
+      console.error("Error creating client:", error);
+      res.status(400).json({ message: error.message || "Échec de la création du client" });
+    }
+  });
+
   app.post("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const createSchema = z.object({
