@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, Plus, Edit, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -404,6 +404,9 @@ export default function AdminReservations() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer une Réservation</DialogTitle>
+            <DialogDescription>
+              Créez une nouvelle réservation de service pour un client.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             <div>
@@ -681,6 +684,9 @@ export default function AdminReservations() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier la Réservation</DialogTitle>
+            <DialogDescription>
+              Modifiez les détails de cette réservation.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             <div>

@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Quote, User } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -669,6 +669,9 @@ export default function AdminQuotes() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Répondre à la Demande de Devis</DialogTitle>
+            <DialogDescription>
+              Définissez le montant du devis et ajoutez des notes supplémentaires.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -720,6 +723,9 @@ export default function AdminQuotes() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Créer une Facture</DialogTitle>
+            <DialogDescription>
+              Créez une facture basée sur ce devis approuvé.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
@@ -807,6 +813,9 @@ export default function AdminQuotes() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Créer une Réservation</DialogTitle>
+            <DialogDescription>
+              Planifiez une réservation pour ce devis.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -856,6 +865,9 @@ export default function AdminQuotes() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Créer un Nouveau Devis</DialogTitle>
+            <DialogDescription>
+              Remplissez les informations pour créer un nouveau devis.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="flex items-center justify-between p-3 border border-border rounded-md">

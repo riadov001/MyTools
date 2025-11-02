@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Service } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -232,6 +232,9 @@ export default function AdminServices() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingService ? "Modifier le Service" : "Ajouter un Nouveau Service"}</DialogTitle>
+            <DialogDescription>
+              {editingService ? "Modifiez les détails de ce service." : "Créez un nouveau service pour votre catalogue."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
