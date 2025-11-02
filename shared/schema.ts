@@ -98,10 +98,11 @@ export const quoteItems = pgTable("quote_items", {
 // Invoices
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  quoteId: varchar("quote_id").notNull().references(() => quotes.id, { onDelete: 'cascade' }),
+  quoteId: varchar("quote_id").references(() => quotes.id, { onDelete: 'cascade' }), // Optional - nullable for direct invoices
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("payment_method", { enum: ["cash", "other"] }).notNull().default("other"), // Required for direct invoices
   wheelCount: integer("wheel_count"), // Number of wheels: 1, 2, 3, or 4
   diameter: varchar("diameter", { length: 50 }), // Wheel diameter
   priceExcludingTax: decimal("price_excluding_tax", { precision: 10, scale: 2 }), // Prix HT
@@ -312,6 +313,14 @@ export const insertInvoiceSchema = createInsertSchema(invoices)
     dueDate: z.union([z.date(), z.string()]).transform(val => 
       typeof val === 'string' ? new Date(val) : val
     ).optional(),
+    quoteId: z.string().nullable().optional(), // Optional for direct invoices
+    paymentMethod: z.enum(["cash", "other"]).default("other"), // Required for direct invoices
+    wheelCount: z.number().min(1).max(4).nullable().optional(),
+    diameter: z.string().nullable().optional(),
+    priceExcludingTax: z.string().nullable().optional(),
+    taxRate: z.string().nullable().optional(),
+    taxAmount: z.string().nullable().optional(),
+    productDetails: z.string().nullable().optional(),
   });
 
 // Custom reservation schema with data transformations

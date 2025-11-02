@@ -218,7 +218,9 @@ export default function AdminInvoices() {
                         <StatusBadge status={invoice.status as any} />
                       </div>
                       <p className="text-sm text-muted-foreground">Client: {invoice.clientId.slice(0, 8)}</p>
-                      <p className="text-sm text-muted-foreground">Devis: {invoice.quoteId.slice(0, 8)}</p>
+                      {invoice.quoteId && (
+                        <p className="text-sm text-muted-foreground">Devis: {invoice.quoteId.slice(0, 8)}</p>
+                      )}
                       {invoice.wheelCount && (
                         <p className="text-sm text-muted-foreground">
                           <span className="font-medium">Jantes:</span> {invoice.wheelCount} 
