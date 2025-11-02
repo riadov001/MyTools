@@ -565,7 +565,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const invoice = await storage.updateInvoice(id, req.body);
+      const updateData = { ...req.body };
+      
+      // Convert date strings to Date objects
+      if (updateData.dueDate && typeof updateData.dueDate === 'string') {
+        updateData.dueDate = new Date(updateData.dueDate);
+      }
+      if (updateData.createdAt && typeof updateData.createdAt === 'string') {
+        updateData.createdAt = new Date(updateData.createdAt);
+      }
+      if (updateData.updatedAt && typeof updateData.updatedAt === 'string') {
+        updateData.updatedAt = new Date(updateData.updatedAt);
+      }
+      
+      const invoice = await storage.updateInvoice(id, updateData);
       res.json(invoice);
     } catch (error: any) {
       console.error("Error updating invoice:", error);
