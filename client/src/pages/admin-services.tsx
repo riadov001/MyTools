@@ -154,15 +154,16 @@ export default function AdminServices() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold" data-testid="text-admin-services-title">Gestion des Services</h1>
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-admin-services-title">Gestion des Services</h1>
         <Button
           onClick={() => {
             setEditingService(null);
             resetForm();
             setIsDialogOpen(true);
           }}
+          className="w-full sm:w-auto"
           data-testid="button-add-service"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -190,7 +191,7 @@ export default function AdminServices() {
               {services.map((service) => (
                 <div
                   key={service.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-md hover-elevate"
+                  className="flex flex-col gap-3 p-4 border border-border rounded-md hover-elevate"
                   data-testid={`service-item-${service.id}`}
                 >
                   <div className="flex-1">
@@ -200,25 +201,29 @@ export default function AdminServices() {
                     )}
                     <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
                     {service.basePrice && (
-                      <p className="font-mono font-semibold mt-2">À partir de ${service.basePrice}</p>
+                      <p className="font-mono font-semibold mt-2">À partir de {service.basePrice} €</p>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2 border-t">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleEdit(service)}
+                      className="flex-1"
                       data-testid={`button-edit-${service.id}`}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Modifier</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDelete(service.id)}
+                      className="flex-1"
                       data-testid={`button-delete-${service.id}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Supprimer</span>
                     </Button>
                   </div>
                 </div>

@@ -70,9 +70,9 @@ function Router() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between p-4 border-b border-border bg-background">
+            <header className="flex items-center justify-between p-2 sm:p-4 border-b border-border bg-background shrink-0">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <NotificationBell />
                 <ThemeToggle />
                 <UserMenu />
@@ -104,9 +104,9 @@ function Router() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="flex items-center justify-between p-4 border-b border-border bg-background">
-        <h1 className="text-2xl font-bold text-primary">MyJantes</h1>
-        <div className="flex items-center gap-2">
+      <header className="flex items-center justify-between p-2 sm:p-4 border-b border-border bg-background shrink-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-primary">MyJantes</h1>
+        <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell />
           <ThemeToggle />
           <UserMenu />
