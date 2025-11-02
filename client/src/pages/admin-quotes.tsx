@@ -45,12 +45,17 @@ export default function AdminQuotes() {
   const [createQuoteDialog, setCreateQuoteDialog] = useState(false);
   const [isNewClient, setIsNewClient] = useState(false);
   const [newQuoteClientId, setNewQuoteClientId] = useState("");
-  const [newQuoteServiceId, setNewQuoteServiceId] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Array<{
+    serviceId: string;
+    serviceName: string;
+    quantity: string;
+    unitPrice: string;
+  }>>([]);
   const [newQuotePaymentMethod, setNewQuotePaymentMethod] = useState<"cash" | "other">("other");
   const [newQuoteDetails, setNewQuoteDetails] = useState("");
   const [newQuoteWheelCount, setNewQuoteWheelCount] = useState<string>("4");
   const [newQuoteDiameter, setNewQuoteDiameter] = useState("");
-  const [newQuotePriceHT, setNewQuotePriceHT] = useState("");
   const [newQuoteTaxRate, setNewQuoteTaxRate] = useState("20");
   const [newQuoteProductDetails, setNewQuoteProductDetails] = useState("");
   const [quoteMediaFiles, setQuoteMediaFiles] = useState<Array<{key: string; type: string; name: string}>>([]);
@@ -245,10 +250,10 @@ export default function AdminQuotes() {
     if (!invoiceDialog || !invoiceDueDate) return;
     
     const imageCount = invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length;
-    if (imageCount < 6) {
+    if (imageCount < 3) {
       toast({
         title: "Erreur",
-        description: `Au moins 6 images sont requises (${imageCount}/6)`,
+        description: `Au moins 3 images sont requises (${imageCount}/3)`,
         variant: "destructive",
       });
       return;
@@ -289,6 +294,12 @@ export default function AdminQuotes() {
       taxAmount?: string;
       productDetails?: string;
       quoteAmount?: string;
+      services?: Array<{
+        serviceId: string;
+        serviceName: string;
+        quantity: number;
+        unitPrice: number;
+      }>;
     }) => {
       return apiRequest("POST", "/api/admin/quotes", data);
     },
@@ -300,12 +311,12 @@ export default function AdminQuotes() {
       setCreateQuoteDialog(false);
       setIsNewClient(false);
       setNewQuoteClientId("");
-      setNewQuoteServiceId("");
+      setSelectedServiceId("");
+      setSelectedServices([]);
       setNewQuotePaymentMethod("other");
       setNewQuoteDetails("");
       setNewQuoteWheelCount("4");
       setNewQuoteDiameter("");
-      setNewQuotePriceHT("");
       setNewQuoteTaxRate("20");
       setNewQuoteProductDetails("");
       setQuoteMediaFiles([]);
@@ -343,6 +354,55 @@ export default function AdminQuotes() {
     },
   });
 
+  const addServiceToQuote = () => {
+    if (!selectedServiceId) return;
+    
+    const service = services.find(s => s.id === selectedServiceId);
+    if (!service) return;
+    
+    setSelectedServices([...selectedServices, {
+      serviceId: service.id,
+      serviceName: service.name,
+      quantity: "1",
+      unitPrice: service.basePrice || "0",
+    }]);
+    setSelectedServiceId("");
+  };
+
+  const removeServiceFromQuote = (index: number) => {
+    setSelectedServices(selectedServices.filter((_, i) => i !== index));
+  };
+
+  const updateServiceQuantity = (index: number, quantity: string) => {
+    const updated = [...selectedServices];
+    updated[index].quantity = quantity;
+    setSelectedServices(updated);
+  };
+
+  const updateServicePrice = (index: number, price: string) => {
+    const updated = [...selectedServices];
+    updated[index].unitPrice = price;
+    setSelectedServices(updated);
+  };
+
+  const calculateTotalHT = () => {
+    return selectedServices.reduce((total, service) => {
+      const qty = parseFloat(service.quantity || "0");
+      const price = parseFloat(service.unitPrice || "0");
+      return total + (qty * price);
+    }, 0);
+  };
+
+  const calculateTaxAmount = () => {
+    const totalHT = calculateTotalHT();
+    const taxRate = parseFloat(newQuoteTaxRate || "0");
+    return (totalHT * taxRate) / 100;
+  };
+
+  const calculateTotalTTC = () => {
+    return calculateTotalHT() + calculateTaxAmount();
+  };
+
   const handleCreateNewQuote = async () => {
     // Validation
     if (isNewClient) {
@@ -365,20 +425,20 @@ export default function AdminQuotes() {
       }
     }
     
-    if (!newQuoteServiceId) {
+    if (selectedServices.length === 0) {
       toast({
         title: "Erreur",
-        description: "Veuillez sélectionner un service",
+        description: "Veuillez ajouter au moins un service",
         variant: "destructive",
       });
       return;
     }
     
     const imageCount = quoteMediaFiles.filter(f => f.type.startsWith('image/')).length;
-    if (imageCount < 6) {
+    if (imageCount < 3) {
       toast({
         title: "Erreur",
-        description: `Au moins 6 images sont requises (${imageCount}/6)`,
+        description: `Au moins 3 images sont requises (${imageCount}/3)`,
         variant: "destructive",
       });
       return;
@@ -404,25 +464,34 @@ export default function AdminQuotes() {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       }
       
-      // Calcul du montant TTC
-      const priceHT = parseFloat(newQuotePriceHT) || 0;
+      // Calcul du montant TTC avec les services sélectionnés
+      const totalHT = calculateTotalHT();
       const taxRate = parseFloat(newQuoteTaxRate) || 0;
-      const taxAmount = (priceHT * taxRate) / 100;
-      const totalAmount = priceHT + taxAmount;
+      const taxAmount = calculateTaxAmount();
+      const totalAmount = calculateTotalTTC();
+      
+      // Utiliser le premier service comme service principal pour la compatibilité
+      const mainServiceId = selectedServices[0].serviceId;
       
       createNewQuoteMutation.mutate({
         clientId,
-        serviceId: newQuoteServiceId,
+        serviceId: mainServiceId,
         paymentMethod: newQuotePaymentMethod,
         requestDetails: newQuoteDetails ? { notes: newQuoteDetails } : undefined,
         mediaFiles: quoteMediaFiles,
         wheelCount: parseInt(newQuoteWheelCount),
         diameter: newQuoteDiameter,
-        priceExcludingTax: newQuotePriceHT,
+        priceExcludingTax: totalHT.toFixed(2),
         taxRate: newQuoteTaxRate,
         taxAmount: taxAmount.toFixed(2),
         productDetails: newQuoteProductDetails,
         quoteAmount: totalAmount.toFixed(2),
+        services: selectedServices.map(s => ({
+          serviceId: s.serviceId,
+          serviceName: s.serviceName,
+          quantity: parseFloat(s.quantity),
+          unitPrice: parseFloat(s.unitPrice),
+        })),
       });
     } catch (error: any) {
       toast({
@@ -691,7 +760,7 @@ export default function AdminQuotes() {
             <div>
               <Label>Images et Vidéos</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Minimum 6 images requises. Vidéos optionnelles.
+                Minimum 3 images requises. Vidéos optionnelles.
               </p>
               <ObjectUploader
                 onUploadComplete={(files) => setInvoiceMediaFiles(files)}
@@ -701,9 +770,9 @@ export default function AdminQuotes() {
                 }}
                 data-testid="uploader-invoice-media"
               />
-              {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 6 && (
+              {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
                 <p className="text-sm text-destructive mt-2">
-                  Au moins 6 images sont requises ({invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length}/6)
+                  Au moins 3 images sont requises ({invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
                 </p>
               )}
             </div>
@@ -724,7 +793,7 @@ export default function AdminQuotes() {
               disabled={
                 createInvoiceMutation.isPending || 
                 !invoiceDueDate ||
-                invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 6
+                invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
               }
               data-testid="button-save-invoice"
             >
@@ -933,20 +1002,76 @@ export default function AdminQuotes() {
                 </Select>
               </div>
             )}
-            <div>
-              <Label htmlFor="new-quote-service">Service</Label>
-              <Select value={newQuoteServiceId} onValueChange={setNewQuoteServiceId}>
-                <SelectTrigger className="mt-2" data-testid="select-new-quote-service">
-                  <SelectValue placeholder="Sélectionner un service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
+            <div className="space-y-3">
+              <Label>Services</Label>
+              <div className="flex gap-2">
+                <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                  <SelectTrigger className="flex-1" data-testid="select-service-to-add">
+                    <SelectValue placeholder="Sélectionner un service à ajouter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name} - {parseFloat(service.basePrice || "0").toFixed(2)} €
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  onClick={addServiceToQuote}
+                  disabled={!selectedServiceId}
+                  data-testid="button-add-service"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {selectedServices.length > 0 && (
+                <div className="border rounded-md p-3 space-y-2">
+                  <p className="text-sm font-medium">Services ajoutés:</p>
+                  {selectedServices.map((service, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{service.serviceName}</p>
+                      </div>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Qté"
+                        value={service.quantity}
+                        onChange={(e) => updateServiceQuantity(index, e.target.value)}
+                        className="w-16 h-8"
+                        data-testid={`input-service-quantity-${index}`}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Prix"
+                        value={service.unitPrice}
+                        onChange={(e) => updateServicePrice(index, e.target.value)}
+                        className="w-24 h-8"
+                        data-testid={`input-service-price-${index}`}
+                      />
+                      <span className="text-sm font-mono whitespace-nowrap">
+                        {(parseFloat(service.quantity) * parseFloat(service.unitPrice)).toFixed(2)} €
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeServiceFromQuote(index)}
+                        className="h-8 w-8"
+                        data-testid={`button-remove-service-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="new-quote-payment-method">Moyen de paiement</Label>
@@ -988,47 +1113,32 @@ export default function AdminQuotes() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="new-quote-price-ht">Prix HT (€)</Label>
-                <Input
-                  id="new-quote-price-ht"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={newQuotePriceHT}
-                  onChange={(e) => setNewQuotePriceHT(e.target.value)}
-                  className="mt-2"
-                  data-testid="input-new-quote-price-ht"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-quote-tax-rate">TVA (%)</Label>
-                <Input
-                  id="new-quote-tax-rate"
-                  type="number"
-                  step="0.01"
-                  placeholder="20"
-                  value={newQuoteTaxRate}
-                  onChange={(e) => setNewQuoteTaxRate(e.target.value)}
-                  className="mt-2"
-                  data-testid="input-new-quote-tax-rate"
-                />
-              </div>
+            <div>
+              <Label htmlFor="new-quote-tax-rate">TVA (%)</Label>
+              <Input
+                id="new-quote-tax-rate"
+                type="number"
+                step="0.01"
+                placeholder="20"
+                value={newQuoteTaxRate}
+                onChange={(e) => setNewQuoteTaxRate(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-quote-tax-rate"
+              />
             </div>
-            {newQuotePriceHT && newQuoteTaxRate && (
-              <div className="p-3 bg-muted rounded-md">
+            {selectedServices.length > 0 && (
+              <div className="p-4 bg-muted rounded-md space-y-2">
                 <div className="flex justify-between items-center text-sm">
-                  <span>Prix HT:</span>
-                  <span className="font-mono">{parseFloat(newQuotePriceHT || "0").toFixed(2)} €</span>
+                  <span>Total HT:</span>
+                  <span className="font-mono">{calculateTotalHT().toFixed(2)} €</span>
                 </div>
-                <div className="flex justify-between items-center text-sm mt-1">
+                <div className="flex justify-between items-center text-sm">
                   <span>TVA ({newQuoteTaxRate}%):</span>
-                  <span className="font-mono">{((parseFloat(newQuotePriceHT || "0") * parseFloat(newQuoteTaxRate || "0")) / 100).toFixed(2)} €</span>
+                  <span className="font-mono">{calculateTaxAmount().toFixed(2)} €</span>
                 </div>
-                <div className="flex justify-between items-center font-bold mt-2 pt-2 border-t border-border">
-                  <span>Prix TTC:</span>
-                  <span className="font-mono">{(parseFloat(newQuotePriceHT || "0") + (parseFloat(newQuotePriceHT || "0") * parseFloat(newQuoteTaxRate || "0")) / 100).toFixed(2)} €</span>
+                <div className="flex justify-between items-center font-bold text-base pt-2 border-t border-border">
+                  <span>Total TTC:</span>
+                  <span className="font-mono text-primary">{calculateTotalTTC().toFixed(2)} €</span>
                 </div>
               </div>
             )}
@@ -1059,7 +1169,7 @@ export default function AdminQuotes() {
             <div>
               <Label>Images et Vidéos</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Minimum 6 images requises. Vidéos optionnelles.
+                Minimum 3 images requises. Vidéos optionnelles.
               </p>
               <ObjectUploader
                 onUploadComplete={(files) => setQuoteMediaFiles(files)}
@@ -1069,9 +1179,9 @@ export default function AdminQuotes() {
                 }}
                 data-testid="uploader-quote-media"
               />
-              {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 6 && (
+              {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
                 <p className="text-sm text-destructive mt-2">
-                  Au moins 6 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/6)
+                  Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
                 </p>
               )}
             </div>
@@ -1093,8 +1203,8 @@ export default function AdminQuotes() {
                 createNewQuoteMutation.isPending || 
                 createClientMutation.isPending ||
                 (isNewClient ? (!newClientEmail || !newClientFirstName || !newClientLastName) : !newQuoteClientId) ||
-                !newQuoteServiceId ||
-                quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 6
+                selectedServices.length === 0 ||
+                quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
               }
               data-testid="button-save-new-quote"
             >

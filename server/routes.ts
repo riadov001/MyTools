@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/quotes", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { mediaFiles, wheelCount, diameter, priceExcludingTax, taxRate, taxAmount, productDetails, quoteAmount, ...quoteData } = req.body;
+      const { mediaFiles, wheelCount, diameter, priceExcludingTax, taxRate, taxAmount, productDetails, quoteAmount, services, ...quoteData } = req.body;
       
       // Validate minimum 6 images requirement
       if (!mediaFiles || !Array.isArray(mediaFiles)) {
@@ -148,9 +148,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const imageCount = mediaFiles.filter((f: any) => f.type.startsWith('image/')).length;
-      if (imageCount < 6) {
+      if (imageCount < 3) {
         return res.status(400).json({ 
-          message: `Au moins 6 images sont requises (${imageCount}/6 fournis)` 
+          message: `Au moins 3 images sont requises (${imageCount}/3 fournis)` 
         });
       }
       
@@ -175,6 +175,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fileType: file.type.startsWith('image/') ? 'image' : 'video',
           fileName: file.name,
         });
+      }
+      
+      // Create quote items if services array is provided
+      if (services && Array.isArray(services) && services.length > 0) {
+        for (const service of services) {
+          const quantity = parseFloat(service.quantity || 1);
+          const unitPrice = parseFloat(service.unitPrice || 0);
+          const totalHT = quantity * unitPrice;
+          const taxRateDecimal = parseFloat(taxRate || 0);
+          const taxAmountItem = (totalHT * taxRateDecimal) / 100;
+          const totalTTC = totalHT + taxAmountItem;
+          
+          await storage.createQuoteItem({
+            quoteId: quote.id,
+            description: service.serviceName,
+            quantity: quantity.toString(),
+            unitPriceExcludingTax: unitPrice.toString(),
+            totalExcludingTax: totalHT.toString(),
+            taxRate: taxRateDecimal.toString(),
+            taxAmount: taxAmountItem.toString(),
+            totalIncludingTax: totalTTC.toString(),
+          });
+        }
       }
       
       // Create notification for client
@@ -325,9 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const imageCount = mediaFiles.filter((f: any) => f.type.startsWith('image/')).length;
-      if (imageCount < 6) {
+      if (imageCount < 3) {
         return res.status(400).json({ 
-          message: `Au moins 6 images sont requises (${imageCount}/6 fournis)` 
+          message: `Au moins 3 images sont requises (${imageCount}/3 fournis)` 
         });
       }
       
