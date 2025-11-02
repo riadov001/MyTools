@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,11 +25,11 @@ export default function AdminUsers() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"client" | "admin">("client");
+  const [newUserRole, setNewUserRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
 
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
-  const [editRole, setEditRole] = useState<"client" | "admin">("client");
+  const [editRole, setEditRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -50,7 +50,7 @@ export default function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (data: { email: string; firstName?: string; lastName?: string; role?: "client" | "admin" }) => {
+    mutationFn: async (data: { email: string; firstName?: string; lastName?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
       return apiRequest("POST", "/api/admin/users", data);
     },
     onSuccess: () => {
@@ -75,7 +75,7 @@ export default function AdminUsers() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (data: { id: string; firstName?: string; lastName?: string; role?: "client" | "admin" }) => {
+    mutationFn: async (data: { id: string; firstName?: string; lastName?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
       return apiRequest("PATCH", `/api/admin/users/${data.id}`, {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -199,7 +199,7 @@ export default function AdminUsers() {
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <p className="font-semibold">{user.firstName} {user.lastName}</p>
                       <Badge variant={user.role === "admin" ? "default" : "secondary"} data-testid={`badge-role-${user.id}`}>
-                        {user.role === "admin" ? "Admin" : "Client"}
+                        {user.role === "admin" ? "Admin" : user.role === "employe" ? "Employé" : user.role === "client_professionnel" ? "Client Pro" : "Client"}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -241,6 +241,9 @@ export default function AdminUsers() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Créer un Utilisateur</DialogTitle>
+            <DialogDescription>
+              Remplissez les informations pour créer un nouveau compte utilisateur.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -281,12 +284,14 @@ export default function AdminUsers() {
             </div>
             <div>
               <Label htmlFor="new-user-role">Rôle</Label>
-              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as "client" | "admin")}>
+              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as "client" | "client_professionnel" | "employe" | "admin")}>
                 <SelectTrigger className="mt-2" data-testid="select-new-user-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="client_professionnel">Client Professionnel</SelectItem>
+                  <SelectItem value="employe">Employé</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -321,6 +326,9 @@ export default function AdminUsers() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier l'Utilisateur</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de l'utilisateur.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -349,12 +357,14 @@ export default function AdminUsers() {
             </div>
             <div>
               <Label htmlFor="edit-user-role">Rôle</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as "client" | "admin")}>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as "client" | "client_professionnel" | "employe" | "admin")}>
                 <SelectTrigger className="mt-2" data-testid="select-edit-user-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="client_professionnel">Client Professionnel</SelectItem>
+                  <SelectItem value="employe">Employé</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
