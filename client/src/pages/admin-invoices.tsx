@@ -268,7 +268,32 @@ export default function AdminInvoices() {
   };
 
   const handleCreateDirectInvoice = async () => {
-    if (!selectedClientId || selectedServices.length === 0 || invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3) {
+    // Validation with user feedback
+    if (!selectedClientId) {
+      toast({
+        title: "Client requis",
+        description: "Veuillez sélectionner un client",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedServices.length === 0) {
+      toast({
+        title: "Services requis",
+        description: "Veuillez ajouter au moins un service",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const imageCount = invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length;
+    if (imageCount < 3) {
+      toast({
+        title: "Images requises",
+        description: `Au moins 3 images sont requises (${imageCount}/3 fournies)`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -293,7 +318,7 @@ export default function AdminInvoices() {
       taxAmount: calculateTaxAmount().toFixed(2),
       productDetails: invoiceProductDetails || null,
       notes: invoiceNotes || null,
-      dueDate: invoiceDueDate || null,
+      dueDate: invoiceDueDate ? new Date(invoiceDueDate) : undefined,
       status: "pending",
       invoiceItems,
       mediaFiles: invoiceMediaFiles,
