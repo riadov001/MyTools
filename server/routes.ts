@@ -356,14 +356,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       
-      // Get quote to determine payment method and copy details
-      const quote = await storage.getQuote(validatedData.quoteId);
-      if (!quote) {
-        return res.status(404).json({ message: "Quote not found" });
+      // Check if this is a quote-based invoice or direct invoice
+      let quote = null;
+      let paymentType = validatedData.paymentMethod;
+      let wheelCount = validatedData.wheelCount || null;
+      let diameter = validatedData.diameter || null;
+      let priceExcludingTax = validatedData.priceExcludingTax || "0";
+      let taxRate = validatedData.taxRate || 20;
+      let taxAmount = validatedData.taxAmount || "0";
+      let productDetails = validatedData.productDetails || null;
+      
+      if (validatedData.quoteId) {
+        // Get quote to copy details
+        quote = await storage.getQuote(validatedData.quoteId);
+        if (!quote) {
+          return res.status(404).json({ message: "Quote not found" });
+        }
+        // Copy quote details
+        paymentType = quote.paymentMethod;
+        wheelCount = quote.wheelCount;
+        diameter = quote.diameter;
+        priceExcludingTax = quote.priceExcludingTax;
+        taxRate = quote.taxRate;
+        taxAmount = quote.taxAmount;
+        productDetails = quote.productDetails;
       }
       
       // Atomically get next invoice number (handles initialization and increment)
-      const paymentType = quote.paymentMethod;
       const counter = await storage.incrementInvoiceCounter(paymentType);
       
       // Generate invoice number: MY-INV-ESP00000001, MY-INV-VIR00000001, or MY-INV-CBL00000001
@@ -376,22 +395,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
       const invoiceNumber = `${prefix}${paddedNumber}`;
       
-      // Create invoice with generated number and copy details from quote
+      // Create invoice with generated number
       const invoice = await storage.createInvoice({
+        quoteId: validatedData.quoteId || null,
         clientId: validatedData.clientId,
-        paymentMethod: validatedData.paymentMethod,
+        paymentMethod: paymentType,
         amount: validatedData.amount,
         status: validatedData.status || "pending",
         notes: validatedData.notes,
         dueDate: validatedData.dueDate,
         invoiceNumber,
-        wheelCount: quote.wheelCount,
-        diameter: quote.diameter,
-        priceExcludingTax: quote.priceExcludingTax,
-        taxRate: quote.taxRate,
-        taxAmount: quote.taxAmount,
-        productDetails: quote.productDetails,
-      });
+        wheelCount,
+        diameter,
+        priceExcludingTax,
+        taxRate,
+        taxAmount,
+        productDetails,
+      } as any);
       
       // Create media entries
       for (const file of mediaFiles) {
@@ -481,7 +501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taxAmount: validatedData.taxAmount,
         productDetails: validatedData.productDetails,
         invoiceNumber,
-      });
+      } as any);
       
       // Create invoice items
       for (const item of invoiceItems) {
@@ -711,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get related data
       const items = await storage.getInvoiceItems(id);
       const client = await storage.getUser(invoice.clientId);
-      const quote = await storage.getQuote(invoice.quoteId);
+      const quote = invoice.quoteId ? await storage.getQuote(invoice.quoteId) : null;
 
       // Return all data for client-side PDF generation
       res.json({ invoice, items, client, quote });

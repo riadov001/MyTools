@@ -18,7 +18,7 @@ export default function Services() {
   const { isAuthenticated, isLoading } = useAuth();
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [requestDetails, setRequestDetails] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "other">("other");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "wire_transfer" | "card">("wire_transfer");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -40,7 +40,7 @@ export default function Services() {
   });
 
   const requestQuoteMutation = useMutation({
-    mutationFn: async (data: { serviceId: string; paymentMethod: "cash" | "other"; requestDetails: any }) => {
+    mutationFn: async (data: { serviceId: string; paymentMethod: "cash" | "wire_transfer" | "card"; requestDetails: any }) => {
       return apiRequest("POST", "/api/quotes", data);
     },
     onSuccess: () => {
@@ -50,7 +50,7 @@ export default function Services() {
       });
       setSelectedService(null);
       setRequestDetails("");
-      setPaymentMethod("other");
+      setPaymentMethod("wire_transfer");
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
     },
     onError: (error: Error) => {
@@ -160,13 +160,14 @@ export default function Services() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="payment-method">Moyen de Paiement</Label>
-              <Select value={paymentMethod} onValueChange={(value: "cash" | "other") => setPaymentMethod(value)}>
+              <Select value={paymentMethod} onValueChange={(value: "cash" | "wire_transfer" | "card") => setPaymentMethod(value)}>
                 <SelectTrigger id="payment-method" className="mt-2" data-testid="select-payment-method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="other">Autres Moyens</SelectItem>
+                  <SelectItem value="wire_transfer">Virement</SelectItem>
+                  <SelectItem value="card">Carte bleue</SelectItem>
                 </SelectContent>
               </Select>
             </div>

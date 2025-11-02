@@ -52,7 +52,7 @@ export default function AdminQuotes() {
     quantity: string;
     unitPrice: string;
   }>>([]);
-  const [newQuotePaymentMethod, setNewQuotePaymentMethod] = useState<"cash" | "other">("other");
+  const [newQuotePaymentMethod, setNewQuotePaymentMethod] = useState<"cash" | "wire_transfer" | "card">("wire_transfer");
   const [newQuoteDetails, setNewQuoteDetails] = useState("");
   const [newQuoteWheelCount, setNewQuoteWheelCount] = useState<string>("4");
   const [newQuoteDiameter, setNewQuoteDiameter] = useState("");
@@ -313,7 +313,7 @@ export default function AdminQuotes() {
       setNewQuoteClientId("");
       setSelectedServiceId("");
       setSelectedServices([]);
-      setNewQuotePaymentMethod("other");
+      setNewQuotePaymentMethod("wire_transfer");
       setNewQuoteDetails("");
       setNewQuoteWheelCount("4");
       setNewQuoteDiameter("");
@@ -1075,13 +1075,14 @@ export default function AdminQuotes() {
             </div>
             <div>
               <Label htmlFor="new-quote-payment-method">Moyen de paiement</Label>
-              <Select value={newQuotePaymentMethod} onValueChange={(v) => setNewQuotePaymentMethod(v as "cash" | "other")}>
+              <Select value={newQuotePaymentMethod} onValueChange={(v) => setNewQuotePaymentMethod(v as "cash" | "wire_transfer" | "card")}>
                 <SelectTrigger className="mt-2" data-testid="select-new-quote-payment-method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
+                  <SelectItem value="wire_transfer">Virement</SelectItem>
+                  <SelectItem value="card">Carte bleue</SelectItem>
                 </SelectContent>
               </Select>
             </div>
