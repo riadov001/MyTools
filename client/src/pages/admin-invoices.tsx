@@ -170,8 +170,9 @@ export default function AdminInvoices() {
   };
 
   const calculateTotalHT = () => {
+    const wheelMultiplier = parseInt(invoiceWheelCount) || 1;
     return selectedServices.reduce((total, service) => {
-      return total + (parseFloat(service.quantity) * parseFloat(service.unitPrice));
+      return total + (parseFloat(service.quantity) * parseFloat(service.unitPrice) * wheelMultiplier);
     }, 0);
   };
 
@@ -543,14 +544,14 @@ export default function AdminInvoices() {
       </Dialog>
 
       <Dialog open={createDirectInvoiceDialog} onOpenChange={setCreateDirectInvoiceDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Créer une Nouvelle Facture</DialogTitle>
             <DialogDescription>
               Créez une facture directement sans passer par un devis.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-4 overflow-y-auto pr-2 flex-1">
             <div>
               <Label htmlFor="direct-invoice-client">Client</Label>
               <Select value={selectedClientId} onValueChange={setSelectedClientId}>
@@ -595,46 +596,67 @@ export default function AdminInvoices() {
               {selectedServices.length > 0 && (
                 <div className="border rounded-md p-3 space-y-2">
                   <p className="text-sm font-medium">Services ajoutés:</p>
-                  {selectedServices.map((service, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{service.serviceName}</p>
+                  {selectedServices.map((service, index) => {
+                    const wheelMultiplier = parseInt(invoiceWheelCount) || 1;
+                    const subtotal = parseFloat(service.quantity) * parseFloat(service.unitPrice);
+                    const totalWithWheels = subtotal * wheelMultiplier;
+                    
+                    return (
+                      <div key={index} className="space-y-2 p-2 bg-muted rounded-md">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{service.serviceName}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removeServiceFromInvoice(index)}
+                            className="h-8 w-8 shrink-0"
+                            data-testid={`button-remove-service-${index}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs shrink-0">Qté:</Label>
+                            <Input
+                              type="number"
+                              step="1"
+                              min="1"
+                              placeholder="Qté"
+                              value={service.quantity}
+                              onChange={(e) => updateServiceQuantity(index, e.target.value)}
+                              className="w-16 h-8"
+                              data-testid={`input-service-quantity-${index}`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs shrink-0">Prix/u:</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="Prix"
+                              value={service.unitPrice}
+                              onChange={(e) => updateServicePrice(index, e.target.value)}
+                              className="w-24 h-8"
+                              data-testid={`input-service-price-${index}`}
+                            />
+                          </div>
+                          <div className="flex-1 text-right sm:text-left">
+                            <p className="text-xs text-muted-foreground">
+                              {subtotal.toFixed(2)} € × {wheelMultiplier} jante{wheelMultiplier > 1 ? 's' : ''}
+                            </p>
+                            <p className="text-sm font-mono font-semibold">
+                              = {totalWithWheels.toFixed(2)} €
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <Input
-                        type="number"
-                        step="1"
-                        min="1"
-                        placeholder="Qté"
-                        value={service.quantity}
-                        onChange={(e) => updateServiceQuantity(index, e.target.value)}
-                        className="w-16 h-8"
-                        data-testid={`input-service-quantity-${index}`}
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Prix"
-                        value={service.unitPrice}
-                        onChange={(e) => updateServicePrice(index, e.target.value)}
-                        className="w-24 h-8"
-                        data-testid={`input-service-price-${index}`}
-                      />
-                      <span className="text-sm font-mono whitespace-nowrap">
-                        {(parseFloat(service.quantity) * parseFloat(service.unitPrice)).toFixed(2)} €
-                      </span>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeServiceFromInvoice(index)}
-                        className="h-8 w-8"
-                        data-testid={`button-remove-service-${index}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -771,13 +793,14 @@ export default function AdminInvoices() {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0 gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 setCreateDirectInvoiceDialog(false);
                 setInvoiceMediaFiles([]);
               }}
+              className="flex-1 sm:flex-none"
               data-testid="button-cancel-direct-invoice"
             >
               Annuler
@@ -790,6 +813,7 @@ export default function AdminInvoices() {
                 selectedServices.length === 0 ||
                 invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
               }
+              className="flex-1 sm:flex-none"
               data-testid="button-save-direct-invoice"
             >
               {createDirectInvoiceMutation.isPending ? "Création..." : "Créer Facture"}
