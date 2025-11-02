@@ -717,7 +717,7 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={!!invoiceDialog} onOpenChange={(open) => !open && setInvoiceDialog(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer une Facture</DialogTitle>
           </DialogHeader>
@@ -853,7 +853,7 @@ export default function AdminQuotes() {
       </Dialog>
 
       <Dialog open={createQuoteDialog} onOpenChange={setCreateQuoteDialog}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer un Nouveau Devis</DialogTitle>
           </DialogHeader>
@@ -875,7 +875,7 @@ export default function AdminQuotes() {
               <>
                 <div className="p-3 bg-muted rounded-md space-y-4">
                   <p className="text-sm font-semibold">Informations du nouveau client</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="new-client-firstname">Prénom *</Label>
                       <Input
@@ -940,7 +940,7 @@ export default function AdminQuotes() {
                           data-testid="input-new-client-company"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="new-client-siret">SIRET</Label>
                           <Input
@@ -1085,7 +1085,7 @@ export default function AdminQuotes() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="new-quote-wheel-count">Nombre de jantes</Label>
                 <Select value={newQuoteWheelCount} onValueChange={setNewQuoteWheelCount}>
