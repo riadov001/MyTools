@@ -37,16 +37,26 @@ export function ObjectUploader({
           method: "POST",
           headers: { "Content-Type": "application/json" },
         });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || "Échec de génération de l'URL");
+        }
+        
         const { uploadURL } = await response.json();
 
         // Upload file to object storage
-        await fetch(uploadURL, {
+        const uploadResponse = await fetch(uploadURL, {
           method: "PUT",
           body: file,
           headers: {
             "Content-Type": file.type,
           },
         });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Échec de l'upload du fichier (${uploadResponse.status})`);
+        }
 
         // Set ACL policy
         const aclResponse = await fetch("/api/quote-media", {
@@ -54,6 +64,12 @@ export function ObjectUploader({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mediaURL: uploadURL }),
         });
+        
+        if (!aclResponse.ok) {
+          const errorData = await aclResponse.json();
+          throw new Error(errorData.error || "Échec de configuration des permissions");
+        }
+        
         const { objectPath } = await aclResponse.json();
 
         newFiles.push({
@@ -74,8 +90,8 @@ export function ObjectUploader({
     } catch (error) {
       console.error("Upload error:", error);
       toast({
-        title: "Erreur",
-        description: "Échec du téléchargement",
+        title: "Erreur de téléchargement",
+        description: error instanceof Error ? error.message : "Échec du téléchargement",
         variant: "destructive",
       });
     } finally {

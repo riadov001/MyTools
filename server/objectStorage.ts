@@ -261,9 +261,11 @@ async function signObjectURL({
     }
   );
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Sidecar error response: ${errorText}`);
     throw new Error(
       `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
+        `error: ${errorText}, make sure you're running on Replit`
     );
   }
 
