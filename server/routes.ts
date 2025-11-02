@@ -376,9 +376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentType = quote.paymentMethod;
         wheelCount = quote.wheelCount;
         diameter = quote.diameter;
-        priceExcludingTax = quote.priceExcludingTax;
-        taxRate = quote.taxRate;
-        taxAmount = quote.taxAmount;
+        priceExcludingTax = quote.priceExcludingTax ?? "0";
+        taxRate = quote.taxRate ?? 20;
+        taxAmount = quote.taxAmount ?? "0";
         productDetails = quote.productDetails;
       }
       

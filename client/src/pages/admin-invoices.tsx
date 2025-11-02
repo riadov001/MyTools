@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Invoice, Quote } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -463,6 +463,9 @@ export default function AdminInvoices() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Créer une Nouvelle Facture depuis Devis</DialogTitle>
+            <DialogDescription>
+              Générez une facture à partir d'un devis approuvé existant.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
@@ -543,6 +546,9 @@ export default function AdminInvoices() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Créer une Nouvelle Facture</DialogTitle>
+            <DialogDescription>
+              Créez une facture directement sans passer par un devis.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
