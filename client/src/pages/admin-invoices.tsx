@@ -47,7 +47,7 @@ export default function AdminInvoices() {
     unitPrice: string;
   }>>([]);
   const [selectedServiceId, setSelectedServiceId] = useState("");
-  const [invoicePaymentMethod, setInvoicePaymentMethod] = useState<"cash" | "other">("other");
+  const [invoicePaymentMethod, setInvoicePaymentMethod] = useState<"cash" | "wire_transfer" | "card">("wire_transfer");
   const [invoiceWheelCount, setInvoiceWheelCount] = useState("4");
   const [invoiceDiameter, setInvoiceDiameter] = useState("");
   const [invoiceTaxRate, setInvoiceTaxRate] = useState("20");
@@ -462,9 +462,9 @@ export default function AdminInvoices() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Créer une Nouvelle Facture</DialogTitle>
+            <DialogTitle>Créer une Nouvelle Facture depuis Devis</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
               <Label htmlFor="quote-select">Sélectionner un Devis Approuvé</Label>
               <Select
@@ -635,13 +635,14 @@ export default function AdminInvoices() {
 
             <div>
               <Label htmlFor="direct-invoice-payment-method">Moyen de paiement</Label>
-              <Select value={invoicePaymentMethod} onValueChange={(v) => setInvoicePaymentMethod(v as "cash" | "other")}>
+              <Select value={invoicePaymentMethod} onValueChange={(v) => setInvoicePaymentMethod(v as "cash" | "wire_transfer" | "card")}>
                 <SelectTrigger className="mt-2" data-testid="select-direct-invoice-payment-method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
+                  <SelectItem value="wire_transfer">Virement</SelectItem>
+                  <SelectItem value="card">Carte bleue</SelectItem>
                 </SelectContent>
               </Select>
             </div>

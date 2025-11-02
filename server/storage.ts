@@ -89,9 +89,9 @@ export interface IStorage {
   markNotificationAsRead(id: string): Promise<void>;
 
   // Invoice counter operations
-  getInvoiceCounter(paymentType: "cash" | "other"): Promise<InvoiceCounter | undefined>;
+  getInvoiceCounter(paymentType: "cash" | "wire_transfer" | "card"): Promise<InvoiceCounter | undefined>;
   createInvoiceCounter(counter: InsertInvoiceCounter): Promise<InvoiceCounter>;
-  incrementInvoiceCounter(paymentType: "cash" | "other"): Promise<InvoiceCounter>;
+  incrementInvoiceCounter(paymentType: "cash" | "wire_transfer" | "card"): Promise<InvoiceCounter>;
 
   // Media operations
   createQuoteMedia(media: { quoteId: string; filePath: string; fileType: string; fileName?: string }): Promise<void>;
@@ -394,7 +394,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice counter operations
-  async getInvoiceCounter(paymentType: "cash" | "other"): Promise<InvoiceCounter | undefined> {
+  async getInvoiceCounter(paymentType: "cash" | "wire_transfer" | "card"): Promise<InvoiceCounter | undefined> {
     const [counter] = await db.select().from(invoiceCounters).where(eq(invoiceCounters.paymentType, paymentType));
     return counter;
   }
@@ -404,7 +404,7 @@ export class DatabaseStorage implements IStorage {
     return counter;
   }
 
-  async incrementInvoiceCounter(paymentType: "cash" | "other"): Promise<InvoiceCounter> {
+  async incrementInvoiceCounter(paymentType: "cash" | "wire_transfer" | "card"): Promise<InvoiceCounter> {
     // Atomic upsert and increment: handles both initialization and increment atomically
     const [counter] = await db
       .insert(invoiceCounters)

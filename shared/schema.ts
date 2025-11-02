@@ -65,7 +65,7 @@ export const quotes = pgTable("quotes", {
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
   status: varchar("status", { enum: ["pending", "approved", "rejected", "completed"] }).notNull().default("pending"),
-  paymentMethod: varchar("payment_method", { enum: ["cash", "other"] }).notNull().default("other"),
+  paymentMethod: varchar("payment_method", { enum: ["cash", "wire_transfer", "card"] }).notNull().default("wire_transfer"),
   requestDetails: jsonb("request_details"), // Custom form data from client
   quoteAmount: decimal("quote_amount", { precision: 10, scale: 2 }),
   wheelCount: integer("wheel_count"), // Number of wheels: 1, 2, 3, or 4
@@ -102,7 +102,7 @@ export const invoices = pgTable("invoices", {
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: varchar("payment_method", { enum: ["cash", "other"] }).notNull().default("other"), // Required for direct invoices
+  paymentMethod: varchar("payment_method", { enum: ["cash", "wire_transfer", "card"] }).notNull().default("wire_transfer"), // Required for direct invoices
   wheelCount: integer("wheel_count"), // Number of wheels: 1, 2, 3, or 4
   diameter: varchar("diameter", { length: 50 }), // Wheel diameter
   priceExcludingTax: decimal("price_excluding_tax", { precision: 10, scale: 2 }), // Prix HT
@@ -166,7 +166,7 @@ export const notifications = pgTable("notifications", {
 // Invoice counters for incremental numbering
 export const invoiceCounters = pgTable("invoice_counters", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  paymentType: varchar("payment_type", { enum: ["cash", "other"] }).notNull().unique(),
+  paymentType: varchar("payment_type", { enum: ["cash", "wire_transfer", "card"] }).notNull().unique(),
   currentNumber: integer("current_number").notNull().default(0),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -307,14 +307,14 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({ id: true, cre
 
 // Custom invoice schema with data transformations
 export const insertInvoiceSchema = createInsertSchema(invoices)
-  .omit({ id: true, createdAt: true, updatedAt: true })
+  .omit({ id: true, createdAt: true, updatedAt: true, invoiceNumber: true })
   .extend({
     amount: z.union([z.string(), z.number()]).transform(val => String(val)),
     dueDate: z.union([z.date(), z.string()]).transform(val => 
       typeof val === 'string' ? new Date(val) : val
     ).optional(),
     quoteId: z.string().nullable().optional(), // Optional for direct invoices
-    paymentMethod: z.enum(["cash", "other"]).default("other"), // Required for direct invoices
+    paymentMethod: z.enum(["cash", "wire_transfer", "card"]).default("wire_transfer"), // Required for direct invoices
     wheelCount: z.number().min(1).max(4).nullable().optional(),
     diameter: z.string().nullable().optional(),
     priceExcludingTax: z.string().nullable().optional(),

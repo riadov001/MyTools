@@ -363,17 +363,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Atomically get next invoice number (handles initialization and increment)
-      const paymentType = quote.paymentMethod === "cash" ? "cash" : "other";
+      const paymentType = quote.paymentMethod;
       const counter = await storage.incrementInvoiceCounter(paymentType);
       
-      // Generate invoice number: MY-INV-ESP00000001 or MY-INV-OTH00000001
-      const prefix = paymentType === "cash" ? "MY-INV-ESP" : "MY-INV-OTH";
+      // Generate invoice number: MY-INV-ESP00000001, MY-INV-VIR00000001, or MY-INV-CBL00000001
+      let prefix = "MY-INV-";
+      if (paymentType === "cash") prefix += "ESP";
+      else if (paymentType === "wire_transfer") prefix += "VIR";
+      else if (paymentType === "card") prefix += "CBL";
+      else prefix += "OTH";
+      
       const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
       const invoiceNumber = `${prefix}${paddedNumber}`;
       
       // Create invoice with generated number and copy details from quote
       const invoice = await storage.createInvoice({
-        ...validatedData,
+        clientId: validatedData.clientId,
+        paymentMethod: validatedData.paymentMethod,
+        amount: validatedData.amount,
+        status: validatedData.status || "pending",
+        notes: validatedData.notes,
+        dueDate: validatedData.dueDate,
         invoiceNumber,
         wheelCount: quote.wheelCount,
         diameter: quote.diameter,
@@ -443,17 +453,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       
       // Atomically get next invoice number (handles initialization and increment)
-      const paymentType = validatedData.paymentMethod === "cash" ? "cash" : "other";
+      const paymentType = validatedData.paymentMethod;
       const counter = await storage.incrementInvoiceCounter(paymentType);
       
-      // Generate invoice number: MY-INV-ESP00000001 or MY-INV-OTH00000001
-      const prefix = paymentType === "cash" ? "MY-INV-ESP" : "MY-INV-OTH";
+      // Generate invoice number: MY-INV-ESP00000001, MY-INV-VIR00000001, or MY-INV-CBL00000001
+      let prefix = "MY-INV-";
+      if (paymentType === "cash") prefix += "ESP";
+      else if (paymentType === "wire_transfer") prefix += "VIR";
+      else if (paymentType === "card") prefix += "CBL";
+      else prefix += "OTH";
+      
       const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
       const invoiceNumber = `${prefix}${paddedNumber}`;
       
       // Create invoice with generated number
       const invoice = await storage.createInvoice({
-        ...validatedData,
+        clientId: validatedData.clientId,
+        paymentMethod: validatedData.paymentMethod,
+        amount: validatedData.amount,
+        status: validatedData.status || "pending",
+        notes: validatedData.notes,
+        dueDate: validatedData.dueDate,
+        wheelCount: validatedData.wheelCount,
+        diameter: validatedData.diameter,
+        priceExcludingTax: validatedData.priceExcludingTax,
+        taxRate: validatedData.taxRate,
+        taxAmount: validatedData.taxAmount,
+        productDetails: validatedData.productDetails,
         invoiceNumber,
       });
       
