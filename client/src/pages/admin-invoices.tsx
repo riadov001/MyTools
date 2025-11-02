@@ -16,15 +16,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Download, Tags, Pencil } from "lucide-react";
+import { Plus, Download, Tags, Pencil, X } from "lucide-react";
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { LabelsPreview } from "@/components/labels-preview";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 export default function AdminInvoices() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [createDirectInvoiceDialog, setCreateDirectInvoiceDialog] = useState(false);
   const [labelsPreviewOpen, setLabelsPreviewOpen] = useState(false);
   const [selectedInvoiceForLabels, setSelectedInvoiceForLabels] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState({
@@ -35,6 +37,24 @@ export default function AdminInvoices() {
     notes: "",
     dueDate: "",
   });
+
+  // Direct invoice creation states
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Array<{
+    serviceId: string;
+    serviceName: string;
+    quantity: string;
+    unitPrice: string;
+  }>>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [invoicePaymentMethod, setInvoicePaymentMethod] = useState<"cash" | "other">("other");
+  const [invoiceWheelCount, setInvoiceWheelCount] = useState("4");
+  const [invoiceDiameter, setInvoiceDiameter] = useState("");
+  const [invoiceTaxRate, setInvoiceTaxRate] = useState("20");
+  const [invoiceProductDetails, setInvoiceProductDetails] = useState("");
+  const [invoiceNotes, setInvoiceNotes] = useState("");
+  const [invoiceDueDate, setInvoiceDueDate] = useState("");
+  const [invoiceMediaFiles, setInvoiceMediaFiles] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -62,6 +82,11 @@ export default function AdminInvoices() {
   const { data: services = [] } = useQuery<any[]>({
     queryKey: ["/api/services"],
     enabled: isAuthenticated,
+  });
+
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: isAuthenticated && isAdmin,
   });
 
   const approvedQuotes = quotes.filter((q) => q.status === "approved");
@@ -113,6 +138,51 @@ export default function AdminInvoices() {
     }
   };
 
+  // Functions for direct invoice creation
+  const addServiceToInvoice = () => {
+    if (!selectedServiceId) return;
+    const service = services.find(s => s.id === selectedServiceId);
+    if (!service) return;
+    
+    setSelectedServices([...selectedServices, {
+      serviceId: service.id,
+      serviceName: service.name,
+      quantity: "1",
+      unitPrice: service.basePrice || "0",
+    }]);
+    setSelectedServiceId("");
+  };
+
+  const updateServiceQuantity = (index: number, quantity: string) => {
+    const updated = [...selectedServices];
+    updated[index].quantity = quantity;
+    setSelectedServices(updated);
+  };
+
+  const updateServicePrice = (index: number, price: string) => {
+    const updated = [...selectedServices];
+    updated[index].unitPrice = price;
+    setSelectedServices(updated);
+  };
+
+  const removeServiceFromInvoice = (index: number) => {
+    setSelectedServices(selectedServices.filter((_, i) => i !== index));
+  };
+
+  const calculateTotalHT = () => {
+    return selectedServices.reduce((total, service) => {
+      return total + (parseFloat(service.quantity) * parseFloat(service.unitPrice));
+    }, 0);
+  };
+
+  const calculateTaxAmount = () => {
+    return (calculateTotalHT() * parseFloat(invoiceTaxRate)) / 100;
+  };
+
+  const calculateTotalTTC = () => {
+    return calculateTotalHT() + calculateTaxAmount();
+  };
+
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest("POST", "/api/admin/invoices", data);
@@ -131,6 +201,36 @@ export default function AdminInvoices() {
         notes: "",
         dueDate: "",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de la création de la facture",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createDirectInvoiceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/admin/invoices/direct", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Facture créée avec succès",
+      });
+      setCreateDirectInvoiceDialog(false);
+      setSelectedClientId("");
+      setSelectedServices([]);
+      setInvoiceMediaFiles([]);
+      setInvoiceNotes("");
+      setInvoiceDueDate("");
+      setInvoiceProductDetails("");
+      setInvoiceTaxRate("20");
+      setInvoiceWheelCount("4");
+      setInvoiceDiameter("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/invoices"] });
     },
     onError: (error: Error) => {
@@ -167,6 +267,39 @@ export default function AdminInvoices() {
     });
   };
 
+  const handleCreateDirectInvoice = async () => {
+    if (!selectedClientId || selectedServices.length === 0 || invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3) {
+      return;
+    }
+
+    const invoiceItems = selectedServices.map(service => ({
+      description: service.serviceName,
+      quantity: parseFloat(service.quantity),
+      unitPriceExcludingTax: parseFloat(service.unitPrice),
+      totalExcludingTax: parseFloat(service.quantity) * parseFloat(service.unitPrice),
+      taxRate: parseFloat(invoiceTaxRate),
+      taxAmount: (parseFloat(service.quantity) * parseFloat(service.unitPrice) * parseFloat(invoiceTaxRate)) / 100,
+      totalIncludingTax: parseFloat(service.quantity) * parseFloat(service.unitPrice) * (1 + parseFloat(invoiceTaxRate) / 100),
+    }));
+
+    createDirectInvoiceMutation.mutate({
+      clientId: selectedClientId,
+      paymentMethod: invoicePaymentMethod,
+      amount: calculateTotalTTC().toFixed(2),
+      wheelCount: parseInt(invoiceWheelCount),
+      diameter: invoiceDiameter || null,
+      priceExcludingTax: calculateTotalHT().toFixed(2),
+      taxRate: invoiceTaxRate,
+      taxAmount: calculateTaxAmount().toFixed(2),
+      productDetails: invoiceProductDetails || null,
+      notes: invoiceNotes || null,
+      dueDate: invoiceDueDate || null,
+      status: "pending",
+      invoiceItems,
+      mediaFiles: invoiceMediaFiles,
+    });
+  };
+
   if (isLoading || !isAdmin) {
     return (
       <div className="p-6 space-y-6">
@@ -179,13 +312,23 @@ export default function AdminInvoices() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-3xl font-bold" data-testid="text-admin-invoices-title">Gestion des Factures</h1>
-        <Button
-          onClick={() => setIsDialogOpen(true)}
-          data-testid="button-create-invoice"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Créer une Facture
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsDialogOpen(true)}
+            variant="outline"
+            data-testid="button-create-invoice-from-quote"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Depuis Devis
+          </Button>
+          <Button
+            onClick={() => setCreateDirectInvoiceDialog(true)}
+            data-testid="button-create-direct-invoice"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Créer une Facture
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -366,6 +509,258 @@ export default function AdminInvoices() {
               data-testid="button-save-invoice"
             >
               {createInvoiceMutation.isPending ? "Création..." : "Créer la Facture"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createDirectInvoiceDialog} onOpenChange={setCreateDirectInvoiceDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Créer une Nouvelle Facture</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div>
+              <Label htmlFor="direct-invoice-client">Client</Label>
+              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                <SelectTrigger className="mt-2" data-testid="select-direct-invoice-client">
+                  <SelectValue placeholder="Sélectionner un client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.filter(u => u.role === "client" || u.role === "client_professionnel").map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Services</Label>
+              <div className="flex gap-2">
+                <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                  <SelectTrigger className="flex-1" data-testid="select-service-to-add">
+                    <SelectValue placeholder="Sélectionner un service à ajouter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name} - {parseFloat(service.basePrice || "0").toFixed(2)} €
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  onClick={addServiceToInvoice}
+                  disabled={!selectedServiceId}
+                  data-testid="button-add-service"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {selectedServices.length > 0 && (
+                <div className="border rounded-md p-3 space-y-2">
+                  <p className="text-sm font-medium">Services ajoutés:</p>
+                  {selectedServices.map((service, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{service.serviceName}</p>
+                      </div>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Qté"
+                        value={service.quantity}
+                        onChange={(e) => updateServiceQuantity(index, e.target.value)}
+                        className="w-16 h-8"
+                        data-testid={`input-service-quantity-${index}`}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Prix"
+                        value={service.unitPrice}
+                        onChange={(e) => updateServicePrice(index, e.target.value)}
+                        className="w-24 h-8"
+                        data-testid={`input-service-price-${index}`}
+                      />
+                      <span className="text-sm font-mono whitespace-nowrap">
+                        {(parseFloat(service.quantity) * parseFloat(service.unitPrice)).toFixed(2)} €
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeServiceFromInvoice(index)}
+                        className="h-8 w-8"
+                        data-testid={`button-remove-service-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="direct-invoice-payment-method">Moyen de paiement</Label>
+              <Select value={invoicePaymentMethod} onValueChange={(v) => setInvoicePaymentMethod(v as "cash" | "other")}>
+                <SelectTrigger className="mt-2" data-testid="select-direct-invoice-payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="other">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="direct-invoice-wheel-count">Nombre de jantes</Label>
+                <Select value={invoiceWheelCount} onValueChange={setInvoiceWheelCount}>
+                  <SelectTrigger className="mt-2" data-testid="select-direct-invoice-wheel-count">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 jante</SelectItem>
+                    <SelectItem value="2">2 jantes</SelectItem>
+                    <SelectItem value="3">3 jantes</SelectItem>
+                    <SelectItem value="4">4 jantes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="direct-invoice-diameter">Diamètre</Label>
+                <Input
+                  id="direct-invoice-diameter"
+                  type="text"
+                  placeholder="Ex: 17 pouces"
+                  value={invoiceDiameter}
+                  onChange={(e) => setInvoiceDiameter(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-direct-invoice-diameter"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="direct-invoice-tax-rate">TVA (%)</Label>
+              <Input
+                id="direct-invoice-tax-rate"
+                type="number"
+                step="0.01"
+                placeholder="20"
+                value={invoiceTaxRate}
+                onChange={(e) => setInvoiceTaxRate(e.target.value)}
+                className="mt-2"
+                data-testid="input-direct-invoice-tax-rate"
+              />
+            </div>
+
+            {selectedServices.length > 0 && (
+              <div className="p-4 bg-muted rounded-md space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span>Total HT:</span>
+                  <span className="font-mono">{calculateTotalHT().toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span>TVA ({invoiceTaxRate}%):</span>
+                  <span className="font-mono">{calculateTaxAmount().toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-base pt-2 border-t border-border">
+                  <span>Total TTC:</span>
+                  <span className="font-mono text-primary">{calculateTotalTTC().toFixed(2)} €</span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="direct-invoice-product-details">Détails du produit</Label>
+              <Textarea
+                id="direct-invoice-product-details"
+                placeholder="Description du produit, références, caractéristiques..."
+                value={invoiceProductDetails}
+                onChange={(e) => setInvoiceProductDetails(e.target.value)}
+                className="mt-2"
+                rows={3}
+                data-testid="textarea-direct-invoice-product-details"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="direct-invoice-due-date">Date d'Échéance</Label>
+              <Input
+                id="direct-invoice-due-date"
+                type="date"
+                value={invoiceDueDate}
+                onChange={(e) => setInvoiceDueDate(e.target.value)}
+                className="mt-2"
+                data-testid="input-direct-invoice-due-date"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="direct-invoice-notes">Notes additionnelles (optionnel)</Label>
+              <Textarea
+                id="direct-invoice-notes"
+                placeholder="Notes complémentaires..."
+                value={invoiceNotes}
+                onChange={(e) => setInvoiceNotes(e.target.value)}
+                className="mt-2"
+                rows={3}
+                data-testid="textarea-direct-invoice-notes"
+              />
+            </div>
+
+            <div>
+              <Label>Images et Vidéos</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Minimum 3 images requises. Vidéos optionnelles.
+              </p>
+              <ObjectUploader
+                onUploadComplete={(files) => setInvoiceMediaFiles(files)}
+                accept={{
+                  'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+                  'video/*': ['.mp4', '.webm', '.mov']
+                }}
+                data-testid="uploader-direct-invoice-media"
+              />
+              {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
+                <p className="text-sm text-destructive mt-2">
+                  Au moins 3 images sont requises ({invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateDirectInvoiceDialog(false);
+                setInvoiceMediaFiles([]);
+              }}
+              data-testid="button-cancel-direct-invoice"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreateDirectInvoice}
+              disabled={
+                createDirectInvoiceMutation.isPending ||
+                !selectedClientId ||
+                selectedServices.length === 0 ||
+                invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
+              }
+              data-testid="button-save-direct-invoice"
+            >
+              {createDirectInvoiceMutation.isPending ? "Création..." : "Créer Facture"}
             </Button>
           </DialogFooter>
         </DialogContent>

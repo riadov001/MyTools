@@ -418,6 +418,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create invoice directly (without quote)
+  app.post("/api/admin/invoices/direct", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { mediaFiles, invoiceItems, ...invoiceData } = req.body;
+      
+      // Validate minimum 3 images requirement
+      if (!mediaFiles || !Array.isArray(mediaFiles)) {
+        return res.status(400).json({ message: "Media files are required" });
+      }
+      
+      const imageCount = mediaFiles.filter((f: any) => f.type.startsWith('image/')).length;
+      if (imageCount < 3) {
+        return res.status(400).json({ 
+          message: `Au moins 3 images sont requises (${imageCount}/3 fournis)` 
+        });
+      }
+
+      // Validate invoice items
+      if (!invoiceItems || !Array.isArray(invoiceItems) || invoiceItems.length === 0) {
+        return res.status(400).json({ message: "Invoice items are required" });
+      }
+      
+      const validatedData = insertInvoiceSchema.parse(invoiceData);
+      
+      // Atomically get next invoice number (handles initialization and increment)
+      const paymentType = validatedData.paymentMethod === "cash" ? "cash" : "other";
+      const counter = await storage.incrementInvoiceCounter(paymentType);
+      
+      // Generate invoice number: MY-INV-ESP00000001 or MY-INV-OTH00000001
+      const prefix = paymentType === "cash" ? "MY-INV-ESP" : "MY-INV-OTH";
+      const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
+      const invoiceNumber = `${prefix}${paddedNumber}`;
+      
+      // Create invoice with generated number
+      const invoice = await storage.createInvoice({
+        ...validatedData,
+        invoiceNumber,
+      });
+      
+      // Create invoice items
+      for (const item of invoiceItems) {
+        await storage.createInvoiceItem({
+          ...item,
+          invoiceId: invoice.id,
+        });
+      }
+      
+      // Create media entries
+      for (const file of mediaFiles) {
+        await storage.createInvoiceMedia({
+          invoiceId: invoice.id,
+          filePath: file.key,
+          fileType: file.type.startsWith('image/') ? 'image' : 'video',
+          fileName: file.name,
+        });
+      }
+
+      // Create notification for client
+      await storage.createNotification({
+        userId: invoice.clientId,
+        type: "invoice",
+        title: "New Invoice",
+        message: `A new invoice has been generated`,
+        relatedId: invoice.id,
+      });
+
+      // Send WebSocket notification
+      const client = wsClients.get(invoice.clientId);
+      if (client && client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: "invoice_created",
+          invoiceId: invoice.id,
+        }));
+      }
+      
+      res.json(invoice);
+    } catch (error: any) {
+      console.error("Error creating direct invoice:", error);
+      res.status(400).json({ message: error.message || "Failed to create direct invoice" });
+    }
+  });
+
   // Invoice Items routes
   app.get("/api/admin/invoices/:id/items", isAuthenticated, isAdmin, async (req, res) => {
     try {
