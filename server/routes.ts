@@ -546,6 +546,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single invoice by ID
+  app.get("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  // Update invoice
+  app.patch("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.updateInvoice(id, req.body);
+      res.json(invoice);
+    } catch (error: any) {
+      console.error("Error updating invoice:", error);
+      res.status(400).json({ message: error.message || "Failed to update invoice" });
+    }
+  });
+
   // Invoice Items routes
   app.get("/api/admin/invoices/:id/items", isAuthenticated, isAdmin, async (req, res) => {
     try {
