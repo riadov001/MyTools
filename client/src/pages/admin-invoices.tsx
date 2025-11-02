@@ -298,15 +298,22 @@ export default function AdminInvoices() {
       return;
     }
 
-    const invoiceItems = selectedServices.map(service => ({
-      description: service.serviceName,
-      quantity: parseFloat(service.quantity),
-      unitPriceExcludingTax: parseFloat(service.unitPrice),
-      totalExcludingTax: parseFloat(service.quantity) * parseFloat(service.unitPrice),
-      taxRate: parseFloat(invoiceTaxRate),
-      taxAmount: (parseFloat(service.quantity) * parseFloat(service.unitPrice) * parseFloat(invoiceTaxRate)) / 100,
-      totalIncludingTax: parseFloat(service.quantity) * parseFloat(service.unitPrice) * (1 + parseFloat(invoiceTaxRate) / 100),
-    }));
+    const wheelMultiplier = parseInt(invoiceWheelCount) || 1;
+    const invoiceItems = selectedServices.map(service => {
+      const baseTotal = parseFloat(service.quantity) * parseFloat(service.unitPrice);
+      const totalWithWheels = baseTotal * wheelMultiplier;
+      const taxAmount = (totalWithWheels * parseFloat(invoiceTaxRate)) / 100;
+      
+      return {
+        description: service.serviceName,
+        quantity: parseFloat(service.quantity),
+        unitPriceExcludingTax: parseFloat(service.unitPrice),
+        totalExcludingTax: totalWithWheels,
+        taxRate: parseFloat(invoiceTaxRate),
+        taxAmount: taxAmount,
+        totalIncludingTax: totalWithWheels + taxAmount,
+      };
+    });
 
     createDirectInvoiceMutation.mutate({
       clientId: selectedClientId,

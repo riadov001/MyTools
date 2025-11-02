@@ -317,15 +317,24 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   
   if (invoiceItems && invoiceItems.length > 0) {
     // Use invoice items from database
-    tableData = invoiceItems.map(item => ({
-      description: item.description || '',
-      date: billingDate,
-      quantity: item.quantity?.toString() || '1',
-      unit: 'pce',
-      unitPrice: parseFloat(item.unitPriceExcludingTax || '0').toFixed(2),
-      vat: `${parseFloat(item.taxRate || '0').toFixed(0)} %`,
-      amount: parseFloat(item.totalExcludingTax || '0').toFixed(2),
-    }));
+    tableData = invoiceItems.map(item => {
+      let description = item.description || '';
+      
+      // Add wheel count info to description if available
+      if (invoice.wheelCount && invoice.wheelCount > 1) {
+        description = `${description} (× ${invoice.wheelCount} jantes)`;
+      }
+      
+      return {
+        description: description,
+        date: billingDate,
+        quantity: item.quantity?.toString() || '1',
+        unit: 'pce',
+        unitPrice: parseFloat(item.unitPriceExcludingTax || '0').toFixed(2),
+        vat: `${parseFloat(item.taxRate || '0').toFixed(0)} %`,
+        amount: parseFloat(item.totalExcludingTax || '0').toFixed(2),
+      };
+    });
   } else {
     // Legacy: Create single item from invoice data
     let description = serviceInfo?.description || serviceInfo?.name || 'Service automobile';
