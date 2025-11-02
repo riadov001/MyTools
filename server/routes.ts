@@ -565,19 +565,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      console.log("Update invoice request body:", JSON.stringify(req.body, null, 2));
       const updateData = { ...req.body };
       
-      // Convert date strings to Date objects
-      if (updateData.dueDate && typeof updateData.dueDate === 'string') {
-        updateData.dueDate = new Date(updateData.dueDate);
-      }
-      if (updateData.createdAt && typeof updateData.createdAt === 'string') {
-        updateData.createdAt = new Date(updateData.createdAt);
-      }
-      if (updateData.updatedAt && typeof updateData.updatedAt === 'string') {
-        updateData.updatedAt = new Date(updateData.updatedAt);
-      }
+      // Convert date strings to Date objects for all timestamp fields
+      Object.keys(updateData).forEach(key => {
+        const value = updateData[key];
+        if (value && typeof value === 'string') {
+          // Check if it looks like an ISO date string
+          const dateRegex = /^\d{4}-\d{2}-\d{2}/;
+          if (dateRegex.test(value)) {
+            const parsedDate = new Date(value);
+            if (!isNaN(parsedDate.getTime())) {
+              updateData[key] = parsedDate;
+            }
+          }
+        }
+      });
       
+      console.log("Update invoice processed data:", JSON.stringify(updateData, null, 2));
       const invoice = await storage.updateInvoice(id, updateData);
       res.json(invoice);
     } catch (error: any) {
