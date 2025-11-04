@@ -70,65 +70,56 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo
+  // Add logo (LEFT side)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth - 60, 10, 40, 20);
+    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
   } catch (error) {
     console.error('Failed to load logo:', error);
   }
   
-  // Header with logo space
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MY JANTES', 20, 25);
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('SPÉCIALISTE JANTES ET PNEUS', 20, 32);
-  
-  // Document title
+  // Document title (CENTER)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   const quoteNumber = `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
-  doc.text(`DEVIS - ${quoteNumber}`, 20, 50);
+  doc.text(`DEVIS - ${quoteNumber}`, pageWidth / 2, 20, { align: 'center' });
   
-  // Dates and operation type
-  doc.setFontSize(10);
+  // Dates and operation type (RIGHT side)
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(quote.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = quote.validUntil ? new Date(quote.validUntil).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date de facturation: ${billingDate}`, 20, 60);
-  doc.text(`Échéance: ${dueDate}`, 20, 66);
-  doc.text('Type d\'opération: Opération interne', 20, 72);
+  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 34, { align: 'right' });
+  doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
   
-  // Company info
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 90);
-  
+  // Company info (LEFT side, below logo)
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 96);
-  doc.text(COMPANY_INFO.city, 20, 102);
-  doc.text(COMPANY_INFO.phone, 20, 108);
-  doc.text(COMPANY_INFO.email, 20, 114);
-  doc.text(COMPANY_INFO.website, 20, 120);
+  doc.setFont('helvetica', 'bold');
+  doc.text(COMPANY_INFO.name, 20, 50);
   
-  // Client info
-  doc.setFontSize(12);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(COMPANY_INFO.address, 20, 56);
+  doc.text(COMPANY_INFO.city, 20, 61);
+  doc.text(COMPANY_INFO.phone, 20, 66);
+  doc.text(COMPANY_INFO.email, 20, 71);
+  doc.text(COMPANY_INFO.website, 20, 76);
+  
+  // Client info (RIGHT side)
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   const clientName = clientInfo?.name || clientInfo?.email?.split('@')[0] || 'Client';
-  doc.text(clientName.toUpperCase(), 20, 138);
+  doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   if (clientInfo?.email) {
-    doc.text(clientInfo.email, 20, 144);
+    doc.text(clientInfo.email, pageWidth - 20, 56, { align: 'right' });
   }
   if (clientInfo?.address) {
-    doc.text(clientInfo.address, 20, 150);
+    doc.text(clientInfo.address, pageWidth - 20, 61, { align: 'right' });
   }
   
   // Table - Use quote items if available, otherwise fall back to legacy single item
@@ -178,8 +169,8 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   }
   
   autoTable(doc, {
-    startY: 165,
-    head: [['Description', 'Date', 'Qte', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
+    startY: 90,
+    head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
     body: tableData.map(item => [
       item.description,
       item.date,
@@ -236,13 +227,29 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   // Payment methods
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 30);
+  doc.text('Moyens de paiement:', 20, finalY + 20);
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
+  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
+  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
+  doc.text('30 jours', 20, finalY + 45);
+  
+  // Payment conditions
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Conditions de paiement:', 20, finalY + 57);
+  
+  // Footer
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.text(`${COMPANY_INFO.bankName}`, 20, finalY + 38);
-  doc.text(`Banque: SOCIETE GENERALE de la convention - 62800 Lievin`, 20, finalY + 44);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift} - Numéro de TVA: ${COMPANY_INFO.tva}`, 20, finalY + 50);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 56);
+  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
   doc.save(`devis-${quoteNumber}.pdf`);
@@ -252,64 +259,55 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo
+  // Add logo (LEFT side)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth - 60, 10, 40, 20);
+    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
   } catch (error) {
     console.error('Failed to load logo:', error);
   }
   
-  // Header with logo space
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MY JANTES', 20, 25);
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('SPÉCIALISTE JANTES ET PNEUS', 20, 32);
-  
-  // Document title
+  // Document title (CENTER)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 50);
+  doc.text(`FACTURE - ${invoice.invoiceNumber}`, pageWidth / 2, 20, { align: 'center' });
   
-  // Dates and operation type
-  doc.setFontSize(10);
+  // Dates and operation type (RIGHT side)
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(invoice.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date de facturation: ${billingDate}`, 20, 60);
-  doc.text(`Échéance: ${dueDate}`, 20, 66);
-  doc.text('Type d\'opération: Opération interne', 20, 72);
+  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 34, { align: 'right' });
+  doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
   
-  // Company info
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 90);
-  
+  // Company info (LEFT side, below logo)
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 96);
-  doc.text(COMPANY_INFO.city, 20, 102);
-  doc.text(COMPANY_INFO.phone, 20, 108);
-  doc.text(COMPANY_INFO.email, 20, 114);
-  doc.text(COMPANY_INFO.website, 20, 120);
+  doc.setFont('helvetica', 'bold');
+  doc.text(COMPANY_INFO.name, 20, 50);
   
-  // Client info
-  doc.setFontSize(12);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(COMPANY_INFO.address, 20, 56);
+  doc.text(COMPANY_INFO.city, 20, 61);
+  doc.text(COMPANY_INFO.phone, 20, 66);
+  doc.text(COMPANY_INFO.email, 20, 71);
+  doc.text(COMPANY_INFO.website, 20, 76);
+  
+  // Client info (RIGHT side)
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   const clientName = clientInfo?.name || clientInfo?.email?.split('@')[0] || 'Client';
-  doc.text(clientName.toUpperCase(), 20, 138);
+  doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   if (clientInfo?.email) {
-    doc.text(clientInfo.email, 20, 144);
+    doc.text(clientInfo.email, pageWidth - 20, 56, { align: 'right' });
   }
   if (clientInfo?.address) {
-    doc.text(clientInfo.address, 20, 150);
+    doc.text(clientInfo.address, pageWidth - 20, 61, { align: 'right' });
   }
   
   // Table - Use invoice items if available, otherwise fall back to legacy single item
@@ -367,8 +365,8 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   }
   
   autoTable(doc, {
-    startY: 165,
-    head: [['Description', 'Date', 'Qte', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
+    startY: 90,
+    head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
     body: tableData.map(item => [
       item.description,
       item.date,
@@ -424,13 +422,29 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   // Payment methods
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 30);
+  doc.text('Moyens de paiement:', 20, finalY + 20);
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
+  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
+  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
+  doc.text('30 jours', 20, finalY + 45);
+  
+  // Payment conditions
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Conditions de paiement:', 20, finalY + 57);
+  
+  // Footer
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.text(`${COMPANY_INFO.bankName}`, 20, finalY + 38);
-  doc.text(`Banque: SOCIETE GENERALE de la convention - 62800 Lievin`, 20, finalY + 44);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift} - Numéro de TVA: ${COMPANY_INFO.tva}`, 20, finalY + 50);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 56);
+  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
   doc.save(`facture-${invoice.invoiceNumber}.pdf`);
