@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Plus, Edit, Trash2 } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,41 @@ export default function AdminReservations() {
   });
 
   const approvedQuotes = quotes.filter(q => q.status === "approved");
+
+  // États pour la recherche et les filtres
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Fonction pour obtenir le nom complet du client
+  const getClientName = (clientId: string) => {
+    const client = users.find(u => u.id === clientId);
+    if (!client) return `Client-${clientId.slice(0, 8)}`;
+    return `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email;
+  };
+
+  // Fonction pour obtenir le nom du service
+  const getServiceName = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    return service?.name || `Service-${serviceId.slice(0, 8)}`;
+  };
+
+  // Filtrage des réservations
+  const filteredReservations = reservations.filter(reservation => {
+    const clientName = getClientName(reservation.clientId).toLowerCase();
+    const serviceName = getServiceName(reservation.serviceId).toLowerCase();
+    const notes = (reservation.notes ?? "").toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = 
+      clientName.includes(searchLower) ||
+      serviceName.includes(searchLower) ||
+      reservation.id.toLowerCase().includes(searchLower) ||
+      notes.includes(searchLower);
+    
+    const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const createReservationMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -311,21 +346,46 @@ export default function AdminReservations() {
         <CardHeader>
           <CardTitle>Toutes les Réservations</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client, service, notes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-reservations"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="confirmed">Confirmées</SelectItem>
+                <SelectItem value="completed">Terminées</SelectItem>
+                <SelectItem value="cancelled">Annulées</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {reservationsLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-24" />
               ))}
             </div>
-          ) : reservations.length === 0 ? (
+          ) : filteredReservations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aucune réservation pour le moment</p>
+              <p>{reservations.length === 0 ? "Aucune réservation pour le moment" : "Aucune réservation ne correspond à votre recherche"}</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {reservations.map((reservation) => (
+              {filteredReservations.map((reservation) => (
                 <div
                   key={reservation.id}
                   className="flex flex-col gap-4 p-4 border border-border rounded-md hover-elevate"
@@ -337,8 +397,12 @@ export default function AdminReservations() {
                         <p className="font-semibold">Réservation #{reservation.id.slice(0, 8)}</p>
                         <StatusBadge status={reservation.status as any} />
                       </div>
-                      <p className="text-sm text-muted-foreground">Client: {reservation.clientId.slice(0, 8)}</p>
-                      <p className="text-sm text-muted-foreground">Service: {reservation.serviceId.slice(0, 8)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Client:</span> {getClientName(reservation.clientId)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Service:</span> {getServiceName(reservation.serviceId)}
+                      </p>
                       {reservation.quoteId && (
                         <p className="text-sm text-muted-foreground">Devis: {reservation.quoteId.slice(0, 8)}</p>
                       )}

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Download, Tags, Pencil, X } from "lucide-react";
+import { Plus, Download, Tags, Pencil, X, Search } from "lucide-react";
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { LabelsPreview } from "@/components/labels-preview";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -90,6 +90,49 @@ export default function AdminInvoices() {
   });
 
   const approvedQuotes = quotes.filter((q) => q.status === "approved");
+
+  // États pour la recherche et les filtres
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Fonction pour obtenir le nom complet du client
+  const getClientName = (clientId: string) => {
+    const client = users.find(u => u.id === clientId);
+    if (!client) return `Client-${clientId.slice(0, 8)}`;
+    return `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email;
+  };
+
+  // Fonction pour obtenir le nom du service via le quote
+  const getServiceNameFromInvoice = (invoice: Invoice) => {
+    if (invoice.quoteId) {
+      const quote = quotes.find(q => q.id === invoice.quoteId);
+      if (quote && quote.serviceId) {
+        const service = services.find(s => s.id === quote.serviceId);
+        return service?.name || `Service-${quote.serviceId.slice(0, 8)}`;
+      }
+    }
+    return "N/A";
+  };
+
+  // Filtrage des factures
+  const filteredInvoices = invoices.filter(invoice => {
+    const clientName = getClientName(invoice.clientId).toLowerCase();
+    const serviceName = getServiceNameFromInvoice(invoice).toLowerCase();
+    const invoiceNumber = (invoice.invoiceNumber ?? "").toLowerCase();
+    const productDetails = (invoice.productDetails ?? "").toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = 
+      clientName.includes(searchLower) ||
+      serviceName.includes(searchLower) ||
+      invoiceNumber.includes(searchLower) ||
+      invoice.id.toLowerCase().includes(searchLower) ||
+      productDetails.includes(searchLower);
+    
+    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
@@ -370,20 +413,45 @@ export default function AdminInvoices() {
         <CardHeader>
           <CardTitle>Toutes les Factures</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client, n° facture, produits..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-invoices"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="paid">Payées</SelectItem>
+                <SelectItem value="overdue">En retard</SelectItem>
+                <SelectItem value="cancelled">Annulées</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {invoicesLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-24" />
               ))}
             </div>
-          ) : invoices.length === 0 ? (
+          ) : filteredInvoices.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>Aucune facture pour le moment. Créez-en une pour commencer!</p>
+              <p>{invoices.length === 0 ? "Aucune facture pour le moment. Créez-en une pour commencer!" : "Aucune facture ne correspond à votre recherche"}</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {invoices.map((invoice) => (
+              {filteredInvoices.map((invoice) => (
                 <div
                   key={invoice.id}
                   className="p-4 border border-border rounded-md hover-elevate"
@@ -395,10 +463,12 @@ export default function AdminInvoices() {
                         <p className="font-semibold font-mono">{invoice.invoiceNumber}</p>
                         <StatusBadge status={invoice.status as any} />
                       </div>
-                      <p className="text-sm text-muted-foreground">Client: {invoice.clientId.slice(0, 8)}</p>
-                      {invoice.quoteId && (
-                        <p className="text-sm text-muted-foreground">Devis: {invoice.quoteId.slice(0, 8)}</p>
-                      )}
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Client:</span> {getClientName(invoice.clientId)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Service:</span> {getServiceNameFromInvoice(invoice)}
+                      </p>
                       {invoice.wheelCount && (
                         <p className="text-sm text-muted-foreground">
                           <span className="font-medium">Jantes:</span> {invoice.wheelCount} 

@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags } from "lucide-react";
+import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search } from "lucide-react";
 import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
@@ -95,6 +95,41 @@ export default function AdminQuotes() {
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     enabled: isAuthenticated && isAdmin,
+  });
+
+  // États pour la recherche et les filtres
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Fonction pour obtenir le nom complet du client
+  const getClientName = (clientId: string) => {
+    const client = users.find(u => u.id === clientId);
+    if (!client) return `Client-${clientId.slice(0, 8)}`;
+    return `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email;
+  };
+
+  // Fonction pour obtenir le nom du service
+  const getServiceName = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    return service?.name || `Service-${serviceId.slice(0, 8)}`;
+  };
+
+  // Filtrage des devis
+  const filteredQuotes = quotes.filter(quote => {
+    const clientName = getClientName(quote.clientId).toLowerCase();
+    const serviceName = getServiceName(quote.serviceId).toLowerCase();
+    const productDetails = (quote.productDetails ?? "").toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = 
+      clientName.includes(searchLower) ||
+      serviceName.includes(searchLower) ||
+      quote.id.toLowerCase().includes(searchLower) ||
+      productDetails.includes(searchLower);
+    
+    const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
   });
 
   const handleDownloadPDF = async (quote: Quote) => {
@@ -520,24 +555,50 @@ export default function AdminQuotes() {
         </Button>
       </div>
 
+      {/* Barre de recherche et filtres */}
       <Card>
         <CardHeader>
           <CardTitle>Tous les Devis</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client, service, produits..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-quotes"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="approved">Approuvés</SelectItem>
+                <SelectItem value="rejected">Refusés</SelectItem>
+                <SelectItem value="completed">Terminés</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {quotesLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-24" />
               ))}
             </div>
-          ) : quotes.length === 0 ? (
+          ) : filteredQuotes.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>Aucun devis pour le moment</p>
+              <p>{quotes.length === 0 ? "Aucun devis pour le moment" : "Aucun devis ne correspond à votre recherche"}</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {quotes.map((quote) => (
+              {filteredQuotes.map((quote) => (
                 <div
                   key={quote.id}
                   className="flex flex-col md:flex-row gap-4 p-4 border border-border rounded-md hover-elevate"
@@ -548,8 +609,12 @@ export default function AdminQuotes() {
                       <p className="font-semibold">Devis #{quote.id.slice(0, 8)}</p>
                       <StatusBadge status={quote.status as any} />
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">Client: {quote.clientId.slice(0, 8)}</p>
-                    <p className="text-sm text-muted-foreground truncate">Service: {quote.serviceId.slice(0, 8)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium">Client:</span> {getClientName(quote.clientId)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-medium">Service:</span> {getServiceName(quote.serviceId)}
+                    </p>
                     {quote.wheelCount && (
                       <p className="text-sm text-muted-foreground">
                         <span className="font-medium">Jantes:</span> {quote.wheelCount} 
