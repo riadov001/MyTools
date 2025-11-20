@@ -21,6 +21,7 @@ import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search } fr
 import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
+import { NewClientForm } from "@/components/new-client-form";
 
 export default function AdminQuotes() {
   const [, setLocation] = useLocation();
@@ -43,7 +44,7 @@ export default function AdminQuotes() {
   const [selectedQuoteForLabels, setSelectedQuoteForLabels] = useState<Quote | null>(null);
   
   const [createQuoteDialog, setCreateQuoteDialog] = useState(false);
-  const [isNewClient, setIsNewClient] = useState(false);
+  const [clientSelection, setClientSelection] = useState<"existing" | "new">("existing");
   const [newQuoteClientId, setNewQuoteClientId] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedServices, setSelectedServices] = useState<Array<{
@@ -344,7 +345,7 @@ export default function AdminQuotes() {
         description: "Devis créé avec succès",
       });
       setCreateQuoteDialog(false);
-      setIsNewClient(false);
+      setClientSelection("existing");
       setNewQuoteClientId("");
       setSelectedServiceId("");
       setSelectedServices([]);
@@ -440,7 +441,7 @@ export default function AdminQuotes() {
 
   const handleCreateNewQuote = async () => {
     // Validation
-    if (isNewClient) {
+    if (clientSelection === "new") {
       if (!newClientEmail || !newClientFirstName || !newClientLastName) {
         toast({
           title: "Erreur",
@@ -483,7 +484,7 @@ export default function AdminQuotes() {
       let clientId = newQuoteClientId;
       
       // Create client if needed
-      if (isNewClient) {
+      if (clientSelection === "new") {
         const newClient: any = await createClientMutation.mutateAsync({
           email: newClientEmail,
           firstName: newClientFirstName,
@@ -935,138 +936,24 @@ export default function AdminQuotes() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            <div className="flex items-center justify-between p-3 border border-border rounded-md">
-              <div className="flex-1">
-                <Label htmlFor="is-new-client" className="font-semibold">Créer un nouveau client</Label>
-                <p className="text-sm text-muted-foreground">Activez pour créer un client en même temps que le devis</p>
-              </div>
-              <Switch
-                id="is-new-client"
-                checked={isNewClient}
-                onCheckedChange={setIsNewClient}
-                data-testid="switch-new-client"
-              />
+            <div className="space-y-2">
+              <Label htmlFor="client-selection">Sélection du client *</Label>
+              <Select value={clientSelection} onValueChange={(value: "existing" | "new") => setClientSelection(value)}>
+                <SelectTrigger id="client-selection" data-testid="select-client-type">
+                  <SelectValue placeholder="Choisir une option" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="existing">Client existant</SelectItem>
+                  <SelectItem value="new">Nouveau client</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {isNewClient ? (
-              <>
-                <div className="p-3 bg-muted rounded-md space-y-4">
-                  <p className="text-sm font-semibold">Informations du nouveau client</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="new-client-firstname">Prénom *</Label>
-                      <Input
-                        id="new-client-firstname"
-                        type="text"
-                        placeholder="Jean"
-                        value={newClientFirstName}
-                        onChange={(e) => setNewClientFirstName(e.target.value)}
-                        className="mt-2"
-                        data-testid="input-new-client-firstname"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="new-client-lastname">Nom *</Label>
-                      <Input
-                        id="new-client-lastname"
-                        type="text"
-                        placeholder="Dupont"
-                        value={newClientLastName}
-                        onChange={(e) => setNewClientLastName(e.target.value)}
-                        className="mt-2"
-                        data-testid="input-new-client-lastname"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="new-client-email">Email *</Label>
-                    <Input
-                      id="new-client-email"
-                      type="email"
-                      placeholder="client@example.com"
-                      value={newClientEmail}
-                      onChange={(e) => setNewClientEmail(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-new-client-email"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new-client-role">Type de client</Label>
-                    <Select value={newClientRole} onValueChange={(v) => setNewClientRole(v as "client" | "client_professionnel")}>
-                      <SelectTrigger className="mt-2" data-testid="select-new-client-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="client">Particulier</SelectItem>
-                        <SelectItem value="client_professionnel">Professionnel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {newClientRole === "client_professionnel" && (
-                    <>
-                      <div>
-                        <Label htmlFor="new-client-company">Nom de l'entreprise</Label>
-                        <Input
-                          id="new-client-company"
-                          type="text"
-                          placeholder="Mon Entreprise SA"
-                          value={newClientCompanyName}
-                          onChange={(e) => setNewClientCompanyName(e.target.value)}
-                          className="mt-2"
-                          data-testid="input-new-client-company"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="new-client-siret">SIRET</Label>
-                          <Input
-                            id="new-client-siret"
-                            type="text"
-                            placeholder="12345678901234"
-                            value={newClientSiret}
-                            onChange={(e) => setNewClientSiret(e.target.value)}
-                            className="mt-2"
-                            data-testid="input-new-client-siret"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="new-client-tva">Numéro TVA</Label>
-                          <Input
-                            id="new-client-tva"
-                            type="text"
-                            placeholder="FR12345678901"
-                            value={newClientTvaNumber}
-                            onChange={(e) => setNewClientTvaNumber(e.target.value)}
-                            className="mt-2"
-                            data-testid="input-new-client-tva"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="new-client-address">Adresse de l'entreprise</Label>
-                        <Textarea
-                          id="new-client-address"
-                          placeholder="123 Rue de l'Entreprise, 75001 Paris"
-                          value={newClientCompanyAddress}
-                          onChange={(e) => setNewClientCompanyAddress(e.target.value)}
-                          className="mt-2"
-                          rows={2}
-                          data-testid="textarea-new-client-address"
-                        />
-                      </div>
-                    </>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Mot de passe par défaut: <span className="font-mono font-semibold">client123</span> (à changer lors de la première connexion)
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div>
-                <Label htmlFor="new-quote-client">Client</Label>
+            {clientSelection === "existing" ? (
+              <div className="space-y-2">
+                <Label htmlFor="new-quote-client">Client *</Label>
                 <Select value={newQuoteClientId} onValueChange={setNewQuoteClientId}>
-                  <SelectTrigger className="mt-2" data-testid="select-new-quote-client">
+                  <SelectTrigger id="new-quote-client" data-testid="select-new-quote-client">
                     <SelectValue placeholder="Sélectionner un client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1077,6 +964,31 @@ export default function AdminQuotes() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            ) : (
+              <div className="p-3 bg-muted rounded-md space-y-4">
+                <p className="text-sm font-semibold">Informations du nouveau client</p>
+                <NewClientForm
+                  email={newClientEmail}
+                  setEmail={setNewClientEmail}
+                  firstName={newClientFirstName}
+                  setFirstName={setNewClientFirstName}
+                  lastName={newClientLastName}
+                  setLastName={setNewClientLastName}
+                  role={newClientRole}
+                  setRole={setNewClientRole}
+                  companyName={newClientCompanyName}
+                  setCompanyName={setNewClientCompanyName}
+                  siret={newClientSiret}
+                  setSiret={setNewClientSiret}
+                  tvaNumber={newClientTvaNumber}
+                  setTvaNumber={setNewClientTvaNumber}
+                  companyAddress={newClientCompanyAddress}
+                  setCompanyAddress={setNewClientCompanyAddress}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mot de passe par défaut: <span className="font-mono font-semibold">client123</span> (à changer lors de la première connexion)
+                </p>
               </div>
             )}
             <div className="space-y-3">
