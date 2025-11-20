@@ -1198,7 +1198,7 @@ export default function AdminQuotes() {
               disabled={
                 createNewQuoteMutation.isPending || 
                 createClientMutation.isPending ||
-                (isNewClient ? (!newClientEmail || !newClientFirstName || !newClientLastName) : !newQuoteClientId) ||
+                (clientSelection === "new" ? (!newClientEmail || !newClientFirstName || !newClientLastName) : !newQuoteClientId) ||
                 selectedServices.length === 0 ||
                 quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
               }
