@@ -386,7 +386,8 @@ export default function AdminQuotes() {
       tvaNumber?: string;
       companyAddress?: string;
     }) => {
-      return apiRequest("POST", "/api/admin/clients", data);
+      const response = await apiRequest("POST", "/api/admin/clients", data);
+      return response;
     },
   });
 
@@ -495,6 +496,11 @@ export default function AdminQuotes() {
           tvaNumber: newClientRole === "client_professionnel" ? newClientTvaNumber : undefined,
           companyAddress: newClientRole === "client_professionnel" ? newClientCompanyAddress : undefined,
         });
+        
+        if (!newClient || !newClient.id) {
+          throw new Error("Échec de la création du client");
+        }
+        
         clientId = newClient.id;
         // Invalidate users cache to refresh the list
         queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });

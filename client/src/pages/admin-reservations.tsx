@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { NewClientForm } from "@/components/new-client-form";
 
 export default function AdminReservations() {
   const { toast } = useToast();
@@ -39,10 +40,21 @@ export default function AdminReservations() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   
   const [reservationType, setReservationType] = useState<"direct" | "from-quote">("direct");
+  const [clientSelection, setClientSelection] = useState<"existing" | "new">("existing");
   
   // Form state for direct reservation
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
+  
+  // Form state for new client
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientFirstName, setNewClientFirstName] = useState("");
+  const [newClientLastName, setNewClientLastName] = useState("");
+  const [newClientRole, setNewClientRole] = useState<"client" | "client_professionnel">("client");
+  const [newClientCompanyName, setNewClientCompanyName] = useState("");
+  const [newClientSiret, setNewClientSiret] = useState("");
+  const [newClientTvaNumber, setNewClientTvaNumber] = useState("");
+  const [newClientCompanyAddress, setNewClientCompanyAddress] = useState("");
   const [scheduledDate, setScheduledDate] = useState<string>("");
   const [wheelCount, setWheelCount] = useState<string>("1");
   const [diameter, setDiameter] = useState<string>("");
@@ -192,8 +204,25 @@ export default function AdminReservations() {
     },
   });
 
+  const createClientMutation = useMutation({
+    mutationFn: async (data: { 
+      email: string; 
+      firstName: string; 
+      lastName: string; 
+      role: "client" | "client_professionnel";
+      companyName?: string;
+      siret?: string;
+      tvaNumber?: string;
+      companyAddress?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/admin/clients", data);
+      return response;
+    },
+  });
+
   const resetForm = () => {
     setReservationType("direct");
+    setClientSelection("existing");
     setSelectedClient("");
     setSelectedService("");
     setScheduledDate("");
@@ -205,9 +234,17 @@ export default function AdminReservations() {
     setNotes("");
     setSelectedQuote("");
     setReservationStatus("pending");
+    setNewClientEmail("");
+    setNewClientFirstName("");
+    setNewClientLastName("");
+    setNewClientRole("client");
+    setNewClientCompanyName("");
+    setNewClientSiret("");
+    setNewClientTvaNumber("");
+    setNewClientCompanyAddress("");
   };
 
-  const handleCreateReservation = () => {
+  const handleCreateReservation = async () => {
     if (reservationType === "from-quote") {
       if (!selectedQuote || !scheduledDate) {
         toast({
@@ -243,7 +280,28 @@ export default function AdminReservations() {
         status: reservationStatus,
       });
     } else {
-      if (!selectedClient || !selectedService || !scheduledDate) {
+      // Validation for direct reservation
+      if (clientSelection === "new") {
+        if (!newClientEmail || !newClientFirstName || !newClientLastName) {
+          toast({
+            title: "Erreur",
+            description: "Email, prénom et nom sont requis pour créer un nouveau client",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        if (!selectedClient) {
+          toast({
+            title: "Erreur",
+            description: "Veuillez sélectionner un client",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      if (!selectedService || !scheduledDate) {
         toast({
           title: "Erreur",
           description: "Veuillez remplir tous les champs obligatoires",
@@ -252,23 +310,55 @@ export default function AdminReservations() {
         return;
       }
 
-      const taxRateNum = parseFloat(taxRate);
-      const priceHTNum = parseFloat(priceHT || "0");
-      const taxAmount = (priceHTNum * taxRateNum / 100).toFixed(2);
+      try {
+        let clientId = selectedClient;
 
-      createReservationMutation.mutate({
-        clientId: selectedClient,
-        serviceId: selectedService,
-        scheduledDate,
-        wheelCount: parseInt(wheelCount),
-        diameter: diameter || undefined,
-        priceExcludingTax: priceHT || undefined,
-        taxRate: taxRate || undefined,
-        taxAmount: taxAmount || undefined,
-        productDetails: productDetails || undefined,
-        notes: notes || undefined,
-        status: reservationStatus,
-      });
+        // Create client if needed
+        if (clientSelection === "new") {
+          const newClient: any = await createClientMutation.mutateAsync({
+            email: newClientEmail,
+            firstName: newClientFirstName,
+            lastName: newClientLastName,
+            role: newClientRole,
+            companyName: newClientRole === "client_professionnel" ? newClientCompanyName : undefined,
+            siret: newClientRole === "client_professionnel" ? newClientSiret : undefined,
+            tvaNumber: newClientRole === "client_professionnel" ? newClientTvaNumber : undefined,
+            companyAddress: newClientRole === "client_professionnel" ? newClientCompanyAddress : undefined,
+          });
+          
+          if (!newClient || !newClient.id) {
+            throw new Error("Échec de la création du client");
+          }
+          
+          clientId = newClient.id;
+          // Invalidate users cache to refresh the list
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+        }
+
+        const taxRateNum = parseFloat(taxRate);
+        const priceHTNum = parseFloat(priceHT || "0");
+        const taxAmount = (priceHTNum * taxRateNum / 100).toFixed(2);
+
+        createReservationMutation.mutate({
+          clientId,
+          serviceId: selectedService,
+          scheduledDate,
+          wheelCount: parseInt(wheelCount),
+          diameter: diameter || undefined,
+          priceExcludingTax: priceHT || undefined,
+          taxRate: taxRate || undefined,
+          taxAmount: taxAmount || undefined,
+          productDetails: productDetails || undefined,
+          notes: notes || undefined,
+          status: reservationStatus,
+        });
+      } catch (error: any) {
+        toast({
+          title: "Erreur",
+          description: error.message || "Échec de la création du client ou de la réservation",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -560,21 +650,61 @@ export default function AdminReservations() {
               </>
             ) : (
               <>
-                <div>
-                  <Label htmlFor="client">Client *</Label>
-                  <Select value={selectedClient} onValueChange={setSelectedClient}>
-                    <SelectTrigger className="mt-2" data-testid="select-client">
-                      <SelectValue placeholder="Sélectionner un client" />
+                <div className="space-y-2">
+                  <Label htmlFor="client-selection-res">Sélection du client *</Label>
+                  <Select value={clientSelection} onValueChange={(value: "existing" | "new") => setClientSelection(value)}>
+                    <SelectTrigger id="client-selection-res" data-testid="select-client-type-res">
+                      <SelectValue placeholder="Choisir une option" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.filter(u => u.role === "client").map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName} ({user.email})
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="existing">Client existant</SelectItem>
+                      <SelectItem value="new">Nouveau client</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {clientSelection === "existing" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="client">Client *</Label>
+                    <Select value={selectedClient} onValueChange={setSelectedClient}>
+                      <SelectTrigger id="client" data-testid="select-client">
+                        <SelectValue placeholder="Sélectionner un client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.filter(u => u.role === "client" || u.role === "client_professionnel").map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} ({user.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted rounded-md space-y-4">
+                    <p className="text-sm font-semibold">Informations du nouveau client</p>
+                    <NewClientForm
+                      email={newClientEmail}
+                      setEmail={setNewClientEmail}
+                      firstName={newClientFirstName}
+                      setFirstName={setNewClientFirstName}
+                      lastName={newClientLastName}
+                      setLastName={setNewClientLastName}
+                      role={newClientRole}
+                      setRole={setNewClientRole}
+                      companyName={newClientCompanyName}
+                      setCompanyName={setNewClientCompanyName}
+                      siret={newClientSiret}
+                      setSiret={setNewClientSiret}
+                      tvaNumber={newClientTvaNumber}
+                      setTvaNumber={setNewClientTvaNumber}
+                      companyAddress={newClientCompanyAddress}
+                      setCompanyAddress={setNewClientCompanyAddress}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Mot de passe par défaut: <span className="font-mono font-semibold">client123</span> (à changer lors de la première connexion)
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="service">Service *</Label>
