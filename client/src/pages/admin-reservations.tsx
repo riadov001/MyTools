@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,8 +29,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { NewClientForm } from "@/components/new-client-form";
+import { initiateClientCreationRedirect } from "@/lib/navigation";
 
 export default function AdminReservations() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   
@@ -79,6 +82,24 @@ export default function AdminReservations() {
       }, 500);
     }
   }, [isAuthenticated, isLoading, isAdmin, toast]);
+
+  // Détection des paramètres URL pour ouvrir le dialogue après redirection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpenDialog = params.get("openDialog") === "true";
+    const clientId = params.get("clientId");
+
+    if (shouldOpenDialog && isAuthenticated && isAdmin) {
+      setCreateReservationDialog(true);
+      setReservationType("direct");
+      if (clientId) {
+        setSelectedClient(clientId);
+        setClientSelection("existing");
+      }
+      // Nettoyer les paramètres URL sans recharger la page
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [isAuthenticated, isAdmin]);
 
   const { data: reservations = [], isLoading: reservationsLoading } = useQuery<Reservation[]>({
     queryKey: ["/api/admin/reservations"],
@@ -652,7 +673,14 @@ export default function AdminReservations() {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="client-selection-res">Sélection du client *</Label>
-                  <Select value={clientSelection} onValueChange={(value: "existing" | "new") => setClientSelection(value)}>
+                  <Select value={clientSelection} onValueChange={(value: "existing" | "new") => {
+                    if (value === "new") {
+                      initiateClientCreationRedirect("reservation");
+                      setLocation("/admin/users");
+                    } else {
+                      setClientSelection(value);
+                    }
+                  }}>
                     <SelectTrigger id="client-selection-res" data-testid="select-client-type-res">
                       <SelectValue placeholder="Choisir une option" />
                     </SelectTrigger>
