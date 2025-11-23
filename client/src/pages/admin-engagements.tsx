@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FileText, DollarSign, Calendar, Trash2 } from "lucide-react";
+import { FileText, DollarSign, Calendar, Trash2, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User, Quote, Invoice, Reservation } from "@shared/schema";
 
@@ -83,55 +84,191 @@ export default function AdminEngagements() {
       </Card>
 
       {selectedClient && engagementData && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Quotes Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <FileText className="h-4 w-4" />
-                Devis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{engagementData.quotes.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {engagementData.quotes.filter((q) => q.status === "approved").length} approuvés
-              </p>
-            </CardContent>
-          </Card>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Quotes Summary */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <FileText className="h-4 w-4" />
+                  Devis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{engagementData.quotes.length}</div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {engagementData.quotes.filter((q) => q.status === "approved").length} approuvés
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Invoices Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4" />
-                Factures
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{engagementData.invoices.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {engagementData.invoices.filter((i) => i.status === "paid").length} payées
-              </p>
-            </CardContent>
-          </Card>
+            {/* Invoices Summary */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4" />
+                  Factures
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{engagementData.invoices.length}</div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {engagementData.invoices.filter((i) => i.status === "paid").length} payées
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Reservations Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4" />
-                Réservations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{engagementData.reservations.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {engagementData.reservations.filter((r) => r.status === "confirmed").length} confirmées
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Reservations Summary */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4" />
+                  Réservations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{engagementData.reservations.length}</div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {engagementData.reservations.filter((r) => r.status === "confirmed").length} confirmées
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quotes List */}
+          {engagementData.quotes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Devis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {engagementData.quotes.map((quote) => (
+                    <Link key={quote.id} href={`/admin/quotes/${quote.id}/edit`}>
+                      <div
+                        className="flex items-center justify-between p-3 border border-border rounded-md hover-elevate cursor-pointer"
+                        data-testid={`row-quote-${quote.id}`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium">Devis #{quote.id.slice(0, 8)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {quote.quoteAmount ? `${parseFloat(quote.quoteAmount).toFixed(2)} €` : "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              quote.status === "approved"
+                                ? "default"
+                                : quote.status === "rejected"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {quote.status === "approved"
+                              ? "Approuvé"
+                              : quote.status === "rejected"
+                                ? "Rejeté"
+                                : "En attente"}
+                          </Badge>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Invoices List */}
+          {engagementData.invoices.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Factures</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {engagementData.invoices.map((invoice) => (
+                    <Link key={invoice.id} href={`/admin/invoices/${invoice.id}/edit`}>
+                      <div
+                        className="flex items-center justify-between p-3 border border-border rounded-md hover-elevate cursor-pointer"
+                        data-testid={`row-invoice-${invoice.id}`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium">{invoice.invoiceNumber}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {invoice.amount ? `${parseFloat(invoice.amount).toFixed(2)} €` : "N/A"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              invoice.status === "paid"
+                                ? "default"
+                                : invoice.status === "overdue"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {invoice.status === "paid"
+                              ? "Payée"
+                              : invoice.status === "overdue"
+                                ? "En retard"
+                                : "En attente"}
+                          </Badge>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Reservations List */}
+          {engagementData.reservations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Réservations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {engagementData.reservations.map((reservation) => (
+                    <div
+                      key={reservation.id}
+                      className="flex items-center justify-between p-3 border border-border rounded-md"
+                      data-testid={`row-reservation-${reservation.id}`}
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{reservation.id}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {reservation.serviceId ? `Service réservé` : "N/A"}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          reservation.status === "confirmed"
+                            ? "default"
+                            : reservation.status === "cancelled"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {reservation.status === "confirmed"
+                          ? "Confirmée"
+                          : reservation.status === "cancelled"
+                            ? "Annulée"
+                            : "En attente"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Engagements List */}
