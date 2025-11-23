@@ -552,6 +552,19 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(workflows).orderBy(desc(workflows.createdAt));
   }
 
+  async updateWorkflow(id: string, workflowData: Partial<InsertWorkflow>): Promise<Workflow> {
+    const [workflow] = await db
+      .update(workflows)
+      .set({ ...workflowData, updatedAt: new Date() })
+      .where(eq(workflows.id, id))
+      .returning();
+    return workflow;
+  }
+
+  async deleteWorkflow(id: string): Promise<void> {
+    await db.delete(workflows).where(eq(workflows.id, id));
+  }
+
   async createWorkflowStep(stepData: InsertWorkflowStep): Promise<WorkflowStep> {
     const [step] = await db.insert(workflowSteps).values([stepData]).returning();
     return step;
@@ -559,6 +572,19 @@ export class DatabaseStorage implements IStorage {
 
   async getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]> {
     return await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, workflowId)).orderBy(workflowSteps.stepNumber);
+  }
+
+  async updateWorkflowStep(id: string, stepData: Partial<InsertWorkflowStep>): Promise<WorkflowStep> {
+    const [step] = await db
+      .update(workflowSteps)
+      .set({ ...stepData, updatedAt: new Date() })
+      .where(eq(workflowSteps.id, id))
+      .returning();
+    return step;
+  }
+
+  async deleteWorkflowStep(id: string): Promise<void> {
+    await db.delete(workflowSteps).where(eq(workflowSteps.id, id));
   }
 
   async assignWorkflowToService(serviceWorkflowData: InsertServiceWorkflow): Promise<ServiceWorkflow> {
@@ -571,6 +597,12 @@ export class DatabaseStorage implements IStorage {
     const workflowIds = serviceWorkflowsList.map(sw => sw.workflowId);
     if (workflowIds.length === 0) return [];
     return await db.select().from(workflows).where(inArray(workflows.id, workflowIds));
+  }
+
+  async deleteServiceWorkflow(serviceId: string, workflowId: string): Promise<void> {
+    await db.delete(serviceWorkflows).where(
+      and(eq(serviceWorkflows.serviceId, serviceId), eq(serviceWorkflows.workflowId, workflowId))
+    );
   }
 
   async createWorkshopTask(taskData: InsertWorkshopTask): Promise<WorkshopTask> {
