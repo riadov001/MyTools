@@ -11,6 +11,10 @@ import {
   invoiceCounters,
   applicationSettings,
   engagements,
+  workflows,
+  workflowSteps,
+  serviceWorkflows,
+  workshopTasks,
   type User,
   type UpsertUser,
   type Service,
@@ -33,9 +37,17 @@ import {
   type InsertApplicationSettings,
   type Engagement,
   type InsertEngagement,
+  type Workflow,
+  type InsertWorkflow,
+  type WorkflowStep,
+  type InsertWorkflowStep,
+  type ServiceWorkflow,
+  type InsertServiceWorkflow,
+  type WorkshopTask,
+  type InsertWorkshopTask,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations

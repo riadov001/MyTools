@@ -1065,6 +1065,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Workflow routes
+  app.get("/api/admin/workflows", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const workflows = await storage.getWorkflows();
+      res.json(workflows);
+    } catch (error: any) {
+      console.error("Error fetching workflows:", error);
+      res.status(500).json({ message: "Failed to fetch workflows" });
+    }
+  });
+
+  app.post("/api/admin/workflows", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const workflow = await storage.createWorkflow({
+        name: req.body.name,
+        description: req.body.description,
+      });
+      res.json(workflow);
+    } catch (error: any) {
+      console.error("Error creating workflow:", error);
+      res.status(400).json({ message: error.message || "Failed to create workflow" });
+    }
+  });
+
+  app.post("/api/admin/workflow-steps", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const step = await storage.createWorkflowStep({
+        workflowId: req.body.workflowId,
+        stepNumber: req.body.stepNumber,
+        title: req.body.title,
+        description: req.body.description,
+      });
+      res.json(step);
+    } catch (error: any) {
+      console.error("Error creating workflow step:", error);
+      res.status(400).json({ message: error.message || "Failed to create workflow step" });
+    }
+  });
+
+  app.get("/api/admin/workflows/:workflowId/steps", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const steps = await storage.getWorkflowSteps(req.params.workflowId);
+      res.json(steps);
+    } catch (error: any) {
+      console.error("Error fetching workflow steps:", error);
+      res.status(500).json({ message: "Failed to fetch workflow steps" });
+    }
+  });
+
+  app.post("/api/admin/services/:serviceId/workflows", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const serviceWorkflow = await storage.assignWorkflowToService({
+        serviceId: req.params.serviceId,
+        workflowId: req.body.workflowId,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
+      res.json(serviceWorkflow);
+    } catch (error: any) {
+      console.error("Error assigning workflow to service:", error);
+      res.status(400).json({ message: error.message || "Failed to assign workflow" });
+    }
+  });
+
+  app.get("/api/admin/services/:serviceId/workflows", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const workflows = await storage.getServiceWorkflows(req.params.serviceId);
+      res.json(workflows);
+    } catch (error: any) {
+      console.error("Error fetching service workflows:", error);
+      res.status(500).json({ message: "Failed to fetch service workflows" });
+    }
+  });
+
+  // Workshop task routes
+  app.get("/api/workshop/reservations/:reservationId/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const tasks = await storage.getReservationTasks(req.params.reservationId);
+      res.json(tasks);
+    } catch (error: any) {
+      console.error("Error fetching workshop tasks:", error);
+      res.status(500).json({ message: "Failed to fetch workshop tasks" });
+    }
+  });
+
+  app.patch("/api/workshop/tasks/:taskId", isAuthenticated, async (req, res) => {
+    try {
+      const task = await storage.updateWorkshopTask(req.params.taskId, {
+        isCompleted: req.body.isCompleted,
+        comment: req.body.comment,
+        completedByUserId: req.body.isCompleted ? (req as any).user.id : undefined,
+        completedAt: req.body.isCompleted ? new Date() : undefined,
+      });
+      res.json(task);
+    } catch (error: any) {
+      console.error("Error updating workshop task:", error);
+      res.status(400).json({ message: error.message || "Failed to update workshop task" });
+    }
+  });
+
   // Cache clearing route
   app.post("/api/admin/cache/clear", isAuthenticated, isAdmin, async (req, res) => {
     try {
