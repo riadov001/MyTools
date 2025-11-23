@@ -529,6 +529,67 @@ export class DatabaseStorage implements IStorage {
     ]);
     return { quotes: quotesList, invoices: invoicesList, reservations: reservationsList };
   }
+
+  // Workflow operations
+  async createWorkflow(workflowData: InsertWorkflow): Promise<Workflow> {
+    const [workflow] = await db.insert(workflows).values([workflowData]).returning();
+    return workflow;
+  }
+
+  async getWorkflows(): Promise<Workflow[]> {
+    return await db.select().from(workflows).orderBy(desc(workflows.createdAt));
+  }
+
+  async createWorkflowStep(stepData: InsertWorkflowStep): Promise<WorkflowStep> {
+    const [step] = await db.insert(workflowSteps).values([stepData]).returning();
+    return step;
+  }
+
+  async getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]> {
+    return await db.select().from(workflowSteps).where(eq(workflowSteps.workflowId, workflowId)).orderBy(workflowSteps.stepNumber);
+  }
+
+  async assignWorkflowToService(serviceWorkflowData: InsertServiceWorkflow): Promise<ServiceWorkflow> {
+    const [sw] = await db.insert(serviceWorkflows).values([serviceWorkflowData]).returning();
+    return sw;
+  }
+
+  async getServiceWorkflows(serviceId: string): Promise<Workflow[]> {
+    const serviceWorkflowsList = await db.select().from(serviceWorkflows).where(eq(serviceWorkflows.serviceId, serviceId));
+    const workflowIds = serviceWorkflowsList.map(sw => sw.workflowId);
+    if (workflowIds.length === 0) return [];
+    return await db.select().from(workflows).where(inArray(workflows.id, workflowIds));
+  }
+
+  async createWorkshopTask(taskData: InsertWorkshopTask): Promise<WorkshopTask> {
+    const [task] = await db.insert(workshopTasks).values([taskData]).returning();
+    return task;
+  }
+
+  async getReservationTasks(reservationId: string): Promise<(WorkshopTask & { step: WorkflowStep })[]> {
+    return await db.select().from(workshopTasks)
+      .innerJoin(workflowSteps, eq(workshopTasks.workflowStepId, workflowSteps.id))
+      .where(eq(workshopTasks.reservationId, reservationId))
+      .then(results => results.map(r => ({ ...r.workshop_tasks, step: r.workflow_steps })));
+  }
+
+  async updateWorkshopTask(id: string, taskData: Partial<InsertWorkshopTask> & { completedByUserId?: string }): Promise<WorkshopTask> {
+    const [task] = await db.update(workshopTasks)
+      .set({ ...taskData, updatedAt: new Date() })
+      .where(eq(workshopTasks.id, id))
+      .returning();
+    return task;
+  }
+
+  async initializeReservationWorkflow(reservationId: string, workflowSteps: WorkflowStep[]): Promise<void> {
+    for (const step of workflowSteps) {
+      await this.createWorkshopTask({
+        reservationId,
+        workflowStepId: step.id,
+        isCompleted: false,
+      });
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

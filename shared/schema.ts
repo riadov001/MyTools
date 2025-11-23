@@ -222,6 +222,47 @@ export const engagements = pgTable("engagements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Workflows - define the steps required for a service
+export const workflows = pgTable("workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Workflow steps - individual steps within a workflow
+export const workflowSteps = pgTable("workflow_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workflowId: varchar("workflow_id").notNull().references(() => workflows.id, { onDelete: 'cascade' }),
+  stepNumber: integer("step_number").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Service-Workflow associations
+export const serviceWorkflows = pgTable("service_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
+  workflowId: varchar("workflow_id").notNull().references(() => workflows.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Workshop tracking - tracks the progress of a reservation
+export const workshopTasks = pgTable("workshop_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reservationId: varchar("reservation_id").notNull().references(() => reservations.id, { onDelete: 'cascade' }),
+  workflowStepId: varchar("workflow_step_id").notNull().references(() => workflowSteps.id, { onDelete: 'cascade' }),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  completedByUserId: varchar("completed_by_user_id").references(() => users.id),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   quotes: many(quotes),
@@ -298,6 +339,45 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const workflowsRelations = relations(workflows, ({ many }) => ({
+  steps: many(workflowSteps),
+  serviceWorkflows: many(serviceWorkflows),
+}));
+
+export const workflowStepsRelations = relations(workflowSteps, ({ one, many }) => ({
+  workflow: one(workflows, {
+    fields: [workflowSteps.workflowId],
+    references: [workflows.id],
+  }),
+  workshopTasks: many(workshopTasks),
+}));
+
+export const serviceWorkflowsRelations = relations(serviceWorkflows, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceWorkflows.serviceId],
+    references: [services.id],
+  }),
+  workflow: one(workflows, {
+    fields: [serviceWorkflows.workflowId],
+    references: [workflows.id],
+  }),
+}));
+
+export const workshopTasksRelations = relations(workshopTasks, ({ one }) => ({
+  reservation: one(reservations, {
+    fields: [workshopTasks.reservationId],
+    references: [reservations.id],
+  }),
+  step: one(workflowSteps, {
+    fields: [workshopTasks.workflowStepId],
+    references: [workflowSteps.id],
+  }),
+  completedBy: one(users, {
+    fields: [workshopTasks.completedByUserId],
+    references: [users.id],
+  }),
+}));
+
 export const engagementsRelations = relations(engagements, ({ one }) => ({
   client: one(users, {
     fields: [engagements.clientId],
@@ -366,6 +446,10 @@ export const insertQuoteMediaSchema = createInsertSchema(quoteMedia).omit({ id: 
 export const insertInvoiceMediaSchema = createInsertSchema(invoiceMedia).omit({ id: true, createdAt: true });
 export const insertApplicationSettingsSchema = createInsertSchema(applicationSettings).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEngagementSchema = createInsertSchema(engagements).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertServiceWorkflowSchema = createInsertSchema(serviceWorkflows).omit({ id: true, createdAt: true });
+export const insertWorkshopTaskSchema = createInsertSchema(workshopTasks).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -394,3 +478,11 @@ export type InsertApplicationSettings = z.infer<typeof insertApplicationSettings
 export type ApplicationSettings = typeof applicationSettings.$inferSelect;
 export type InsertEngagement = z.infer<typeof insertEngagementSchema>;
 export type Engagement = typeof engagements.$inferSelect;
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type Workflow = typeof workflows.$inferSelect;
+export type InsertWorkflowStep = z.infer<typeof insertWorkflowStepSchema>;
+export type WorkflowStep = typeof workflowSteps.$inferSelect;
+export type InsertServiceWorkflow = z.infer<typeof insertServiceWorkflowSchema>;
+export type ServiceWorkflow = typeof serviceWorkflows.$inferSelect;
+export type InsertWorkshopTask = z.infer<typeof insertWorkshopTaskSchema>;
+export type WorkshopTask = typeof workshopTasks.$inferSelect;
