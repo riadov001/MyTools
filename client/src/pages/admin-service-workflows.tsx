@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit } from "lucide-react";
 import type { Service, Workflow, WorkflowStep } from "@shared/schema";
 
 export default function AdminServiceWorkflows() {
@@ -19,6 +19,8 @@ export default function AdminServiceWorkflows() {
   const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
   const [isStepDialogOpen, setIsStepDialogOpen] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [workflowForm, setWorkflowForm] = useState({ name: "", description: "" });
   const [stepForm, setStepForm] = useState({ title: "", description: "", stepNumber: 1 });
 
@@ -34,23 +36,66 @@ export default function AdminServiceWorkflows() {
   });
 
   const createWorkflowMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/admin/workflows", data),
+    mutationFn: (data: any) => {
+      if (editingWorkflowId) {
+        return apiRequest("PATCH", `/api/admin/workflows/${editingWorkflowId}`, data);
+      }
+      return apiRequest("POST", "/api/admin/workflows", data);
+    },
     onSuccess: () => {
-      toast({ title: "Workflow créé", description: "Le workflow a été créé avec succès" });
+      const message = editingWorkflowId ? "Le workflow a été mis à jour" : "Le workflow a été créé avec succès";
+      toast({ title: "Succès", description: message });
       setIsWorkflowDialogOpen(false);
+      setEditingWorkflowId(null);
       setWorkflowForm({ name: "", description: "" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/workflows"] });
     },
     onError: (error: Error) => toast({ title: "Erreur", description: error.message, variant: "destructive" }),
   });
 
-  const createStepMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/admin/workflow-steps", data),
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/workflows/${id}`),
     onSuccess: () => {
-      toast({ title: "Étape créée", description: "L'étape a été créée avec succès" });
+      toast({ title: "Succès", description: "Workflow supprimé" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/workflows"] });
+      if (selectedWorkflowId === selectedWorkflowId) setSelectedWorkflowId("");
+    },
+    onError: (error: Error) => toast({ title: "Erreur", description: error.message, variant: "destructive" }),
+  });
+
+  const createStepMutation = useMutation({
+    mutationFn: (data: any) => {
+      if (editingStepId) {
+        return apiRequest("PATCH", `/api/admin/workflow-steps/${editingStepId}`, data);
+      }
+      return apiRequest("POST", "/api/admin/workflow-steps", data);
+    },
+    onSuccess: () => {
+      const message = editingStepId ? "L'étape a été mise à jour" : "L'étape a été créée avec succès";
+      toast({ title: "Succès", description: message });
       setIsStepDialogOpen(false);
+      setEditingStepId(null);
       setStepForm({ title: "", description: "", stepNumber: 1 });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/workflows", selectedWorkflowId, "steps"] });
+    },
+    onError: (error: Error) => toast({ title: "Erreur", description: error.message, variant: "destructive" }),
+  });
+
+  const deleteStepMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/workflow-steps/${id}`),
+    onSuccess: () => {
+      toast({ title: "Succès", description: "Étape supprimée" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/workflows", selectedWorkflowId, "steps"] });
+    },
+    onError: (error: Error) => toast({ title: "Erreur", description: error.message, variant: "destructive" }),
+  });
+
+  const deleteServiceWorkflowMutation = useMutation({
+    mutationFn: ({ serviceId, workflowId }: any) => apiRequest("DELETE", `/api/admin/services/${serviceId}/workflows/${workflowId}`),
+    onSuccess: () => {
+      toast({ title: "Succès", description: "Workflow désassigné" });
+      setSelectedWorkflowId("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/services", selectedServiceId, "workflows"] });
     },
     onError: (error: Error) => toast({ title: "Erreur", description: error.message, variant: "destructive" }),
   });
@@ -138,10 +183,23 @@ export default function AdminServiceWorkflows() {
               ) : (
                 <div className="space-y-2">
                   {serviceWorkflows.map(wf => (
-                    <div key={wf.id} className="p-3 border rounded-md hover-elevate cursor-pointer" 
-                      onClick={() => setSelectedWorkflowId(wf.id)}>
-                      <p className="font-medium">{wf.name}</p>
-                      <p className="text-xs text-muted-foreground">{wf.description}</p>
+                    <div key={wf.id} className="flex items-center justify-between p-3 border rounded-md hover-elevate">
+                      <div className="flex-1 cursor-pointer" onClick={() => setSelectedWorkflowId(wf.id)}>
+                        <p className="font-medium">{wf.name}</p>
+                        <p className="text-xs text-muted-foreground">{wf.description}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (confirm("Êtes-vous sûr de vouloir désassigner ce workflow?")) {
+                            deleteServiceWorkflowMutation.mutate({ serviceId: selectedServiceId, workflowId: wf.id });
+                          }
+                        }}
+                        disabled={deleteServiceWorkflowMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -163,12 +221,41 @@ export default function AdminServiceWorkflows() {
                   <p className="text-sm text-muted-foreground">Aucune étape définie. Créez la première étape.</p>
                 ) : (
                   <div className="space-y-2">
-                    {workflowSteps.map((step, idx) => (
+                    {workflowSteps.map((step) => (
                       <div key={step.id} className="flex items-center gap-3 p-3 border rounded-md">
                         <Badge>{step.stepNumber}</Badge>
                         <div className="flex-1">
                           <p className="font-medium">{step.title}</p>
                           <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingStepId(step.id);
+                              setStepForm({
+                                title: step.title,
+                                description: step.description || "",
+                                stepNumber: step.stepNumber,
+                              });
+                              setIsStepDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              if (confirm("Êtes-vous sûr de vouloir supprimer cette étape?")) {
+                                deleteStepMutation.mutate(step.id);
+                              }
+                            }}
+                            disabled={deleteStepMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -207,21 +294,46 @@ export default function AdminServiceWorkflows() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsWorkflowDialogOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => {
+              setIsWorkflowDialogOpen(false);
+              setEditingWorkflowId(null);
+              setWorkflowForm({ name: "", description: "" });
+            }}>Annuler</Button>
+            {editingWorkflowId && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Êtes-vous sûr?")) {
+                    deleteWorkflowMutation.mutate(editingWorkflowId);
+                    setIsWorkflowDialogOpen(false);
+                    setEditingWorkflowId(null);
+                  }
+                }}
+                disabled={deleteWorkflowMutation.isPending}
+              >
+                Supprimer
+              </Button>
+            )}
             <Button
               onClick={() => createWorkflowMutation.mutate(workflowForm)}
               disabled={createWorkflowMutation.isPending || !workflowForm.name}
             >
-              {createWorkflowMutation.isPending ? "Création..." : "Créer"}
+              {createWorkflowMutation.isPending ? "Enregistrement..." : editingWorkflowId ? "Mettre à jour" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isStepDialogOpen} onOpenChange={setIsStepDialogOpen}>
+      <Dialog open={isStepDialogOpen} onOpenChange={(open) => {
+        setIsStepDialogOpen(open);
+        if (!open) {
+          setEditingStepId(null);
+          setStepForm({ title: "", description: "", stepNumber: 1 });
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter une Étape</DialogTitle>
+            <DialogTitle>{editingStepId ? "Modifier l'Étape" : "Ajouter une Étape"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -254,12 +366,31 @@ export default function AdminServiceWorkflows() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStepDialogOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => {
+              setIsStepDialogOpen(false);
+              setEditingStepId(null);
+              setStepForm({ title: "", description: "", stepNumber: 1 });
+            }}>Annuler</Button>
+            {editingStepId && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (confirm("Êtes-vous sûr?")) {
+                    deleteStepMutation.mutate(editingStepId);
+                    setIsStepDialogOpen(false);
+                    setEditingStepId(null);
+                  }
+                }}
+                disabled={deleteStepMutation.isPending}
+              >
+                Supprimer
+              </Button>
+            )}
             <Button
               onClick={() => createStepMutation.mutate({ ...stepForm, workflowId: selectedWorkflowId })}
               disabled={createStepMutation.isPending || !stepForm.title}
             >
-              {createStepMutation.isPending ? "Création..." : "Créer"}
+              {createStepMutation.isPending ? "Enregistrement..." : editingStepId ? "Mettre à jour" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>

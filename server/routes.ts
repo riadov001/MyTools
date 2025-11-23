@@ -1148,6 +1148,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/admin/workflows/:workflowId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteWorkflow(req.params.workflowId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting workflow:", error);
+      res.status(400).json({ message: error.message || "Failed to delete workflow" });
+    }
+  });
+
+  app.patch("/api/admin/workflows/:workflowId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const workflow = await storage.updateWorkflow(req.params.workflowId, {
+        name: req.body.name,
+        description: req.body.description,
+      });
+      res.json(workflow);
+    } catch (error: any) {
+      console.error("Error updating workflow:", error);
+      res.status(400).json({ message: error.message || "Failed to update workflow" });
+    }
+  });
+
+  app.delete("/api/admin/workflow-steps/:stepId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteWorkflowStep(req.params.stepId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting workflow step:", error);
+      res.status(400).json({ message: error.message || "Failed to delete workflow step" });
+    }
+  });
+
+  app.patch("/api/admin/workflow-steps/:stepId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const step = await storage.updateWorkflowStep(req.params.stepId, {
+        title: req.body.title,
+        description: req.body.description,
+        stepNumber: req.body.stepNumber,
+      });
+      res.json(step);
+    } catch (error: any) {
+      console.error("Error updating workflow step:", error);
+      res.status(400).json({ message: error.message || "Failed to update workflow step" });
+    }
+  });
+
+  app.delete("/api/admin/services/:serviceId/workflows/:workflowId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteServiceWorkflow(req.params.serviceId, req.params.workflowId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error unassigning workflow:", error);
+      res.status(400).json({ message: error.message || "Failed to unassign workflow" });
+    }
+  });
+
   // Workshop task routes
   app.get("/api/workshop/reservations/:reservationId/tasks", isAuthenticated, async (req, res) => {
     try {
