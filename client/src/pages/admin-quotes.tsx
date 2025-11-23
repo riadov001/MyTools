@@ -22,6 +22,7 @@ import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
 import { NewClientForm } from "@/components/new-client-form";
+import { initiateClientCreationRedirect } from "@/lib/navigation";
 
 export default function AdminQuotes() {
   const [, setLocation] = useLocation();
@@ -82,6 +83,23 @@ export default function AdminQuotes() {
       }, 500);
     }
   }, [isAuthenticated, isLoading, isAdmin, toast]);
+
+  // Détection des paramètres URL pour ouvrir le dialogue après redirection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldOpenDialog = params.get("openDialog") === "true";
+    const clientId = params.get("clientId");
+
+    if (shouldOpenDialog && isAuthenticated && isAdmin) {
+      setCreateQuoteDialog(true);
+      if (clientId) {
+        setNewQuoteClientId(clientId);
+        setClientSelection("existing");
+      }
+      // Nettoyer les paramètres URL sans recharger la page
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [isAuthenticated, isAdmin]);
 
   const { data: quotes = [], isLoading: quotesLoading } = useQuery<Quote[]>({
     queryKey: ["/api/admin/quotes"],
@@ -944,7 +962,14 @@ export default function AdminQuotes() {
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="space-y-2">
               <Label htmlFor="client-selection">Sélection du client *</Label>
-              <Select value={clientSelection} onValueChange={(value: "existing" | "new") => setClientSelection(value)}>
+              <Select value={clientSelection} onValueChange={(value: "existing" | "new") => {
+                if (value === "new") {
+                  initiateClientCreationRedirect("quote");
+                  setLocation("/admin/users");
+                } else {
+                  setClientSelection(value);
+                }
+              }}>
                 <SelectTrigger id="client-selection" data-testid="select-client-type">
                   <SelectValue placeholder="Choisir une option" />
                 </SelectTrigger>
