@@ -211,12 +211,24 @@ export const applicationSettings = pgTable("application_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Engagements (Prestations) - groups quotes, invoices and reservations per client
+export const engagements = pgTable("engagements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { enum: ["active", "completed", "cancelled"] }).notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   quotes: many(quotes),
   invoices: many(invoices),
   reservations: many(reservations),
   notifications: many(notifications),
+  engagements: many(engagements),
 }));
 
 export const servicesRelations = relations(services, ({ many }) => ({
@@ -286,6 +298,13 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const engagementsRelations = relations(engagements, ({ one }) => ({
+  client: one(users, {
+    fields: [engagements.clientId],
+    references: [users.id],
+  }),
+}));
+
 export const quoteMediaRelations = relations(quoteMedia, ({ one }) => ({
   quote: one(quotes, {
     fields: [quoteMedia.quoteId],
@@ -346,6 +365,7 @@ export const insertInvoiceCounterSchema = createInsertSchema(invoiceCounters).om
 export const insertQuoteMediaSchema = createInsertSchema(quoteMedia).omit({ id: true, createdAt: true });
 export const insertInvoiceMediaSchema = createInsertSchema(invoiceMedia).omit({ id: true, createdAt: true });
 export const insertApplicationSettingsSchema = createInsertSchema(applicationSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEngagementSchema = createInsertSchema(engagements).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -372,3 +392,5 @@ export type InsertInvoiceMedia = z.infer<typeof insertInvoiceMediaSchema>;
 export type InvoiceMedia = typeof invoiceMedia.$inferSelect;
 export type InsertApplicationSettings = z.infer<typeof insertApplicationSettingsSchema>;
 export type ApplicationSettings = typeof applicationSettings.$inferSelect;
+export type InsertEngagement = z.infer<typeof insertEngagementSchema>;
+export type Engagement = typeof engagements.$inferSelect;

@@ -10,6 +10,7 @@ import {
   notifications,
   invoiceCounters,
   applicationSettings,
+  engagements,
   type User,
   type UpsertUser,
   type Service,
@@ -30,6 +31,8 @@ import {
   type InsertInvoiceCounter,
   type ApplicationSettings,
   type InsertApplicationSettings,
+  type Engagement,
+  type InsertEngagement,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -100,6 +103,13 @@ export interface IStorage {
   // Application settings operations
   getApplicationSettings(): Promise<ApplicationSettings | undefined>;
   createOrUpdateApplicationSettings(settings: Partial<InsertApplicationSettings>): Promise<ApplicationSettings>;
+
+  // Engagement operations
+  getEngagements(clientId?: string): Promise<Engagement[]>;
+  getEngagement(id: string): Promise<Engagement | undefined>;
+  createEngagement(engagement: InsertEngagement): Promise<Engagement>;
+  updateEngagement(id: string, engagement: Partial<InsertEngagement>): Promise<Engagement>;
+  getEngagementSummary(clientId: string): Promise<{ quotes: Quote[]; invoices: Invoice[]; reservations: Reservation[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -286,7 +296,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    const [invoice] = await db.insert(invoices).values(invoiceData).returning();
+    const [invoice] = await db.insert(invoices).values([invoiceData]).returning();
     return invoice;
   }
 
