@@ -244,7 +244,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuoteItem(itemData: InsertQuoteItem): Promise<QuoteItem> {
-    const [item] = await db.insert(quoteItems).values(itemData).returning();
+    const [item] = await db.insert(quoteItems).values([itemData]).returning();
     return item;
   }
 
@@ -296,7 +296,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    const [invoice] = await db.insert(invoices).values([invoiceData]).returning();
+    const paymentType = invoiceData.paymentMethod || "wire_transfer";
+    
+    // Increment counter and get new invoice number
+    const counter = await this.incrementInvoiceCounter(paymentType);
+    const invoiceNumber = `${paymentType === "cash" ? "CV" : paymentType === "card" ? "CB" : "VI"}-${String(counter.currentNumber).padStart(6, "0")}`;
+    
+    const [invoice] = await db.insert(invoices).values([{
+      ...invoiceData,
+      invoiceNumber,
+    }]).returning();
     return invoice;
   }
 
@@ -324,7 +333,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoiceItem(itemData: InsertInvoiceItem): Promise<InvoiceItem> {
-    const [item] = await db.insert(invoiceItems).values(itemData).returning();
+    const [item] = await db.insert(invoiceItems).values([itemData]).returning();
     return item;
   }
 
