@@ -1,4 +1,4 @@
-import { Home, FileText, DollarSign, Calendar, Settings, Package, Users, Briefcase } from "lucide-react";
+import { Home, FileText, DollarSign, Calendar, Settings, Package, Users, Briefcase, Wrench } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,11 @@ const menuItems = [
     title: "Prestations",
     url: "/admin/engagements",
     icon: Briefcase,
+  },
+  {
+    title: "Atelier",
+    url: "/admin/workshop",
+    icon: Wrench,
   },
   {
     title: "Services",

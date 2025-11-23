@@ -678,6 +678,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertReservationSchema.parse(req.body);
       const reservation = await storage.createReservation(validatedData);
 
+      // Initialize workflow tasks for this reservation if service has workflows
+      try {
+        const serviceWorkflows = await storage.getServiceWorkflows(reservation.serviceId);
+        for (const workflow of serviceWorkflows) {
+          const workflowSteps = await storage.getWorkflowSteps(workflow.id);
+          await storage.initializeReservationWorkflow(reservation.id, workflowSteps);
+        }
+      } catch (error) {
+        console.log("No workflows for this service or error initializing tasks:", error);
+      }
+
       // Create notification for client
       await storage.createNotification({
         userId: reservation.clientId,
@@ -1120,7 +1131,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceId: req.params.serviceId,
         workflowId: req.body.workflowId,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
       res.json(serviceWorkflow);
     } catch (error: any) {
       console.error("Error assigning workflow to service:", error);

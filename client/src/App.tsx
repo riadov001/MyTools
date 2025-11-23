@@ -29,6 +29,8 @@ import AdminReservations from "@/pages/admin-reservations";
 import AdminSettings from "@/pages/admin-settings";
 import AdminUsers from "@/pages/admin-users";
 import AdminEngagements from "@/pages/admin-engagements";
+import AdminServiceWorkflows from "@/pages/admin-service-workflows";
+import WorkshopManagement from "@/pages/workshop-management";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -83,12 +85,14 @@ function Router() {
               <Switch>
                 <Route path="/admin" component={AdminDashboard} />
                 <Route path="/admin/engagements" component={AdminEngagements} />
+                <Route path="/admin/service-workflows" component={AdminServiceWorkflows} />
                 <Route path="/admin/services" component={AdminServices} />
                 <Route path="/admin/quotes/:id/edit" component={AdminQuoteEdit} />
                 <Route path="/admin/quotes" component={AdminQuotes} />
                 <Route path="/admin/invoices/:id/edit" component={AdminInvoiceEdit} />
                 <Route path="/admin/invoices" component={AdminInvoices} />
                 <Route path="/admin/reservations" component={AdminReservations} />
+                <Route path="/admin/workshop" component={WorkshopManagement} />
                 <Route path="/admin/users" component={AdminUsers} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/login">
