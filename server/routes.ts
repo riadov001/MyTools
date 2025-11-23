@@ -995,6 +995,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Engagement (Prestation) routes
+  app.get("/api/admin/engagements", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { clientId } = req.query;
+      const engagements = await storage.getEngagements(clientId as string | undefined);
+      res.json(engagements);
+    } catch (error: any) {
+      console.error("Error fetching engagements:", error);
+      res.status(500).json({ message: "Failed to fetch engagements" });
+    }
+  });
+
+  app.get("/api/admin/engagements/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const engagement = await storage.getEngagement(req.params.id);
+      if (!engagement) {
+        return res.status(404).json({ message: "Engagement not found" });
+      }
+      res.json(engagement);
+    } catch (error: any) {
+      console.error("Error fetching engagement:", error);
+      res.status(500).json({ message: "Failed to fetch engagement" });
+    }
+  });
+
+  app.post("/api/admin/engagements", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const engagement = await storage.createEngagement({
+        clientId: req.body.clientId,
+        title: req.body.title,
+        description: req.body.description,
+        status: req.body.status || "active",
+      });
+      res.json(engagement);
+    } catch (error: any) {
+      console.error("Error creating engagement:", error);
+      res.status(400).json({ message: error.message || "Failed to create engagement" });
+    }
+  });
+
+  app.patch("/api/admin/engagements/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const engagement = await storage.updateEngagement(req.params.id, req.body);
+      res.json(engagement);
+    } catch (error: any) {
+      console.error("Error updating engagement:", error);
+      res.status(400).json({ message: error.message || "Failed to update engagement" });
+    }
+  });
+
+  app.delete("/api/admin/engagements/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.updateEngagement(req.params.id, { status: "cancelled" });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting engagement:", error);
+      res.status(400).json({ message: error.message || "Failed to delete engagement" });
+    }
+  });
+
+  app.get("/api/admin/engagements/summary/:clientId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const summary = await storage.getEngagementSummary(req.params.clientId);
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Error fetching engagement summary:", error);
+      res.status(500).json({ message: "Failed to fetch engagement summary" });
+    }
+  });
+
   // Cache clearing route
   app.post("/api/admin/cache/clear", isAuthenticated, isAdmin, async (req, res) => {
     try {

@@ -479,10 +479,46 @@ export class DatabaseStorage implements IStorage {
       // Create new settings
       const [created] = await db
         .insert(applicationSettings)
-        .values(settingsData as InsertApplicationSettings)
+        .values([settingsData as InsertApplicationSettings])
         .returning();
       return created;
     }
+  }
+
+  // Engagement operations
+  async getEngagements(clientId?: string): Promise<Engagement[]> {
+    if (clientId) {
+      return await db.select().from(engagements).where(eq(engagements.clientId, clientId)).orderBy(desc(engagements.createdAt));
+    }
+    return await db.select().from(engagements).orderBy(desc(engagements.createdAt));
+  }
+
+  async getEngagement(id: string): Promise<Engagement | undefined> {
+    const [engagement] = await db.select().from(engagements).where(eq(engagements.id, id));
+    return engagement;
+  }
+
+  async createEngagement(engagementData: InsertEngagement): Promise<Engagement> {
+    const [engagement] = await db.insert(engagements).values([engagementData]).returning();
+    return engagement;
+  }
+
+  async updateEngagement(id: string, engagementData: Partial<InsertEngagement>): Promise<Engagement> {
+    const [engagement] = await db
+      .update(engagements)
+      .set({ ...engagementData, updatedAt: new Date() })
+      .where(eq(engagements.id, id))
+      .returning();
+    return engagement;
+  }
+
+  async getEngagementSummary(clientId: string): Promise<{ quotes: Quote[]; invoices: Invoice[]; reservations: Reservation[] }> {
+    const [quotesList, invoicesList, reservationsList] = await Promise.all([
+      db.select().from(quotes).where(eq(quotes.clientId, clientId)),
+      db.select().from(invoices).where(eq(invoices.clientId, clientId)),
+      db.select().from(reservations).where(eq(reservations.clientId, clientId)),
+    ]);
+    return { quotes: quotesList, invoices: invoicesList, reservations: reservationsList };
   }
 }
 

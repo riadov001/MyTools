@@ -28,6 +28,7 @@ import AdminQuoteEdit from "@/pages/admin-quote-edit";
 import AdminReservations from "@/pages/admin-reservations";
 import AdminSettings from "@/pages/admin-settings";
 import AdminUsers from "@/pages/admin-users";
+import AdminEngagements from "@/pages/admin-engagements";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -81,6 +82,7 @@ function Router() {
             <main className="flex-1 overflow-auto">
               <Switch>
                 <Route path="/admin" component={AdminDashboard} />
+                <Route path="/admin/engagements" component={AdminEngagements} />
                 <Route path="/admin/services" component={AdminServices} />
                 <Route path="/admin/quotes/:id/edit" component={AdminQuoteEdit} />
                 <Route path="/admin/quotes" component={AdminQuotes} />

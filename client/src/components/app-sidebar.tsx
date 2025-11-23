@@ -1,4 +1,4 @@
-import { Home, FileText, DollarSign, Calendar, Settings, Package, Users } from "lucide-react";
+import { Home, FileText, DollarSign, Calendar, Settings, Package, Users, Briefcase } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +17,11 @@ const menuItems = [
     title: "Tableau de bord",
     url: "/admin",
     icon: Home,
+  },
+  {
+    title: "Prestations",
+    url: "/admin/engagements",
+    icon: Briefcase,
   },
   {
     title: "Services",
