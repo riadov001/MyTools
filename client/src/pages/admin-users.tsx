@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +12,20 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { getRedirectionContext, performReturnRedirect } from "@/lib/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AdminUsers() {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const [createUserDialog, setCreateUserDialog] = useState(false);
   const [editUserDialog, setEditUserDialog] = useState<User | null>(null);
   const [deleteUserDialog, setDeleteUserDialog] = useState<User | null>(null);
+  const [redirectionContext, setRedirectionContext] = useState(getRedirectionContext());
   
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
@@ -44,6 +49,14 @@ export default function AdminUsers() {
     }
   }, [isAuthenticated, isLoading, isAdmin, toast]);
 
+  // Ouvrir automatiquement le dialogue de création si on vient d'une redirection
+  useEffect(() => {
+    if (redirectionContext && !createUserDialog) {
+      setCreateUserDialog(true);
+      setNewUserRole("client"); // Par défaut pour les clients
+    }
+  }, [redirectionContext, createUserDialog]);
+
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
     enabled: isAuthenticated && isAdmin,
@@ -51,9 +64,10 @@ export default function AdminUsers() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: { email: string; firstName?: string; lastName?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
-      return apiRequest("POST", "/api/admin/users", data);
+      const response = await apiRequest("POST", "/api/admin/users", data);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (newUser: any) => {
       toast({
         title: "Succès",
         description: "Utilisateur créé avec succès",
@@ -64,6 +78,16 @@ export default function AdminUsers() {
       setNewUserLastName("");
       setNewUserRole("client");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+
+      // Si on vient d'une redirection, retourner à la page d'origine
+      if (redirectionContext) {
+        const redirectUrl = performReturnRedirect(newUser?.id);
+        if (redirectUrl) {
+          setTimeout(() => {
+            setLocation(redirectUrl);
+          }, 500);
+        }
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -171,6 +195,16 @@ export default function AdminUsers() {
           Créer un utilisateur
         </Button>
       </div>
+
+      {redirectionContext && (
+        <Alert className="bg-primary/10 border-primary">
+          <ArrowLeft className="h-4 w-4" />
+          <AlertDescription>
+            Vous créez un client pour {redirectionContext.returnTo === "quote" ? "un nouveau devis" : "une nouvelle réservation"}. 
+            Après l'ajout du client, vous serez redirigé automatiquement.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
