@@ -236,6 +236,19 @@ function parseObjectPath(path: string): {
   };
 }
 
+async function getSigningCredentials(): Promise<any> {
+  try {
+    const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/credential`);
+    if (!response.ok) {
+      throw new Error(`Failed to get credentials: ${response.statusText}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Error getting signing credentials:", error);
+    throw error;
+  }
+}
+
 async function signObjectURL({
   bucketName,
   objectName,
@@ -248,7 +261,16 @@ async function signObjectURL({
   ttlSec: number;
 }): Promise<string> {
   try {
-    const bucket = objectStorageClient.bucket(bucketName);
+    // Get credentials from sidecar
+    const credentials = await getSigningCredentials();
+    
+    // Create a new Storage instance with credentials
+    const storageWithAuth = new Storage({ 
+      credentials: credentials,
+      projectId: bucketName.split("-")[0] || "replit",
+    });
+    
+    const bucket = storageWithAuth.bucket(bucketName);
     const file = bucket.file(objectName);
     const [signedURL] = await file.getSignedUrl({
       version: "v4",
