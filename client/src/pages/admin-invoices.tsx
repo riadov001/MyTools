@@ -863,6 +863,7 @@ export default function AdminInvoices() {
                   'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
                   'video/*': ['.mp4', '.webm', '.mov']
                 }}
+                mediaEndpoint="/api/invoice-media"
                 data-testid="uploader-direct-invoice-media"
               />
               {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (

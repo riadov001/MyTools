@@ -10,12 +10,14 @@ interface ObjectUploaderProps {
   onUploadComplete: (files: Array<{key: string; type: string; name: string}>) => void;
   accept?: Record<string, string[]>;
   "data-testid"?: string;
+  mediaEndpoint?: string;
 }
 
 export function ObjectUploader({
   onUploadComplete,
   accept = { 'image/*': [], 'video/*': [] },
   "data-testid": testId,
+  mediaEndpoint = "/api/quote-media",
 }: ObjectUploaderProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -36,6 +38,7 @@ export function ObjectUploader({
         const response = await fetch("/api/objects/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
         
         if (!response.ok) {
@@ -59,10 +62,11 @@ export function ObjectUploader({
         }
 
         // Set ACL policy
-        const aclResponse = await fetch("/api/quote-media", {
+        const aclResponse = await fetch(mediaEndpoint, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mediaURL: uploadURL }),
+          credentials: "include",
         });
         
         if (!aclResponse.ok) {
@@ -99,7 +103,7 @@ export function ObjectUploader({
       // Reset input
       e.target.value = '';
     }
-  }, [uploadedFiles, onUploadComplete, toast]);
+  }, [uploadedFiles, onUploadComplete, toast, mediaEndpoint]);
 
   const removeFile = (index: number) => {
     const newFiles = uploadedFiles.filter((_, i) => i !== index);
