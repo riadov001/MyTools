@@ -1,5 +1,6 @@
 // Reference: javascript_object_storage blueprint
 import { Storage, File } from "@google-cloud/storage";
+import { Client as ReplitStorageClient } from "@replit/object-storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
 import {
@@ -12,8 +13,7 @@ import {
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
-// Initialize Storage client with Replit sidecar authentication
-// This provides proper credentials for signing URLs in the Replit environment
+// Initialize Google Cloud Storage client for reading/metadata operations
 export const objectStorageClient = new Storage({
   credentials: {
     type: "external_account",
@@ -32,6 +32,9 @@ export const objectStorageClient = new Storage({
   } as any,
   projectId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "replit",
 });
+
+// Initialize Replit native storage client for uploads (handles auth automatically)
+export const replitStorageClient = new ReplitStorageClient();
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -116,25 +119,31 @@ export class ObjectStorageService {
     }
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
+  // Generate a unique object path for uploads (used with direct upload)
+  generateUploadPath(): { objectId: string; objectPath: string } {
+    const objectId = randomUUID();
+    const objectPath = `.private/uploads/${objectId}`;
+    return { objectId, objectPath };
+  }
+
+  // Upload file directly using Replit SDK (no signed URLs needed)
+  async uploadFile(buffer: Buffer, contentType: string): Promise<string> {
+    const { objectId, objectPath } = this.generateUploadPath();
+    
+    try {
+      const result = await replitStorageClient.uploadFromBytes(objectPath, buffer);
+      
+      if (result.error) {
+        throw new Error(`Upload failed: ${result.error}`);
+      }
+      
+      return `/objects/uploads/${objectId}`;
+    } catch (error) {
+      console.error("Error uploading file:", error);
       throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
+        `Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
-
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
   }
 
   async getObjectEntityFile(objectPath: string): Promise<File> {
@@ -234,54 +243,4 @@ function parseObjectPath(path: string): {
     bucketName,
     objectName,
   };
-}
-
-async function getSigningCredentials(): Promise<any> {
-  try {
-    const response = await fetch(`${REPLIT_SIDECAR_ENDPOINT}/credential`);
-    if (!response.ok) {
-      throw new Error(`Failed to get credentials: ${response.statusText}`);
-    }
-    return response.json();
-  } catch (error) {
-    console.error("Error getting signing credentials:", error);
-    throw error;
-  }
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  try {
-    // Get credentials from sidecar
-    const credentials = await getSigningCredentials();
-    
-    // Create a new Storage instance with credentials
-    const storageWithAuth = new Storage({ 
-      credentials: credentials,
-      projectId: bucketName.split("-")[0] || "replit",
-    });
-    
-    const bucket = storageWithAuth.bucket(bucketName);
-    const file = bucket.file(objectName);
-    const [signedURL] = await file.getSignedUrl({
-      version: "v4",
-      action: method.toLowerCase() as "read" | "write" | "delete",
-      expires: Date.now() + ttlSec * 1000,
-    });
-    return signedURL;
-  } catch (error) {
-    console.error("Error signing URL:", error);
-    throw new Error(
-      `Failed to sign object URL: ${error instanceof Error ? error.message : "Unknown error"}`
-    );
-  }
 }

@@ -1,5 +1,6 @@
 // Local authentication with email/password
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
@@ -1271,15 +1272,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+  app.post("/api/objects/upload", isAuthenticated, express.raw({ type: '*/*', limit: '50mb' }), async (req: any, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
+      const contentType = req.headers['content-type'] || 'application/octet-stream';
+      const buffer = req.body as Buffer;
+      
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ error: "No file data provided" });
+      }
+      
+      const objectPath = await objectStorageService.uploadFile(buffer, contentType);
+      res.json({ objectPath });
     } catch (error) {
-      console.error("Error generating upload URL:", error);
+      console.error("Error uploading file:", error);
       res.status(500).json({ 
-        error: "Failed to generate upload URL",
+        error: "Failed to upload file",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }
