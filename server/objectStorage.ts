@@ -12,12 +12,15 @@ import {
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
+// Initialize Storage client with Replit sidecar authentication
+// This provides proper credentials for signing URLs in the Replit environment
 export const objectStorageClient = new Storage({
   credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
     type: "external_account",
+    audience: "replit",
+    client_id: "replit",
+    subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
     credential_source: {
       url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
       format: {
@@ -25,9 +28,9 @@ export const objectStorageClient = new Storage({
         subject_token_field_name: "access_token",
       },
     },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
+    token_info_url: `${REPLIT_SIDECAR_ENDPOINT}/tokeninfo`,
+  } as any,
+  projectId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "replit",
 });
 
 export class ObjectNotFoundError extends Error {
