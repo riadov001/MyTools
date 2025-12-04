@@ -74,8 +74,8 @@ const actionColors: Record<string, string> = {
 
 export default function AdminAuditLogs() {
   const [filters, setFilters] = useState({
-    entityType: "",
-    action: "",
+    entityType: "all",
+    action: "all",
     limit: 20,
     offset: 0,
   });
@@ -85,8 +85,8 @@ export default function AdminAuditLogs() {
     queryKey: ["/api/admin/audit-logs", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters.entityType) params.append("entityType", filters.entityType);
-      if (filters.action) params.append("action", filters.action);
+      if (filters.entityType && filters.entityType !== "all") params.append("entityType", filters.entityType);
+      if (filters.action && filters.action !== "all") params.append("action", filters.action);
       params.append("limit", filters.limit.toString());
       params.append("offset", filters.offset.toString());
       
@@ -167,7 +167,7 @@ export default function AdminAuditLogs() {
                   <SelectValue placeholder="Type d'entité" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous</SelectItem>
+                  <SelectItem value="all">Tous</SelectItem>
                   <SelectItem value="quote">Devis</SelectItem>
                   <SelectItem value="invoice">Facture</SelectItem>
                   <SelectItem value="reservation">Réservation</SelectItem>
@@ -186,7 +186,7 @@ export default function AdminAuditLogs() {
                   <SelectValue placeholder="Action" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes</SelectItem>
+                  <SelectItem value="all">Toutes</SelectItem>
                   <SelectItem value="created">Créé</SelectItem>
                   <SelectItem value="updated">Modifié</SelectItem>
                   <SelectItem value="deleted">Supprimé</SelectItem>
@@ -199,7 +199,7 @@ export default function AdminAuditLogs() {
             </div>
             <Button
               variant="outline"
-              onClick={() => setFilters({ entityType: "", action: "", limit: 20, offset: 0 })}
+              onClick={() => setFilters({ entityType: "all", action: "all", limit: 20, offset: 0 })}
               data-testid="button-reset-filters"
             >
               Réinitialiser
