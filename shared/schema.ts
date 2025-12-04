@@ -54,6 +54,8 @@ export const services = pgTable("services", {
   basePrice: decimal("base_price", { precision: 10, scale: 2 }),
   category: varchar("category", { length: 100 }),
   isActive: boolean("is_active").notNull().default(true),
+  estimatedDuration: integer("estimated_duration"), // Duration in minutes
+  imageUrl: varchar("image_url", { length: 500 }),
   customFormFields: jsonb("custom_form_fields"), // Array of field definitions
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -225,6 +227,7 @@ export const engagements = pgTable("engagements", {
 // Workflows - define the steps required for a service
 export const workflows = pgTable("workflows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceId: varchar("service_id").references(() => services.id, { onDelete: 'cascade' }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
