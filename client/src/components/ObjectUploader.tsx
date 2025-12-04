@@ -34,31 +34,38 @@ export function ObjectUploader({
 
     try {
       for (const file of Array.from(files)) {
-        // Read file as ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        
-        // Upload file directly to backend
+        // Get signed upload URL from backend
         const response = await fetch("/api/objects/upload", {
           method: "POST",
-          headers: { 
-            "Content-Type": file.type || "application/octet-stream",
-          },
-          body: arrayBuffer,
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
         });
         
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.details || errorData.error || "Échec de l'upload");
+          throw new Error(errorData.details || errorData.error || "Échec de génération de l'URL");
         }
         
-        const { objectPath } = await response.json();
+        const { uploadURL } = await response.json();
+
+        // Upload file directly to object storage using signed URL
+        const uploadResponse = await fetch(uploadURL, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Échec de l'upload du fichier (${uploadResponse.status})`);
+        }
 
         // Set ACL policy
         const aclResponse = await fetch(mediaEndpoint, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mediaURL: objectPath }),
+          body: JSON.stringify({ mediaURL: uploadURL }),
           credentials: "include",
         });
         
@@ -67,10 +74,10 @@ export function ObjectUploader({
           throw new Error(errorData.error || "Échec de configuration des permissions");
         }
         
-        const aclResult = await aclResponse.json();
+        const { objectPath } = await aclResponse.json();
 
         newFiles.push({
-          key: aclResult.objectPath || objectPath,
+          key: objectPath,
           type: file.type,
           name: file.name,
         });
