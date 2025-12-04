@@ -3,6 +3,13 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Handle raw body for file uploads BEFORE json parsing
+app.use('/api/objects/upload', express.raw({ 
+  type: ['image/*', 'video/*', 'application/octet-stream'],
+  limit: '50mb'
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

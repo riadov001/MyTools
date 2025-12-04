@@ -1277,46 +1277,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Direct file upload endpoint - handles server-side upload to object storage
+  // Body is parsed as raw buffer by express.raw() middleware in index.ts
   app.post("/api/objects/upload", isAuthenticated, async (req: any, res) => {
-    const chunks: Buffer[] = [];
-    const contentType = req.headers['content-type'] || 'application/octet-stream';
-    
-    req.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-    });
-    
-    req.on('end', async () => {
-      try {
-        const buffer = Buffer.concat(chunks);
-        
-        if (buffer.length === 0) {
-          return res.status(400).json({ error: "No file data provided" });
-        }
-        
-        const objectStorageService = new ObjectStorageService();
-        const { objectPath, objectId } = await objectStorageService.uploadFileBuffer(buffer, contentType);
-        
-        // Set ACL policy for the uploaded file
-        const userId = req.user.id;
-        await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
-          owner: userId,
-          visibility: "private",
-        });
-        
-        res.json({ objectPath, objectId });
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        res.status(500).json({ 
-          error: "Failed to upload file",
-          details: error instanceof Error ? error.message : "Unknown error"
-        });
+    try {
+      const contentType = req.headers['content-type'] || 'application/octet-stream';
+      const buffer = req.body as Buffer;
+      
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ error: "No file data provided" });
       }
-    });
-    
-    req.on('error', (error: Error) => {
-      console.error("Request error:", error);
-      res.status(500).json({ error: "Upload failed" });
-    });
+      
+      console.log(`Received upload request: ${buffer.length} bytes, type: ${contentType}`);
+      
+      const objectStorageService = new ObjectStorageService();
+      const { objectPath, objectId } = await objectStorageService.uploadFileBuffer(buffer, contentType);
+      
+      // Set ACL policy for the uploaded file
+      const userId = req.user.id;
+      await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+        owner: userId,
+        visibility: "private",
+      });
+      
+      res.json({ objectPath, objectId });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      res.status(500).json({ 
+        error: "Failed to upload file",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   app.put("/api/quote-media", isAuthenticated, async (req, res) => {

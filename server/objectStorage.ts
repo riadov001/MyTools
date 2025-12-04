@@ -42,12 +42,20 @@ export class ObjectStorageService {
     const objectId = randomUUID();
     const objectName = `.private/uploads/${objectId}`;
     
+    console.log(`Uploading file: ${objectName}, size: ${buffer.length} bytes, type: ${contentType}`);
+    
     // Upload using Replit SDK
     const result = await this.client.uploadFromBytes(objectName, buffer);
     
     if (!result.ok) {
-      throw new Error(`Upload failed: ${result.error}`);
+      const errorMsg = typeof result.error === 'string' 
+        ? result.error 
+        : JSON.stringify(result.error);
+      console.error(`Upload failed:`, result.error);
+      throw new Error(`Upload failed: ${errorMsg}`);
     }
+    
+    console.log(`Upload successful: ${objectName}`);
     
     return {
       objectPath: `/objects/uploads/${objectId}`,
