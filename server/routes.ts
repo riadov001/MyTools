@@ -1251,17 +1251,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     const userId = req.user.id;
     const objectStorageService = new ObjectStorageService();
+    const objectPath = req.path;
+    
     try {
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      // Check if user can access this object
       const canAccess = await objectStorageService.canAccessObjectEntity({
-        objectFile,
+        objectPath,
         userId: userId,
         requestedPermission: (await import("./objectAcl")).ObjectPermission.READ,
       });
+      
       if (!canAccess) {
         return res.sendStatus(401);
       }
-      objectStorageService.downloadObject(objectFile, res);
+      
+      // Download and serve the object
+      await objectStorageService.downloadObject(objectPath, res);
     } catch (error) {
       console.error("Error checking object access:", error);
       if (error instanceof ObjectNotFoundError) {
