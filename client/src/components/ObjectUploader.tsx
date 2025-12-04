@@ -17,7 +17,6 @@ export function ObjectUploader({
   onUploadComplete,
   accept = { 'image/*': [], 'video/*': [] },
   "data-testid": testId,
-  mediaEndpoint = "/api/quote-media",
 }: ObjectUploaderProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -34,47 +33,25 @@ export function ObjectUploader({
 
     try {
       for (const file of Array.from(files)) {
-        // Get signed upload URL from backend
+        // Read file as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Upload file directly to backend which handles storage and ACL
         const response = await fetch("/api/objects/upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": file.type || "application/octet-stream",
+          },
+          body: arrayBuffer,
           credentials: "include",
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.details || errorData.error || "Échec de génération de l'URL");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.details || errorData.error || `Échec de l'upload (${response.status})`);
         }
         
-        const { uploadURL } = await response.json();
-
-        // Upload file directly to object storage using signed URL
-        const uploadResponse = await fetch(uploadURL, {
-          method: "PUT",
-          body: file,
-          headers: {
-            "Content-Type": file.type || "application/octet-stream",
-          },
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error(`Échec de l'upload du fichier (${uploadResponse.status})`);
-        }
-
-        // Set ACL policy
-        const aclResponse = await fetch(mediaEndpoint, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mediaURL: uploadURL }),
-          credentials: "include",
-        });
-        
-        if (!aclResponse.ok) {
-          const errorData = await aclResponse.json();
-          throw new Error(errorData.error || "Échec de configuration des permissions");
-        }
-        
-        const { objectPath } = await aclResponse.json();
+        const { objectPath } = await response.json();
 
         newFiles.push({
           key: objectPath,
@@ -103,7 +80,7 @@ export function ObjectUploader({
       // Reset input
       e.target.value = '';
     }
-  }, [uploadedFiles, onUploadComplete, toast, mediaEndpoint]);
+  }, [uploadedFiles, onUploadComplete, toast]);
 
   const removeFile = (index: number) => {
     const newFiles = uploadedFiles.filter((_, i) => i !== index);

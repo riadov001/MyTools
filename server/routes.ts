@@ -1271,18 +1271,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
-    try {
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
-    } catch (error) {
-      console.error("Error generating upload URL:", error);
-      res.status(500).json({ 
-        error: "Failed to generate upload URL",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
+  // Direct file upload endpoint - handles server-side upload to object storage
+  app.post("/api/objects/upload", isAuthenticated, async (req: any, res) => {
+    const chunks: Buffer[] = [];
+    const contentType = req.headers['content-type'] || 'application/octet-stream';
+    
+    req.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    
+    req.on('end', async () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        
+        if (buffer.length === 0) {
+          return res.status(400).json({ error: "No file data provided" });
+        }
+        
+        const objectStorageService = new ObjectStorageService();
+        const { objectPath, objectId } = await objectStorageService.uploadFileBuffer(buffer, contentType);
+        
+        // Set ACL policy for the uploaded file
+        const userId = req.user.id;
+        await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
+          owner: userId,
+          visibility: "private",
+        });
+        
+        res.json({ objectPath, objectId });
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        res.status(500).json({ 
+          error: "Failed to upload file",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+    
+    req.on('error', (error: Error) => {
+      console.error("Request error:", error);
+      res.status(500).json({ error: "Upload failed" });
+    });
   });
 
   app.put("/api/quote-media", isAuthenticated, async (req, res) => {

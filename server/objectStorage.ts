@@ -43,6 +43,18 @@ export class ObjectNotFoundError extends Error {
 export class ObjectStorageService {
   constructor() {}
 
+  // Gets the bucket name from the environment.
+  getBucketName(): string {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
+    if (!bucketId) {
+      throw new Error(
+        "DEFAULT_OBJECT_STORAGE_BUCKET_ID not set. Create a bucket in 'Object Storage' " +
+          "tool to set it up."
+      );
+    }
+    return bucketId;
+  }
+
   // Gets the public object search paths.
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
@@ -131,28 +143,24 @@ export class ObjectStorageService {
     }
   }
 
-  // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL(): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
-    }
-
+  // Upload file directly to object storage (server-side upload)
+  async uploadFileBuffer(buffer: Buffer, contentType: string): Promise<{ objectPath: string; objectId: string }> {
+    const bucketName = this.getBucketName();
     const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    // Sign URL for PUT method with TTL
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
+    const objectName = `.private/uploads/${objectId}`;
+    
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    
+    await file.save(buffer, {
+      contentType: contentType,
+      resumable: false,
     });
+    
+    return {
+      objectPath: `/objects/uploads/${objectId}`,
+      objectId,
+    };
   }
 
   // Gets the object entity file from the object path.
@@ -183,6 +191,11 @@ export class ObjectStorageService {
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
+    // If it's already a normalized path, return it
+    if (rawPath.startsWith("/objects/")) {
+      return rawPath;
+    }
+    
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
@@ -257,42 +270,4 @@ function parseObjectPath(path: string): {
     bucketName,
     objectName,
   };
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
-    );
-  }
-
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
 }
