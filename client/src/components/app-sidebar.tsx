@@ -1,4 +1,4 @@
-import { Home, FileText, DollarSign, Calendar, Settings, Package, Users, Briefcase, Wrench, ClipboardList } from "lucide-react";
+import { Home, FileText, DollarSign, Calendar, Settings, Package, Users, Briefcase, Wrench, ClipboardList, GitBranch, History } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +39,11 @@ const menuItems = [
     icon: Package,
   },
   {
+    title: "Workflows",
+    url: "/admin/service-workflows",
+    icon: GitBranch,
+  },
+  {
     title: "Devis",
     url: "/admin/quotes",
     icon: FileText,
@@ -57,6 +62,11 @@ const menuItems = [
     title: "Utilisateurs",
     url: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Historique",
+    url: "/admin/audit-logs",
+    icon: History,
   },
   {
     title: "Paramètres",

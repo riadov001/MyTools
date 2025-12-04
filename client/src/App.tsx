@@ -30,6 +30,7 @@ import AdminSettings from "@/pages/admin-settings";
 import AdminUsers from "@/pages/admin-users";
 import AdminEngagements from "@/pages/admin-engagements";
 import AdminServiceWorkflows from "@/pages/admin-service-workflows";
+import AdminAuditLogs from "@/pages/admin-audit-logs";
 import WorkshopManagement from "@/pages/workshop-management";
 import EmployeeServices from "@/pages/employee-services";
 
@@ -96,6 +97,7 @@ function Router() {
                 <Route path="/admin/workshop" component={WorkshopManagement} />
                 <Route path="/admin/services-catalog" component={EmployeeServices} />
                 <Route path="/admin/users" component={AdminUsers} />
+                <Route path="/admin/audit-logs" component={AdminAuditLogs} />
                 <Route path="/admin/settings" component={AdminSettings} />
                 <Route path="/login">
                   <Redirect to="/admin" />

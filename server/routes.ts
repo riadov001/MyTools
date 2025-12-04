@@ -143,14 +143,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertServiceSchema.parse(req.body);
       const service = await storage.createService(validatedData);
       
+      // Automatically create a workflow for the service
+      const workflow = await storage.createWorkflow({
+        name: `Workflow - ${service.name}`,
+        description: `Workflow pour le service ${service.name}`,
+        serviceId: service.id,
+      });
+      
       // Log audit event
       await logAuditEvent({
         req,
         entityType: "service",
         entityId: service.id,
         action: "created",
-        summary: `${entityLabels.service} "${service.name}" ${actionLabels.created}`,
+        summary: `${entityLabels.service} "${service.name}" ${actionLabels.created} avec workflow associé`,
         newData: service,
+        metadata: { workflowId: workflow.id },
       });
       
       res.json(service);
@@ -712,10 +720,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update invoice
-  app.patch("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/admin/invoices/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       console.log("Update invoice request body:", JSON.stringify(req.body, null, 2));
+      
+      // Get the previous state for audit logging
+      const previousInvoice = await storage.getInvoice(id);
       const updateData = { ...req.body };
       
       // Convert date strings to Date objects for all timestamp fields
@@ -735,6 +746,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Update invoice processed data:", JSON.stringify(updateData, null, 2));
       const invoice = await storage.updateInvoice(id, updateData);
+      
+      // Determine action type based on status change
+      let action = "updated";
+      let summary = "Facture mise à jour";
+      if (updateData.status === "paid" && previousInvoice?.status !== "paid") {
+        action = "paid";
+        summary = "Facture marquée comme payée";
+      } else if (updateData.status === "cancelled" && previousInvoice?.status !== "cancelled") {
+        action = "cancelled";
+        summary = "Facture annulée";
+      }
+      
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "invoice",
+        entityId: id,
+        action,
+        summary,
+        previousData: previousInvoice,
+        newData: invoice,
+      });
+      
       res.json(invoice);
     } catch (error: any) {
       console.error("Error updating invoice:", error);
@@ -949,11 +983,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reservation CRUD routes for admin
-  app.patch("/api/admin/reservations/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/admin/reservations/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      
+      // Get previous state for audit logging
+      const previousReservation = await storage.getReservation(id);
+      
       const validatedData = insertReservationSchema.partial().parse(req.body);
       const reservation = await storage.updateReservation(id, validatedData);
+
+      // Determine action type based on status change
+      let action = "updated";
+      let summary = "Réservation mise à jour";
+      if (validatedData.status === "confirmed" && previousReservation?.status !== "confirmed") {
+        action = "confirmed";
+        summary = "Réservation confirmée";
+      } else if (validatedData.status === "cancelled" && previousReservation?.status !== "cancelled") {
+        action = "cancelled";
+        summary = "Réservation annulée";
+      } else if (validatedData.status === "completed" && previousReservation?.status !== "completed") {
+        action = "completed";
+        summary = "Réservation terminée";
+      }
+
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "reservation",
+        entityId: id,
+        action,
+        summary,
+        previousData: previousReservation,
+        newData: reservation,
+      });
 
       // Create notification for client if status changed
       if (validatedData.status) {
@@ -1415,18 +1478,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/workshop/tasks/:taskId", isAuthenticated, async (req, res) => {
+  app.patch("/api/workshop/tasks/:taskId", isAuthenticated, async (req: any, res) => {
     try {
       const task = await storage.updateWorkshopTask(req.params.taskId, {
         isCompleted: req.body.isCompleted,
         comment: req.body.comment,
-        completedByUserId: req.body.isCompleted ? (req as any).user.id : undefined,
+        completedByUserId: req.body.isCompleted ? req.user.id : undefined,
         completedAt: req.body.isCompleted ? new Date() : undefined,
       });
+      
+      // Log audit event for workshop task update
+      await logAuditEvent({
+        req,
+        entityType: "workshop_task",
+        entityId: task.id,
+        action: req.body.isCompleted ? "completed" : "updated",
+        summary: `Étape ${req.body.isCompleted ? "validée" : "mise à jour"}`,
+        newData: task,
+      });
+      
       res.json(task);
     } catch (error: any) {
       console.error("Error updating workshop task:", error);
       res.status(400).json({ message: error.message || "Failed to update workshop task" });
+    }
+  });
+
+  // Audit Log routes
+  app.get("/api/admin/audit-logs", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const filters: any = {};
+      
+      if (req.query.entityType) filters.entityType = req.query.entityType as string;
+      if (req.query.entityId) filters.entityId = req.query.entityId as string;
+      if (req.query.actorId) filters.actorId = req.query.actorId as string;
+      if (req.query.action) filters.action = req.query.action as string;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate as string);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate as string);
+      if (req.query.limit) filters.limit = parseInt(req.query.limit as string);
+      if (req.query.offset) filters.offset = parseInt(req.query.offset as string);
+      
+      const result = await storage.getAuditLogs(filters);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  app.get("/api/admin/audit-logs/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const log = await storage.getAuditLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: "Audit log not found" });
+      }
+      res.json(log);
+    } catch (error: any) {
+      console.error("Error fetching audit log:", error);
+      res.status(500).json({ message: "Failed to fetch audit log" });
+    }
+  });
+
+  app.get("/api/admin/entity-history/:entityType/:entityId", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const history = await storage.getEntityAuditHistory(req.params.entityType, req.params.entityId);
+      res.json(history);
+    } catch (error: any) {
+      console.error("Error fetching entity history:", error);
+      res.status(500).json({ message: "Failed to fetch entity history" });
     }
   });
 
