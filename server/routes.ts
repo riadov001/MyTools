@@ -1,11 +1,11 @@
 // Local authentication with email/password
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./localAuth";
-import { insertServiceSchema, insertQuoteSchema, insertInvoiceSchema, insertReservationSchema, type User } from "@shared/schema";
+import { insertServiceSchema, insertQuoteSchema, insertInvoiceSchema, insertReservationSchema, type User, type InsertAuditLog } from "@shared/schema";
 
 // WebSocket clients map
 const wsClients = new Map<string, WebSocket>();
@@ -19,6 +19,81 @@ function sanitizeUser<T extends User>(user: T): Omit<T, 'password'> {
 function sanitizeUsers<T extends User>(users: T[]): Omit<T, 'password'>[] {
   return users.map(sanitizeUser);
 }
+
+// Audit logging helper
+type EntityType = "quote" | "invoice" | "reservation" | "service" | "workflow" | "workflow_step" | "user" | "workshop_task";
+type ActionType = "created" | "updated" | "deleted" | "validated" | "rejected" | "completed" | "cancelled" | "paid" | "confirmed";
+
+interface AuditContext {
+  req: Request & { user?: User };
+  entityType: EntityType;
+  entityId: string;
+  action: ActionType;
+  summary: string;
+  previousData?: Record<string, any>;
+  newData?: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+
+async function logAuditEvent(ctx: AuditContext): Promise<void> {
+  try {
+    const user = ctx.req.user;
+    
+    // Compute field-level changes
+    const changes: { field: string; previousValue: any; newValue: any }[] = [];
+    if (ctx.previousData && ctx.newData) {
+      const allKeys = new Set([...Object.keys(ctx.previousData), ...Object.keys(ctx.newData)]);
+      for (const key of allKeys) {
+        const prev = ctx.previousData[key];
+        const curr = ctx.newData[key];
+        if (JSON.stringify(prev) !== JSON.stringify(curr)) {
+          changes.push({ field: key, previousValue: prev, newValue: curr });
+        }
+      }
+    }
+    
+    const logData: InsertAuditLog = {
+      entityType: ctx.entityType,
+      entityId: ctx.entityId,
+      action: ctx.action,
+      actorId: user?.id ?? null,
+      actorRole: user?.role as any ?? null,
+      actorName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : null,
+      summary: ctx.summary,
+      metadata: ctx.metadata ?? null,
+      ipAddress: ctx.req.ip ?? ctx.req.socket?.remoteAddress ?? null,
+      userAgent: ctx.req.headers['user-agent'] ?? null,
+    };
+    
+    await storage.createAuditLog(logData, changes);
+  } catch (error) {
+    console.error("Error logging audit event:", error);
+  }
+}
+
+// Helper to get action labels in French
+const actionLabels: Record<ActionType, string> = {
+  created: "créé",
+  updated: "modifié",
+  deleted: "supprimé",
+  validated: "validé",
+  rejected: "refusé",
+  completed: "terminé",
+  cancelled: "annulé",
+  paid: "payé",
+  confirmed: "confirmé",
+};
+
+const entityLabels: Record<EntityType, string> = {
+  quote: "Devis",
+  invoice: "Facture",
+  reservation: "Réservation",
+  service: "Service",
+  workflow: "Workflow",
+  workflow_step: "Étape de workflow",
+  user: "Utilisateur",
+  workshop_task: "Tâche atelier",
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -63,10 +138,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/services", isAuthenticated, isAdmin, async (req, res) => {
+  app.post("/api/admin/services", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const validatedData = insertServiceSchema.parse(req.body);
       const service = await storage.createService(validatedData);
+      
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "service",
+        entityId: service.id,
+        action: "created",
+        summary: `${entityLabels.service} "${service.name}" ${actionLabels.created}`,
+        newData: service,
+      });
+      
       res.json(service);
     } catch (error: any) {
       console.error("Error creating service:", error);
@@ -74,10 +160,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/services/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/admin/services/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const previousService = await storage.getService(id);
       const service = await storage.updateService(id, req.body);
+      
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "service",
+        entityId: service.id,
+        action: "updated",
+        summary: `${entityLabels.service} "${service.name}" ${actionLabels.updated}`,
+        previousData: previousService,
+        newData: service,
+      });
+      
       res.json(service);
     } catch (error) {
       console.error("Error updating service:", error);
@@ -85,10 +184,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/services/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.delete("/api/admin/services/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const previousService = await storage.getService(id);
       await storage.deleteService(id);
+      
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "service",
+        entityId: id,
+        action: "deleted",
+        summary: `${entityLabels.service} "${previousService?.name || id}" ${actionLabels.deleted}`,
+        previousData: previousService,
+      });
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting service:", error);
@@ -118,8 +229,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const quote = await storage.createQuote(validatedData);
       
-      // Send notification to admins (in a real app, you'd get admin user IDs)
-      // For now, we'll skip this as we don't have a way to get all admin IDs
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "quote",
+        entityId: quote.id,
+        action: "created",
+        summary: `${entityLabels.quote} ${actionLabels.created} par le client`,
+        newData: quote,
+      });
       
       res.json(quote);
     } catch (error: any) {
@@ -138,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/quotes", isAuthenticated, isAdmin, async (req, res) => {
+  app.post("/api/admin/quotes", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { mediaFiles, wheelCount, diameter, priceExcludingTax, taxRate, taxAmount, productDetails, quoteAmount, services, ...quoteData } = req.body;
       
@@ -200,6 +318,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "quote",
+        entityId: quote.id,
+        action: "created",
+        summary: `${entityLabels.quote} ${actionLabels.created} par l'administrateur`,
+        newData: quote,
+        metadata: { clientId: quote.clientId, servicesCount: services?.length || 0 },
+      });
+      
       // Create notification for client
       await storage.createNotification({
         userId: quote.clientId,
@@ -226,17 +355,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/quotes/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/admin/quotes/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const previousQuote = await storage.getQuote(id);
       const quote = await storage.updateQuote(id, req.body);
+      
+      // Determine the action based on status change
+      let action: ActionType = "updated";
+      if (req.body.status) {
+        if (req.body.status === "approved") action = "validated";
+        else if (req.body.status === "rejected") action = "rejected";
+        else if (req.body.status === "completed") action = "completed";
+        else if (req.body.status === "cancelled") action = "cancelled";
+      }
+      
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "quote",
+        entityId: quote.id,
+        action,
+        summary: `${entityLabels.quote} ${actionLabels[action]}`,
+        previousData: previousQuote,
+        newData: quote,
+      });
       
       // Create notification for client
       await storage.createNotification({
         userId: quote.clientId,
         type: "quote",
-        title: "Quote Updated",
-        message: `Your quote has been ${quote.status}`,
+        title: "Devis mis à jour",
+        message: `Votre devis a été ${actionLabels[action]}`,
         relatedId: quote.id,
       });
 
