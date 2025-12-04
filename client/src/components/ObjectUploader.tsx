@@ -1,4 +1,3 @@
-// Reference: javascript_object_storage blueprint
 import { useState, useCallback, useRef, useId } from "react";
 import { Upload, X, FileImage, FileVideo } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
+interface UploadedFile {
+  key: string;
+  type: string;
+  name: string;
+}
+
 interface ObjectUploaderProps {
-  onUploadComplete: (files: Array<{key: string; type: string; name: string}>) => void;
+  onUploadComplete: (files: UploadedFile[]) => void;
   accept?: Record<string, string[]>;
   "data-testid"?: string;
-  mediaEndpoint?: string;
 }
 
 export function ObjectUploader({
@@ -20,7 +24,7 @@ export function ObjectUploader({
 }: ObjectUploaderProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{key: string; type: string; name: string}>>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
 
@@ -29,20 +33,16 @@ export function ObjectUploader({
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const newFiles: Array<{key: string; type: string; name: string}> = [];
+    const newFiles: UploadedFile[] = [];
 
     try {
       for (const file of Array.from(files)) {
-        // Read file as ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        
-        // Upload file directly to backend which handles storage and ACL
-        const response = await fetch("/api/objects/upload", {
+        const formData = new FormData();
+        formData.append('media', file);
+
+        const response = await fetch("/api/upload", {
           method: "POST",
-          headers: { 
-            "Content-Type": file.type || "application/octet-stream",
-          },
-          body: arrayBuffer,
+          body: formData,
           credentials: "include",
         });
         
@@ -51,10 +51,10 @@ export function ObjectUploader({
           throw new Error(errorData.details || errorData.error || `Échec de l'upload (${response.status})`);
         }
         
-        const { objectPath } = await response.json();
+        const result = await response.json();
 
         newFiles.push({
-          key: objectPath,
+          key: result.objectPath,
           type: file.type,
           name: file.name,
         });
@@ -77,7 +77,6 @@ export function ObjectUploader({
       });
     } finally {
       setUploading(false);
-      // Reset input
       e.target.value = '';
     }
   }, [uploadedFiles, onUploadComplete, toast]);
@@ -110,6 +109,7 @@ export function ObjectUploader({
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
           className="w-full"
+          data-testid="button-select-files"
         >
           <Upload className="h-4 w-4 mr-2" />
           {uploading ? "Téléchargement..." : "Sélectionner des fichiers"}
@@ -133,7 +133,8 @@ export function ObjectUploader({
                 <button
                   type="button"
                   onClick={() => removeFile(index)}
-                  className="ml-1 hover-elevate active-elevate-2 rounded-full p-0.5"
+                  className="ml-1 rounded-full p-0.5 hover-elevate active-elevate-2"
+                  data-testid={`button-remove-file-${index}`}
                 >
                   <X className="h-3 w-3" />
                 </button>

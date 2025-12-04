@@ -1276,30 +1276,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct file upload endpoint - handles server-side upload to object storage
-  // Body is parsed as raw buffer by express.raw() middleware in index.ts
-  app.post("/api/objects/upload", isAuthenticated, async (req: any, res) => {
+  // File upload endpoint using express-fileupload
+  app.post("/api/upload", isAuthenticated, async (req: any, res) => {
     try {
-      const contentType = req.headers['content-type'] || 'application/octet-stream';
-      const buffer = req.body as Buffer;
-      
-      if (!buffer || buffer.length === 0) {
-        return res.status(400).json({ error: "No file data provided" });
+      if (!req.files || !req.files.media) {
+        return res.status(400).json({ error: "No file uploaded" });
       }
       
-      console.log(`Received upload request: ${buffer.length} bytes, type: ${contentType}`);
+      const file = req.files.media;
+      const mimetype = file.mimetype || '';
       
-      const objectStorageService = new ObjectStorageService();
-      const { objectPath, objectId } = await objectStorageService.uploadFileBuffer(buffer, contentType);
+      // Validate file type
+      if (!mimetype.startsWith('image/') && !mimetype.startsWith('video/')) {
+        return res.status(400).json({ error: "Only images and videos are allowed" });
+      }
       
-      // Set ACL policy for the uploaded file
-      const userId = req.user.id;
-      await objectStorageService.trySetObjectEntityAclPolicy(objectPath, {
-        owner: userId,
-        visibility: "private",
+      // Generate unique filename
+      const ext = file.name.split('.').pop();
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const uploadPath = `./uploads/${filename}`;
+      
+      // Save file
+      await file.mv(uploadPath);
+      
+      console.log(`File uploaded: ${uploadPath}`);
+      
+      res.json({ 
+        success: true,
+        message: "Upload OK",
+        objectPath: `/uploads/${filename}`,
+        filename: filename,
+        originalName: file.name,
+        size: file.size,
+        mimetype: file.mimetype
       });
-      
-      res.json({ objectPath, objectId });
     } catch (error) {
       console.error("Error uploading file:", error);
       res.status(500).json({ 
@@ -1308,6 +1318,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Serve uploaded files (static middleware added in index.ts)
 
   app.put("/api/quote-media", isAuthenticated, async (req, res) => {
     if (!req.body.mediaURL) {

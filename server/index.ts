@@ -1,17 +1,22 @@
 import express, { type Request, Response, NextFunction } from "express";
+import fileUpload from "express-fileupload";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Handle raw body for file uploads BEFORE json parsing
-app.use('/api/objects/upload', express.raw({ 
-  type: ['image/*', 'video/*', 'application/octet-stream'],
-  limit: '50mb'
+// File upload middleware
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  abortOnLimit: true,
+  createParentPath: true,
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve uploaded files
+app.use('/uploads', express.static('./uploads'));
 
 app.use((req, res, next) => {
   const start = Date.now();
