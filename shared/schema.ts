@@ -266,6 +266,39 @@ export const workshopTasks = pgTable("workshop_tasks", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Audit Logs - tracks all actions performed in the system
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: varchar("entity_type", { 
+    enum: ["quote", "invoice", "reservation", "service", "workflow", "workflow_step", "user", "workshop_task"] 
+  }).notNull(),
+  entityId: varchar("entity_id").notNull(),
+  action: varchar("action", { 
+    enum: ["created", "updated", "deleted", "validated", "rejected", "completed", "cancelled", "paid", "confirmed"] 
+  }).notNull(),
+  actorId: varchar("actor_id").references(() => users.id, { onDelete: 'set null' }),
+  actorRole: varchar("actor_role", { enum: ["client", "client_professionnel", "employe", "admin"] }),
+  actorName: varchar("actor_name", { length: 255 }), // Store name at time of action
+  summary: text("summary"), // Human-readable summary of action
+  metadata: jsonb("metadata"), // Additional context (e.g., related entity info)
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  occurredAt: timestamp("occurred_at").defaultNow().notNull(),
+}, (table) => [
+  index("IDX_audit_entity").on(table.entityType, table.entityId),
+  index("IDX_audit_actor").on(table.actorId),
+  index("IDX_audit_occurred").on(table.occurredAt),
+]);
+
+// Audit Log Changes - stores field-level changes for each audit log entry
+export const auditLogChanges = pgTable("audit_log_changes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auditLogId: varchar("audit_log_id").notNull().references(() => auditLogs.id, { onDelete: 'cascade' }),
+  field: varchar("field", { length: 100 }).notNull(),
+  previousValue: jsonb("previous_value"),
+  newValue: jsonb("new_value"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   quotes: many(quotes),
@@ -402,6 +435,21 @@ export const invoiceMediaRelations = relations(invoiceMedia, ({ one }) => ({
   }),
 }));
 
+export const auditLogsRelations = relations(auditLogs, ({ one, many }) => ({
+  actor: one(users, {
+    fields: [auditLogs.actorId],
+    references: [users.id],
+  }),
+  changes: many(auditLogChanges),
+}));
+
+export const auditLogChangesRelations = relations(auditLogChanges, ({ one }) => ({
+  auditLog: one(auditLogs, {
+    fields: [auditLogChanges.auditLogId],
+    references: [auditLogs.id],
+  }),
+}));
+
 // Zod Schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true, createdAt: true, updatedAt: true });
@@ -453,6 +501,8 @@ export const insertWorkflowSchema = createInsertSchema(workflows).omit({ id: tru
 export const insertWorkflowStepSchema = createInsertSchema(workflowSteps).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertServiceWorkflowSchema = createInsertSchema(serviceWorkflows).omit({ id: true, createdAt: true });
 export const insertWorkshopTaskSchema = createInsertSchema(workshopTasks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, occurredAt: true });
+export const insertAuditLogChangeSchema = createInsertSchema(auditLogChanges).omit({ id: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -489,3 +539,7 @@ export type InsertServiceWorkflow = z.infer<typeof insertServiceWorkflowSchema>;
 export type ServiceWorkflow = typeof serviceWorkflows.$inferSelect;
 export type InsertWorkshopTask = z.infer<typeof insertWorkshopTaskSchema>;
 export type WorkshopTask = typeof workshopTasks.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLogChange = z.infer<typeof insertAuditLogChangeSchema>;
+export type AuditLogChange = typeof auditLogChanges.$inferSelect;
