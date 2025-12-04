@@ -1087,6 +1087,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/workflows/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const workflow = await storage.getWorkflow(req.params.id);
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      res.json(workflow);
+    } catch (error: any) {
+      console.error("Error fetching workflow:", error);
+      res.status(500).json({ message: "Failed to fetch workflow" });
+    }
+  });
+
+  // Get workflow by service ID (for employee view)
+  app.get("/api/services/:serviceId/workflow", isAuthenticated, async (req, res) => {
+    try {
+      const workflow = await storage.getWorkflowByServiceId(req.params.serviceId);
+      if (!workflow) {
+        return res.status(404).json({ message: "No workflow found for this service" });
+      }
+      const steps = await storage.getWorkflowSteps(workflow.id);
+      res.json({ ...workflow, steps });
+    } catch (error: any) {
+      console.error("Error fetching service workflow:", error);
+      res.status(500).json({ message: "Failed to fetch service workflow" });
+    }
+  });
+
+  // Get all services with their workflows (for employee/admin)
+  app.get("/api/services-with-workflows", isAuthenticated, async (req, res) => {
+    try {
+      const allServices = await storage.getServices();
+      const servicesWithWorkflows = await Promise.all(
+        allServices.map(async (service) => {
+          const workflow = await storage.getWorkflowByServiceId(service.id);
+          let steps: any[] = [];
+          if (workflow) {
+            steps = await storage.getWorkflowSteps(workflow.id);
+          }
+          return { ...service, workflow: workflow ? { ...workflow, steps } : null };
+        })
+      );
+      res.json(servicesWithWorkflows);
+    } catch (error: any) {
+      console.error("Error fetching services with workflows:", error);
+      res.status(500).json({ message: "Failed to fetch services with workflows" });
+    }
+  });
+
   app.post("/api/admin/workflows", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const workflow = await storage.createWorkflow({
