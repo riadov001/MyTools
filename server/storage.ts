@@ -14,6 +14,8 @@ import {
   workflowSteps,
   serviceWorkflows,
   workshopTasks,
+  auditLogs,
+  auditLogChanges,
   type User,
   type UpsertUser,
   type Service,
@@ -44,6 +46,10 @@ import {
   type InsertServiceWorkflow,
   type WorkshopTask,
   type InsertWorkshopTask,
+  type AuditLog,
+  type InsertAuditLog,
+  type AuditLogChange,
+  type InsertAuditLogChange,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
@@ -117,6 +123,20 @@ export interface IStorage {
   updateWorkshopTask(id: string, taskData: Partial<InsertWorkshopTask>): Promise<WorkshopTask>;
   getReservationTasks(reservationId: string): Promise<(WorkshopTask & { step: WorkflowStep })[]>;
   initializeReservationWorkflow(reservationId: string, workflowSteps: WorkflowStep[]): Promise<void>;
+  // Audit Log methods
+  createAuditLog(logData: InsertAuditLog, changes?: { field: string; previousValue: any; newValue: any }[]): Promise<AuditLog>;
+  getAuditLogs(filters?: {
+    entityType?: string;
+    entityId?: string;
+    actorId?: string;
+    action?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: (AuditLog & { actor?: User; changes: AuditLogChange[] })[]; total: number }>;
+  getAuditLog(id: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] }) | undefined>;
+  getEntityAuditHistory(entityType: string, entityId: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -589,6 +609,127 @@ export class DatabaseStorage implements IStorage {
         isCompleted: false,
       });
     }
+  }
+
+  // Audit Log methods
+  async createAuditLog(logData: InsertAuditLog, changes?: { field: string; previousValue: any; newValue: any }[]): Promise<AuditLog> {
+    const [auditLog] = await db.insert(auditLogs).values([logData]).returning();
+    
+    if (changes && changes.length > 0) {
+      await db.insert(auditLogChanges).values(
+        changes.map(change => ({
+          auditLogId: auditLog.id,
+          field: change.field,
+          previousValue: change.previousValue,
+          newValue: change.newValue,
+        }))
+      );
+    }
+    
+    return auditLog;
+  }
+
+  async getAuditLogs(filters?: {
+    entityType?: string;
+    entityId?: string;
+    actorId?: string;
+    action?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: (AuditLog & { actor?: User; changes: AuditLogChange[] })[]; total: number }> {
+    const conditions = [];
+    
+    if (filters?.entityType) {
+      conditions.push(eq(auditLogs.entityType, filters.entityType as any));
+    }
+    if (filters?.entityId) {
+      conditions.push(eq(auditLogs.entityId, filters.entityId));
+    }
+    if (filters?.actorId) {
+      conditions.push(eq(auditLogs.actorId, filters.actorId));
+    }
+    if (filters?.action) {
+      conditions.push(eq(auditLogs.action, filters.action as any));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${auditLogs.occurredAt} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${auditLogs.occurredAt} <= ${filters.endDate}`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    // Get total count
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+      .from(auditLogs)
+      .where(whereClause);
+    
+    // Get paginated logs
+    let query = db.select()
+      .from(auditLogs)
+      .where(whereClause)
+      .orderBy(desc(auditLogs.occurredAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    const logs = await query;
+    
+    // Fetch actor and changes for each log
+    const enrichedLogs = await Promise.all(logs.map(async (log) => {
+      let actor: User | undefined;
+      if (log.actorId) {
+        const [foundActor] = await db.select().from(users).where(eq(users.id, log.actorId));
+        actor = foundActor;
+      }
+      
+      const changes = await db.select().from(auditLogChanges).where(eq(auditLogChanges.auditLogId, log.id));
+      
+      return { ...log, actor, changes };
+    }));
+    
+    return { logs: enrichedLogs, total: Number(count) };
+  }
+
+  async getAuditLog(id: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] }) | undefined> {
+    const [log] = await db.select().from(auditLogs).where(eq(auditLogs.id, id));
+    if (!log) return undefined;
+    
+    let actor: User | undefined;
+    if (log.actorId) {
+      const [foundActor] = await db.select().from(users).where(eq(users.id, log.actorId));
+      actor = foundActor;
+    }
+    
+    const changes = await db.select().from(auditLogChanges).where(eq(auditLogChanges.auditLogId, log.id));
+    
+    return { ...log, actor, changes };
+  }
+
+  async getEntityAuditHistory(entityType: string, entityId: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] })[]> {
+    const logs = await db.select()
+      .from(auditLogs)
+      .where(and(eq(auditLogs.entityType, entityType as any), eq(auditLogs.entityId, entityId)))
+      .orderBy(desc(auditLogs.occurredAt));
+    
+    return Promise.all(logs.map(async (log) => {
+      let actor: User | undefined;
+      if (log.actorId) {
+        const [foundActor] = await db.select().from(users).where(eq(users.id, log.actorId));
+        actor = foundActor;
+      }
+      
+      const changes = await db.select().from(auditLogChanges).where(eq(auditLogChanges.auditLogId, log.id));
+      
+      return { ...log, actor, changes };
+    }));
   }
 }
 
