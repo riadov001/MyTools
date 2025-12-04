@@ -101,7 +101,9 @@ export interface IStorage {
   updateEngagement(id: string, engagement: Partial<InsertEngagement>): Promise<Engagement>;
   getEngagementSummary(clientId: string): Promise<{ quotes: Quote[]; invoices: Invoice[]; reservations: Reservation[] }>;
   createWorkflow(workflowData: InsertWorkflow): Promise<Workflow>;
+  getWorkflow(id: string): Promise<Workflow | undefined>;
   getWorkflows(): Promise<Workflow[]>;
+  getWorkflowByServiceId(serviceId: string): Promise<Workflow | undefined>;
   updateWorkflow(id: string, workflowData: Partial<InsertWorkflow>): Promise<Workflow>;
   deleteWorkflow(id: string): Promise<void>;
   createWorkflowStep(stepData: InsertWorkflowStep): Promise<WorkflowStep>;
@@ -489,8 +491,18 @@ export class DatabaseStorage implements IStorage {
     return workflow;
   }
 
+  async getWorkflow(id: string): Promise<Workflow | undefined> {
+    const [workflow] = await db.select().from(workflows).where(eq(workflows.id, id));
+    return workflow;
+  }
+
   async getWorkflows(): Promise<Workflow[]> {
     return await db.select().from(workflows).orderBy(desc(workflows.createdAt));
+  }
+
+  async getWorkflowByServiceId(serviceId: string): Promise<Workflow | undefined> {
+    const [workflow] = await db.select().from(workflows).where(eq(workflows.serviceId, serviceId));
+    return workflow;
   }
 
   async updateWorkflow(id: string, workflowData: Partial<InsertWorkflow>): Promise<Workflow> {
