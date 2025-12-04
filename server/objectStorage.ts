@@ -33,8 +33,15 @@ export const objectStorageClient = new Storage({
   projectId: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "replit",
 });
 
-// Initialize Replit native storage client for uploads (handles auth automatically)
-export const replitStorageClient = new ReplitStorageClient();
+// Lazy-initialized Replit storage client for uploads
+let _replitStorageClient: ReplitStorageClient | null = null;
+
+function getReplitStorageClient(): ReplitStorageClient {
+  if (!_replitStorageClient) {
+    _replitStorageClient = new ReplitStorageClient();
+  }
+  return _replitStorageClient;
+}
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -131,7 +138,8 @@ export class ObjectStorageService {
     const { objectId, objectPath } = this.generateUploadPath();
     
     try {
-      const result = await replitStorageClient.uploadFromBytes(objectPath, buffer);
+      const client = getReplitStorageClient();
+      const result = await client.uploadFromBytes(objectPath, buffer);
       
       if (result.error) {
         throw new Error(`Upload failed: ${result.error}`);
