@@ -19,62 +19,6 @@ externalPort = 80
 localPort = 24678
 externalPort = 8000
 
-[[ports]]
-localPort = 32931
-externalPort = 6800
-
-[[ports]]
-localPort = 33157
-externalPort = 5000
-
-[[ports]]
-localPort = 33241
-externalPort = 5173
-
-[[ports]]
-localPort = 34949
-externalPort = 8099
-
-[[ports]]
-localPort = 35683
-externalPort = 3003
-
-[[ports]]
-localPort = 36159
-externalPort = 3002
-
-[[ports]]
-localPort = 37753
-externalPort = 8080
-
-[[ports]]
-localPort = 38721
-externalPort = 9000
-
-[[ports]]
-localPort = 40033
-externalPort = 8008
-
-[[ports]]
-localPort = 40047
-externalPort = 4200
-
-[[ports]]
-localPort = 40837
-externalPort = 3000
-
-[[ports]]
-localPort = 40857
-externalPort = 3001
-
-[[ports]]
-localPort = 41633
-externalPort = 8081
-
-[[ports]]
-localPort = 44545
-externalPort = 6000
-
 [env]
 PORT = "5000"
 
@@ -100,4 +44,4 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_websocket:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_object_storage:1.0.0"]
+integrations = ["javascript_websocket:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_object_storage:1.0.0", "resend:1.0.0"]

@@ -42,7 +42,7 @@ async function logAuditEvent(ctx: AuditContext): Promise<void> {
     // Compute field-level changes
     const changes: { field: string; previousValue: any; newValue: any }[] = [];
     if (ctx.previousData && ctx.newData) {
-      const allKeys = new Set([...Object.keys(ctx.previousData), ...Object.keys(ctx.newData)]);
+      const allKeys = [...new Set([...Object.keys(ctx.previousData), ...Object.keys(ctx.newData)])];
       for (const key of allKeys) {
         const prev = ctx.previousData[key];
         const curr = ctx.newData[key];
@@ -415,6 +415,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send quote by email
+  app.post("/api/admin/quotes/:id/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Devis non trouvé" });
+      }
+
+      const client = await storage.getUser(quote.clientId);
+      if (!client || !client.email) {
+        return res.status(400).json({ message: "Email du client non disponible" });
+      }
+
+      const items = await storage.getQuoteItems(id);
+      const settings = await storage.getApplicationSettings();
+
+      const { sendEmail, generateQuoteEmailHtml } = await import("./emailService");
+      
+      const formatPrice = (value: string | number | null): string => {
+        if (value === null || value === undefined) return "0,00 €";
+        const num = typeof value === "string" ? parseFloat(value) : value;
+        return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+      };
+
+      const html = generateQuoteEmailHtml({
+        clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+        quoteNumber: quote.id.slice(0, 8).toUpperCase(),
+        quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
+        amount: formatPrice(quote.quoteAmount),
+        companyName: settings?.companyName || "MyJantes",
+        items: items.map(item => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || "1"),
+          unitPrice: formatPrice(item.unitPriceExcludingTax),
+          total: formatPrice(item.totalIncludingTax),
+        })),
+      });
+
+      const result = await sendEmail({
+        to: client.email,
+        subject: `Votre devis MyJantes - ${quote.id.slice(0, 8).toUpperCase()}`,
+        html,
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Échec de l'envoi de l'email" });
+      }
+
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "quote",
+        entityId: id,
+        action: "updated",
+        summary: `Devis envoyé par email à ${client.email}`,
+        metadata: { emailTo: client.email, messageId: result.messageId },
+      });
+
+      res.json({ success: true, message: "Email envoyé avec succès" });
+    } catch (error: any) {
+      console.error("Error sending quote email:", error);
+      res.status(500).json({ message: error.message || "Échec de l'envoi de l'email" });
+    }
+  });
+
   // Quote Items routes
   app.get("/api/admin/quotes/:id/items", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -748,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const invoice = await storage.updateInvoice(id, updateData);
       
       // Determine action type based on status change
-      let action = "updated";
+      let action: ActionType = "updated";
       let summary = "Facture mise à jour";
       if (updateData.status === "paid" && previousInvoice?.status !== "paid") {
         action = "paid";
@@ -773,6 +839,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating invoice:", error);
       res.status(400).json({ message: error.message || "Failed to update invoice" });
+    }
+  });
+
+  // Send invoice by email
+  app.post("/api/admin/invoices/:id/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Facture non trouvée" });
+      }
+
+      const client = await storage.getUser(invoice.clientId);
+      if (!client || !client.email) {
+        return res.status(400).json({ message: "Email du client non disponible" });
+      }
+
+      const items = await storage.getInvoiceItems(id);
+      const settings = await storage.getApplicationSettings();
+
+      const { sendEmail, generateInvoiceEmailHtml } = await import("./emailService");
+      
+      const formatPrice = (value: string | number | null): string => {
+        if (value === null || value === undefined) return "0,00 €";
+        const num = typeof value === "string" ? parseFloat(value) : value;
+        return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+      };
+
+      const invoiceCreatedAt = invoice.createdAt ? new Date(invoice.createdAt) : new Date();
+      const dueDate = invoice.dueDate 
+        ? new Date(invoice.dueDate).toLocaleDateString("fr-FR")
+        : new Date(invoiceCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR");
+
+      const html = generateInvoiceEmailHtml({
+        clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+        invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+        invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+        dueDate,
+        amount: formatPrice(invoice.amount),
+        companyName: settings?.companyName || "MyJantes",
+        items: items.map(item => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || "1"),
+          unitPrice: formatPrice(item.unitPriceExcludingTax),
+          total: formatPrice(item.totalIncludingTax),
+        })),
+      });
+
+      const result = await sendEmail({
+        to: client.email,
+        subject: `Votre facture MyJantes - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}`,
+        html,
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ message: result.error || "Échec de l'envoi de l'email" });
+      }
+
+      // Log audit event
+      await logAuditEvent({
+        req,
+        entityType: "invoice",
+        entityId: id,
+        action: "updated",
+        summary: `Facture envoyée par email à ${client.email}`,
+        metadata: { emailTo: client.email, messageId: result.messageId },
+      });
+
+      res.json({ success: true, message: "Email envoyé avec succès" });
+    } catch (error: any) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ message: error.message || "Échec de l'envoi de l'email" });
     }
   });
 
@@ -994,7 +1132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reservation = await storage.updateReservation(id, validatedData);
 
       // Determine action type based on status change
-      let action = "updated";
+      let action: ActionType = "updated";
       let summary = "Réservation mise à jour";
       if (validatedData.status === "confirmed" && previousReservation?.status !== "confirmed") {
         action = "confirmed";

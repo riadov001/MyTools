@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
 import type { Invoice, InvoiceItem } from "@shared/schema";
 
 export default function AdminInvoiceEdit() {
@@ -205,6 +205,26 @@ export default function AdminInvoiceEdit() {
     });
   };
 
+  // Send email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/admin/invoices/${invoiceId}/send-email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Facture envoyée par email au client",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -291,10 +311,26 @@ export default function AdminInvoiceEdit() {
               />
             </div>
 
-            <Button onClick={handleSaveInvoice} className="w-full" data-testid="button-save-invoice">
-              <Save className="mr-2 h-4 w-4" />
-              Enregistrer la Facture
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleSaveInvoice} className="w-full" data-testid="button-save-invoice">
+                <Save className="mr-2 h-4 w-4" />
+                Enregistrer la Facture
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => sendEmailMutation.mutate()}
+                disabled={sendEmailMutation.isPending}
+                data-testid="button-send-invoice-email"
+              >
+                {sendEmailMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="mr-2 h-4 w-4" />
+                )}
+                Envoyer par email
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

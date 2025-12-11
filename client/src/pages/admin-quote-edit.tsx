@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
 import type { Quote, QuoteItem } from "@shared/schema";
 
 export default function AdminQuoteEdit() {
@@ -203,6 +203,26 @@ export default function AdminQuoteEdit() {
     });
   };
 
+  // Send email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/admin/quotes/${quoteId}/send-email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Devis envoyé par email au client",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -281,10 +301,25 @@ export default function AdminQuoteEdit() {
             />
           </div>
 
-          <Button onClick={handleSaveQuote} data-testid="button-save-quote">
-            <Save className="mr-2 h-4 w-4" />
-            Enregistrer le devis
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSaveQuote} data-testid="button-save-quote">
+              <Save className="mr-2 h-4 w-4" />
+              Enregistrer le devis
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => sendEmailMutation.mutate()}
+              disabled={sendEmailMutation.isPending}
+              data-testid="button-send-quote-email"
+            >
+              {sendEmailMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
+              Envoyer par email
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
