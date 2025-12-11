@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Download, Tags, Pencil, X, Search } from "lucide-react";
+import { Plus, Download, Tags, Pencil, X, Search, Mail, Loader2 } from "lucide-react";
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { LabelsPreview } from "@/components/labels-preview";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -286,6 +286,30 @@ export default function AdminInvoices() {
     },
   });
 
+  const [sendingEmailInvoiceId, setSendingEmailInvoiceId] = useState<string | null>(null);
+
+  const sendInvoiceEmailMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      setSendingEmailInvoiceId(invoiceId);
+      return apiRequest("POST", `/api/admin/invoices/${invoiceId}/send-email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Email envoyé avec succès",
+      });
+      setSendingEmailInvoiceId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de l'envoi de l'email",
+        variant: "destructive",
+      });
+      setSendingEmailInvoiceId(null);
+    },
+  });
+
   const handleQuoteSelect = (quoteId: string) => {
     const quote = quotes.find((q) => q.id === quoteId);
     if (quote) {
@@ -519,6 +543,20 @@ export default function AdminInvoices() {
                         >
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendInvoiceEmailMutation.mutate(invoice.id)}
+                          disabled={sendingEmailInvoiceId === invoice.id}
+                          data-testid={`button-send-email-${invoice.id}`}
+                        >
+                          {sendingEmailInvoiceId === invoice.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                          ) : (
+                            <Mail className="h-4 w-4 sm:mr-2" />
+                          )}
+                          <span className="hidden sm:inline">Email</span>
                         </Button>
                         <Button
                           size="sm"

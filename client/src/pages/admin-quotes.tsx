@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search } from "lucide-react";
+import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search, Mail, Loader2 } from "lucide-react";
 import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
@@ -216,6 +216,30 @@ export default function AdminQuotes() {
         description: error.message || "Échec de la mise à jour du devis",
         variant: "destructive",
       });
+    },
+  });
+
+  const [sendingEmailQuoteId, setSendingEmailQuoteId] = useState<string | null>(null);
+
+  const sendQuoteEmailMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      setSendingEmailQuoteId(quoteId);
+      return apiRequest("POST", `/api/admin/quotes/${quoteId}/send-email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Email envoyé avec succès",
+      });
+      setSendingEmailQuoteId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de l'envoi de l'email",
+        variant: "destructive",
+      });
+      setSendingEmailQuoteId(null);
     },
   });
 
@@ -709,6 +733,20 @@ export default function AdminQuotes() {
                         >
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">PDF</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendQuoteEmailMutation.mutate(quote.id)}
+                          disabled={sendingEmailQuoteId === quote.id}
+                          data-testid={`button-send-email-${quote.id}`}
+                        >
+                          {sendingEmailQuoteId === quote.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                          ) : (
+                            <Mail className="h-4 w-4 sm:mr-2" />
+                          )}
+                          <span className="hidden sm:inline">Email</span>
                         </Button>
                         <Button
                           size="sm"
