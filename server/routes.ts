@@ -442,6 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quoteNumber: quote.id.slice(0, 8).toUpperCase(),
               quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
               clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+              status: "APPROUVÉ",
               items: items.map(item => ({
                 description: item.description,
                 quantity: parseFloat(item.quantity || "1"),
@@ -519,6 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quoteNumber: quote.id.slice(0, 8).toUpperCase(),
         quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
         clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+        status: quote.status,
         items: items.map(item => ({
           description: item.description,
           quantity: parseFloat(item.quantity || "1"),
@@ -784,6 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
             dueDate,
             clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+            status: invoice.status,
             items: items.map(item => ({
               description: item.description,
               quantity: parseFloat(item.quantity || "1"),
