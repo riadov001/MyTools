@@ -437,10 +437,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })),
             });
             
+            const { generateQuotePDF } = await import("./emailService");
+            const pdfBuffer = generateQuotePDF({
+              quoteNumber: quote.id.slice(0, 8).toUpperCase(),
+              quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
+              clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+              items: items.map(item => ({
+                description: item.description,
+                quantity: parseFloat(item.quantity || "1"),
+                unitPrice: formatPrice(item.unitPriceExcludingTax),
+                total: formatPrice(item.totalIncludingTax),
+              })),
+              amount: formatPrice(quote.quoteAmount),
+              companyName: settings?.companyName || "MyJantes",
+            });
+            
             await sendEmail({
               to: clientUser.email,
               subject: `Devis validé - ${quote.id.slice(0, 8).toUpperCase()} | MyJantes`,
               html,
+              attachments: [{
+                filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
+                content: pdfBuffer,
+              }],
             });
             console.log(`Auto-email sent: Quote approved to ${clientUser.email}`);
           }
@@ -495,10 +514,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       });
 
+      const { generateQuotePDF } = await import("./emailService");
+      const pdfBuffer = generateQuotePDF({
+        quoteNumber: quote.id.slice(0, 8).toUpperCase(),
+        quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
+        clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+        items: items.map(item => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || "1"),
+          unitPrice: formatPrice(item.unitPriceExcludingTax),
+          total: formatPrice(item.totalIncludingTax),
+        })),
+        amount: formatPrice(quote.quoteAmount),
+        companyName: settings?.companyName || "MyJantes",
+      });
+
       const result = await sendEmail({
         to: client.email,
         subject: `Votre devis MyJantes - ${quote.id.slice(0, 8).toUpperCase()}`,
         html,
+        attachments: [{
+          filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
+          content: pdfBuffer,
+        }],
       });
 
       if (!result.success) {
@@ -740,10 +778,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })),
           });
           
+          const { generateInvoicePDF } = await import("./emailService");
+          const invoicePdfBuffer = generateInvoicePDF({
+            invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+            invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+            dueDate,
+            clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+            items: items.map(item => ({
+              description: item.description,
+              quantity: parseFloat(item.quantity || "1"),
+              unitPrice: formatPrice(item.unitPriceExcludingTax),
+              total: formatPrice(item.totalIncludingTax),
+            })),
+            amount: formatPrice(invoice.amount),
+            companyName: settings?.companyName || "MyJantes",
+          });
+          
           await sendEmail({
             to: clientUser.email,
             subject: `Nouvelle facture - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
             html,
+            attachments: [{
+              filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
+              content: invoicePdfBuffer,
+            }],
           });
           console.log(`Auto-email sent: Invoice created to ${clientUser.email}`);
         }
@@ -883,10 +941,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })),
           });
           
+          const { generateInvoicePDF: genInvPdf } = await import("./emailService");
+          const directInvPdf = genInvPdf({
+            invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+            invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+            dueDate,
+            clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+            items: items.map(item => ({
+              description: item.description,
+              quantity: parseFloat(item.quantity || "1"),
+              unitPrice: formatPrice(item.unitPriceExcludingTax),
+              total: formatPrice(item.totalIncludingTax),
+            })),
+            amount: formatPrice(invoice.amount),
+            companyName: settings?.companyName || "MyJantes",
+          });
+          
           await sendEmail({
             to: clientUser.email,
             subject: `Nouvelle facture - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
             html,
+            attachments: [{
+              filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
+              content: directInvPdf,
+            }],
           });
           console.log(`Auto-email sent: Direct invoice created to ${clientUser.email}`);
         }
@@ -1052,10 +1130,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       });
 
+      const { generateInvoicePDF: genInvoicePdf } = await import("./emailService");
+      const sendPdfBuffer = genInvoicePdf({
+        invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+        invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+        dueDate,
+        clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+        items: items.map(item => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || "1"),
+          unitPrice: formatPrice(item.unitPriceExcludingTax),
+          total: formatPrice(item.totalIncludingTax),
+        })),
+        amount: formatPrice(invoice.amount),
+        companyName: settings?.companyName || "MyJantes",
+      });
+
       const result = await sendEmail({
         to: client.email,
         subject: `Votre facture MyJantes - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}`,
         html,
+        attachments: [{
+          filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
+          content: sendPdfBuffer,
+        }],
       });
 
       if (!result.success) {

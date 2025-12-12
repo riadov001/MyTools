@@ -66,268 +66,6 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; me
   }
 }
 
-export function generateQuoteEmailHtml(data: {
-  clientName: string;
-  quoteNumber: string;
-  quoteDate: string;
-  amount: string;
-  companyName: string;
-  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
-}): string {
-  const itemsHtml = data.items.map(item => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.unitPrice}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.total}</td>
-    </tr>
-  `).join('');
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Devis ${data.quoteNumber}</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
-      </div>
-      
-      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-        <h2 style="color: #dc2626; margin-top: 0;">Devis N° ${data.quoteNumber}</h2>
-        
-        <p>Bonjour ${data.clientName},</p>
-        
-        <p>Veuillez trouver ci-dessous votre devis du ${data.quoteDate}.</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: #f3f4f6;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix unit.</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-        
-        <div style="text-align: right; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
-          <p style="font-size: 18px; font-weight: bold; color: #dc2626; margin: 0;">Total TTC: ${data.amount}</p>
-        </div>
-        
-        <p style="margin-top: 30px;">Ce devis est valable 30 jours à compter de sa date d'émission.</p>
-        
-        <p>N'hésitez pas à nous contacter pour toute question.</p>
-        
-        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-      </div>
-      
-      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
-export function generateInvoiceEmailHtml(data: {
-  clientName: string;
-  invoiceNumber: string;
-  invoiceDate: string;
-  dueDate: string;
-  amount: string;
-  companyName: string;
-  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
-}): string {
-  const itemsHtml = data.items.map(item => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.unitPrice}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.total}</td>
-    </tr>
-  `).join('');
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Facture ${data.invoiceNumber}</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
-      </div>
-      
-      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-        <h2 style="color: #dc2626; margin-top: 0;">Facture N° ${data.invoiceNumber}</h2>
-        
-        <p>Bonjour ${data.clientName},</p>
-        
-        <p>Veuillez trouver ci-dessous votre facture du ${data.invoiceDate}.</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
-          <thead>
-            <tr style="background: #f3f4f6;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix unit.</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-        
-        <div style="text-align: right; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
-          <p style="font-size: 18px; font-weight: bold; color: #dc2626; margin: 0;">Total TTC: ${data.amount}</p>
-        </div>
-        
-        <div style="margin-top: 20px; padding: 15px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px;">
-          <p style="margin: 0;"><strong>Date d'échéance:</strong> ${data.dueDate}</p>
-        </div>
-        
-        <p style="margin-top: 30px;">Merci de procéder au règlement avant la date d'échéance.</p>
-        
-        <p>N'hésitez pas à nous contacter pour toute question.</p>
-        
-        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-      </div>
-      
-      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
-export function generateReservationConfirmedEmailHtml(data: {
-  clientName: string;
-  reservationDate: string;
-  reservationTime: string;
-  serviceName: string;
-  companyName: string;
-  notes?: string;
-}): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Réservation Confirmée</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
-      </div>
-      
-      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-        <h2 style="color: #16a34a; margin-top: 0;">Réservation Confirmée</h2>
-        
-        <p>Bonjour ${data.clientName},</p>
-        
-        <p>Nous avons le plaisir de vous confirmer votre réservation.</p>
-        
-        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <table style="width: 100%;">
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Service:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${data.serviceName}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Date:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${data.reservationDate}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Heure:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${data.reservationTime}</td>
-            </tr>
-          </table>
-        </div>
-        
-        ${data.notes ? `<p style="color: #666;"><strong>Notes:</strong> ${data.notes}</p>` : ''}
-        
-        <p style="margin-top: 30px;">Nous vous attendons à la date prévue. N'hésitez pas à nous contacter si vous avez besoin de modifier votre rendez-vous.</p>
-        
-        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-      </div>
-      
-      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
-export function generateInvoicePaidEmailHtml(data: {
-  clientName: string;
-  invoiceNumber: string;
-  amount: string;
-  paymentDate: string;
-  companyName: string;
-}): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Paiement Reçu</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
-      </div>
-      
-      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-        <h2 style="color: #16a34a; margin-top: 0;">Paiement Reçu</h2>
-        
-        <p>Bonjour ${data.clientName},</p>
-        
-        <p>Nous vous confirmons la bonne réception de votre paiement.</p>
-        
-        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <table style="width: 100%;">
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Facture N°:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${data.invoiceNumber}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Montant:</td>
-              <td style="padding: 8px 0; font-weight: bold; color: #16a34a;">${data.amount}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Date de paiement:</td>
-              <td style="padding: 8px 0; font-weight: bold;">${data.paymentDate}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <p style="margin-top: 30px;">Merci pour votre confiance. Nous restons à votre disposition pour tout besoin futur.</p>
-        
-        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-      </div>
-      
-      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
 export function generateQuoteApprovedEmailHtml(data: {
   clientName: string;
   quoteNumber: string;
@@ -396,4 +134,342 @@ export function generateQuoteApprovedEmailHtml(data: {
     </body>
     </html>
   `;
+}
+
+export function generateQuoteEmailHtml(data: {
+  clientName: string;
+  quoteNumber: string;
+  quoteDate: string;
+  amount: string;
+  companyName: string;
+  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
+}): string {
+  const itemsHtml = data.items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.unitPrice}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.total}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Devis ${data.quoteNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #dc2626; margin-top: 0;">Votre devis - N° ${data.quoteNumber}</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Veuillez trouver ci-joint votre devis du ${data.quoteDate}.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix unit.</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+          <p style="font-size: 18px; font-weight: bold; color: #dc2626; margin: 0;">Total TTC: ${data.amount}</p>
+        </div>
+        
+        <p style="margin-top: 30px;">N'hésitez pas à nous contacter pour toute question ou demande de modification.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateInvoiceEmailHtml(data: {
+  clientName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  amount: string;
+  companyName: string;
+  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
+}): string {
+  const itemsHtml = data.items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.unitPrice}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.total}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Facture ${data.invoiceNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #dc2626; margin-top: 0;">Facture - N° ${data.invoiceNumber}</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Veuillez trouver ci-joint votre facture du ${data.invoiceDate}.</p>
+        <p style="color: #666; font-size: 14px;">Date d'échéance: <strong>${data.dueDate}</strong></p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix unit.</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+          <p style="font-size: 18px; font-weight: bold; color: #dc2626; margin: 0;">Total TTC: ${data.amount}</p>
+        </div>
+        
+        <p style="margin-top: 30px;">Merci pour votre confiance. N'hésitez pas à nous contacter pour toute question.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateInvoicePaidEmailHtml(data: {
+  clientName: string;
+  invoiceNumber: string;
+  amount: string;
+  paymentDate: string;
+  companyName: string;
+}): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Paiement reçu - ${data.invoiceNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #16a34a; margin-top: 0;">✓ Paiement reçu</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Nous confirmons la réception de votre paiement pour la facture <strong>${data.invoiceNumber}</strong>.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 0;">
+            <strong>Montant payé:</strong> ${data.amount}<br>
+            <strong>Date de paiement:</strong> ${data.paymentDate}
+          </p>
+        </div>
+        
+        <p>Merci beaucoup pour votre confiance et votre rapidité.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateReservationConfirmedEmailHtml(data: {
+  clientName: string;
+  reservationDate: string;
+  reservationTime: string;
+  serviceName: string;
+  companyName: string;
+  notes?: string;
+}): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Réservation confirmée</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #16a34a; margin-top: 0;">✓ Réservation confirmée</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Votre réservation a été confirmée !</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16a34a;">
+          <p style="margin: 0;">
+            <strong>Service:</strong> ${data.serviceName}<br>
+            <strong>Date:</strong> ${data.reservationDate}<br>
+            <strong>Heure:</strong> ${data.reservationTime}
+          </p>
+          ${data.notes ? `<p style="margin-top: 10px; color: #666;"><strong>Notes:</strong> ${data.notes}</p>` : ''}
+        </div>
+        
+        <p>À bientôt pour votre service !</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// PDF Generation
+export function generateQuotePDF(data: {
+  quoteNumber: string;
+  quoteDate: string;
+  clientName: string;
+  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
+  amount: string;
+  companyName: string;
+}): Buffer {
+  const { jsPDF } = require('jspdf');
+  const autoTable = require('jspdf-autotable').default;
+  
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  doc.setFillColor(220, 38, 38);
+  doc.rect(0, 0, pageWidth, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.text(data.companyName, 15, 20);
+  
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
+  doc.text(`DEVIS N° ${data.quoteNumber}`, 15, 45);
+  
+  doc.setFontSize(10);
+  doc.text(`Client: ${data.clientName}`, 15, 55);
+  doc.text(`Date: ${data.quoteDate}`, 15, 62);
+  
+  const tableData = data.items.map(item => [
+    item.description,
+    item.quantity.toString(),
+    item.unitPrice,
+    item.total,
+  ]);
+  
+  autoTable(doc, {
+    head: [['Description', 'Quantité', 'Prix unitaire', 'Total']],
+    body: tableData,
+    startY: 75,
+    theme: 'grid',
+  });
+  
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total TTC: ${data.amount}`, 15, finalY);
+  
+  return Buffer.from(doc.output('arraybuffer'));
+}
+
+export function generateInvoicePDF(data: {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  clientName: string;
+  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
+  amount: string;
+  companyName: string;
+}): Buffer {
+  const { jsPDF } = require('jspdf');
+  const autoTable = require('jspdf-autotable').default;
+  
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  doc.setFillColor(220, 38, 38);
+  doc.rect(0, 0, pageWidth, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.text(data.companyName, 15, 20);
+  
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
+  doc.text(`FACTURE N° ${data.invoiceNumber}`, 15, 45);
+  
+  doc.setFontSize(10);
+  doc.text(`Client: ${data.clientName}`, 15, 55);
+  doc.text(`Date: ${data.invoiceDate}`, 15, 62);
+  doc.text(`Échéance: ${data.dueDate}`, 15, 69);
+  
+  const tableData = data.items.map(item => [
+    item.description,
+    item.quantity.toString(),
+    item.unitPrice,
+    item.total,
+  ]);
+  
+  autoTable(doc, {
+    head: [['Description', 'Quantité', 'Prix unitaire', 'Total']],
+    body: tableData,
+    startY: 80,
+    theme: 'grid',
+  });
+  
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total TTC: ${data.amount}`, 15, finalY);
+  
+  return Buffer.from(doc.output('arraybuffer'));
 }
