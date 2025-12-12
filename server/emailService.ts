@@ -45,9 +45,10 @@ async function getCredentials() {
     };
   }
   
+  // Always use pointdepart.com domain (verified in Resend) instead of gmail.com
   return {
     apiKey: connectionSettings.settings.api_key, 
-    fromEmail: connectionSettings.settings.from_email || 'MyJantes <contact@pointdepart.com>'
+    fromEmail: 'MyJantes <contact@pointdepart.com>'
   };
 }
 
