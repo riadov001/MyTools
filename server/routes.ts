@@ -718,6 +718,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productDetails,
       } as any);
       
+      // Copy quote items to invoice if creating from quote
+      if (validatedData.quoteId && quote) {
+        const quoteItems = await storage.getQuoteItems(validatedData.quoteId);
+        for (const quoteItem of quoteItems) {
+          await storage.createInvoiceItem({
+            invoiceId: invoice.id,
+            description: quoteItem.description,
+            quantity: quoteItem.quantity,
+            unitPriceExcludingTax: quoteItem.unitPriceExcludingTax,
+            taxRate: quoteItem.taxRate,
+            taxAmount: quoteItem.taxAmount,
+            totalExcludingTax: quoteItem.totalExcludingTax,
+            totalIncludingTax: quoteItem.totalIncludingTax,
+          });
+        }
+      }
+      
       // Create media entries
       for (const file of mediaFiles) {
         await storage.createInvoiceMedia({
