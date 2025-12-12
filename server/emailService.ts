@@ -1,5 +1,7 @@
 // Reference: Resend integration for sending transactional emails
 import { Resend } from 'resend';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const FROM_EMAIL = 'MyJantes <contact@pointdepart.com>';
 
@@ -380,9 +382,6 @@ export function generateQuotePDF(data: {
   amount: string;
   companyName: string;
 }): Buffer {
-  const { jsPDF } = require('jspdf');
-  const autoTable = require('jspdf-autotable').default;
-  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
@@ -431,9 +430,6 @@ export function generateInvoicePDF(data: {
   amount: string;
   companyName: string;
 }): Buffer {
-  const { jsPDF } = require('jspdf');
-  const autoTable = require('jspdf-autotable').default;
-  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
