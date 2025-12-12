@@ -121,7 +121,8 @@ export default function AdminQuotes() {
     if (createQuoteDialog && users.length > 0 && !newQuoteClientId) {
       const clients = users.filter(u => u.role?.includes("client"));
       if (clients.length > 0) {
-        setNewQuoteClientId(clients[clients.length - 1].id);
+        // Users are sorted by createdAt DESC, so most recent is at index 0
+        setNewQuoteClientId(clients[0].id);
       }
     }
   }, [createQuoteDialog, users]);

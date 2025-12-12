@@ -94,7 +94,8 @@ export default function AdminInvoices() {
     if ((isDialogOpen || createDirectInvoiceDialog) && users.length > 0 && !selectedClientId) {
       const clients = users.filter(u => u.role?.includes("client"));
       if (clients.length > 0) {
-        setSelectedClientId(clients[clients.length - 1].id);
+        // Users are sorted by createdAt DESC, so most recent is at index 0
+        setSelectedClientId(clients[0].id);
       }
     }
   }, [isDialogOpen, createDirectInvoiceDialog, users]);
