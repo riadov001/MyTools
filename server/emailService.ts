@@ -1,18 +1,63 @@
-// Reference: Resend integration for sending transactional emails
+// Reference: Resend integration for sending transactional emails via Replit Connectors
 import { Resend } from 'resend';
 
-const FROM_EMAIL = 'MyJantes <contact@pointdepart.com>';
+let connectionSettings: any;
 
-export async function getResendClient() {
-  const apiKey = process.env.Resend;
-  
-  if (!apiKey) {
-    throw new Error('Resend API key not configured. Please add the API key in the secret named "Resend".');
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken || !hostname) {
+    // Fallback to environment variable for local development
+    const apiKey = process.env.Resend;
+    if (!apiKey) {
+      throw new Error('Resend API key not configured. Please add the API key in the secret named "Resend" or configure the Resend integration.');
+    }
+    return { 
+      apiKey, 
+      fromEmail: 'MyJantes <contact@pointdepart.com>' 
+    };
+  }
+
+  connectionSettings = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!connectionSettings || !connectionSettings.settings?.api_key) {
+    // Fallback to environment variable
+    const apiKey = process.env.Resend;
+    if (!apiKey) {
+      throw new Error('Resend not connected. Please configure the Resend integration or add API key in secrets.');
+    }
+    return { 
+      apiKey, 
+      fromEmail: 'MyJantes <contact@pointdepart.com>' 
+    };
   }
   
   return {
+    apiKey: connectionSettings.settings.api_key, 
+    fromEmail: connectionSettings.settings.from_email || 'MyJantes <contact@pointdepart.com>'
+  };
+}
+
+// WARNING: Never cache this client.
+// Access tokens expire, so a new client must be created each time.
+export async function getResendClient() {
+  const { apiKey, fromEmail } = await getCredentials();
+  return {
     client: new Resend(apiKey),
-    fromEmail: FROM_EMAIL
+    fromEmail
   };
 }
 
