@@ -373,32 +373,75 @@ export function generateReservationConfirmedEmailHtml(data: {
   `;
 }
 
-// PDF Generation
+const COMPANY_INFO = {
+  name: 'MY JANTES',
+  tagline: 'SPÉCIALISTE JANTES ET PNEUS',
+  address: '46 rue de la convention',
+  city: '62800 Lievin',
+  phone: '0321408053',
+  email: 'contact@myjantes.com',
+  website: 'www.myjantes.fr',
+  bankName: 'MY JANTES - SASU',
+  iban: 'FR76 3000 3029 5800 0201 0936 525',
+  swift: 'BNPAFRPPXXX',
+  tva: 'FR73913678199',
+};
+
+// PDF Generation - Using same logic as client
 export function generateQuotePDF(data: {
   quoteNumber: string;
   quoteDate: string;
   clientName: string;
+  status?: string;
   items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
   amount: string;
   companyName: string;
 }): Buffer {
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageWidth = doc.internal.pageSize.width;
   
-  doc.setFillColor(220, 38, 38);
-  doc.rect(0, 0, pageWidth, 30, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text(data.companyName, 15, 20);
+  // Header with company name
+  doc.setFillColor(240, 240, 240);
+  doc.rect(0, 0, pageWidth, 35, 'F');
   
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(14);
-  doc.text(`DEVIS N° ${data.quoteNumber}`, 15, 45);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`DEVIS - ${data.quoteNumber}`, pageWidth / 2, 15, { align: 'center' });
   
+  // Company info (LEFT)
   doc.setFontSize(10);
-  doc.text(`Client: ${data.clientName}`, 15, 55);
-  doc.text(`Date: ${data.quoteDate}`, 15, 62);
+  doc.setFont('helvetica', 'bold');
+  doc.text(COMPANY_INFO.name, 15, 50);
   
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(COMPANY_INFO.address, 15, 56);
+  doc.text(COMPANY_INFO.city, 15, 61);
+  doc.text(COMPANY_INFO.phone, 15, 66);
+  doc.text(COMPANY_INFO.email, 15, 71);
+  doc.text(COMPANY_INFO.website, 15, 76);
+  
+  // Client info (RIGHT)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.clientName.toUpperCase(), pageWidth - 15, 50, { align: 'right' });
+  
+  // Status (if provided)
+  if (data.status) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Statut: ${data.status.toUpperCase()}`, pageWidth - 15, 60, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
+  
+  // Dates and operation type
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Date: ${data.quoteDate}`, pageWidth - 15, 72, { align: 'right' });
+  doc.text('Type d\'opération: Opération interne', pageWidth - 15, 78, { align: 'right' });
+  
+  // Table
   const tableData = data.items.map(item => [
     item.description,
     item.quantity.toString(),
@@ -407,16 +450,45 @@ export function generateQuotePDF(data: {
   ]);
   
   autoTable(doc, {
+    startY: 85,
     head: [['Description', 'Quantité', 'Prix unitaire', 'Total']],
     body: tableData,
-    startY: 75,
     theme: 'grid',
+    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { cellWidth: 70 } },
   });
   
+  // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total TTC: ${data.amount}`, 15, finalY);
+  doc.setFontSize(10);
+  doc.text('Total HT', 120, finalY);
+  doc.text(data.amount, 170, finalY, { align: 'right' });
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total TTC', 120, finalY + 12);
+  doc.text(data.amount, 170, finalY + 12, { align: 'right' });
+  
+  // Payment methods
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Moyens de paiement:', 15, finalY + 20);
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Banque: SOCIETE GENERALE', 15, finalY + 27);
+  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 15, finalY + 33);
+  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 15, finalY + 39);
+  doc.text('Délai: 30 jours', 15, finalY + 45);
+  
+  // Footer
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }
@@ -426,28 +498,57 @@ export function generateInvoicePDF(data: {
   invoiceDate: string;
   dueDate: string;
   clientName: string;
+  status?: string;
   items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
   amount: string;
   companyName: string;
 }): Buffer {
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageWidth = doc.internal.pageSize.width;
   
-  doc.setFillColor(220, 38, 38);
-  doc.rect(0, 0, pageWidth, 30, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text(data.companyName, 15, 20);
+  // Header with company name
+  doc.setFillColor(240, 240, 240);
+  doc.rect(0, 0, pageWidth, 35, 'F');
   
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(14);
-  doc.text(`FACTURE N° ${data.invoiceNumber}`, 15, 45);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`FACTURE - ${data.invoiceNumber}`, pageWidth / 2, 15, { align: 'center' });
   
+  // Company info (LEFT)
   doc.setFontSize(10);
-  doc.text(`Client: ${data.clientName}`, 15, 55);
-  doc.text(`Date: ${data.invoiceDate}`, 15, 62);
-  doc.text(`Échéance: ${data.dueDate}`, 15, 69);
+  doc.setFont('helvetica', 'bold');
+  doc.text(COMPANY_INFO.name, 15, 50);
   
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(COMPANY_INFO.address, 15, 56);
+  doc.text(COMPANY_INFO.city, 15, 61);
+  doc.text(COMPANY_INFO.phone, 15, 66);
+  doc.text(COMPANY_INFO.email, 15, 71);
+  doc.text(COMPANY_INFO.website, 15, 76);
+  
+  // Client info (RIGHT)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.clientName.toUpperCase(), pageWidth - 15, 50, { align: 'right' });
+  
+  // Status (if provided)
+  if (data.status) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Statut: ${data.status.toUpperCase()}`, pageWidth - 15, 60, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
+  
+  // Dates
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Date de facturation: ${data.invoiceDate}`, pageWidth - 15, 72, { align: 'right' });
+  doc.text(`Échéance: ${data.dueDate}`, pageWidth - 15, 78, { align: 'right' });
+  doc.text('Type d\'opération: Opération interne', pageWidth - 15, 84, { align: 'right' });
+  
+  // Table
   const tableData = data.items.map(item => [
     item.description,
     item.quantity.toString(),
@@ -456,16 +557,45 @@ export function generateInvoicePDF(data: {
   ]);
   
   autoTable(doc, {
+    startY: 90,
     head: [['Description', 'Quantité', 'Prix unitaire', 'Total']],
     body: tableData,
-    startY: 80,
     theme: 'grid',
+    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { cellWidth: 70 } },
   });
   
+  // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text(`Total TTC: ${data.amount}`, 15, finalY);
+  doc.setFontSize(10);
+  doc.text('Total HT', 120, finalY);
+  doc.text(data.amount, 170, finalY, { align: 'right' });
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total TTC', 120, finalY + 12);
+  doc.text(data.amount, 170, finalY + 12, { align: 'right' });
+  
+  // Payment methods
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Moyens de paiement:', 15, finalY + 20);
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Banque: SOCIETE GENERALE', 15, finalY + 27);
+  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 15, finalY + 33);
+  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 15, finalY + 39);
+  doc.text('Délai: 30 jours', 15, finalY + 45);
+  
+  // Footer
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
+  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }
