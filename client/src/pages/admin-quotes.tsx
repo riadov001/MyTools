@@ -116,6 +116,16 @@ export default function AdminQuotes() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  // Pré-sélectionner le dernier client créé quand le dialog s'ouvre
+  useEffect(() => {
+    if (createQuoteDialog && users.length > 0 && !newQuoteClientId) {
+      const clients = users.filter(u => u.role?.includes("client"));
+      if (clients.length > 0) {
+        setNewQuoteClientId(clients[clients.length - 1].id);
+      }
+    }
+  }, [createQuoteDialog, users]);
+
   // États pour la recherche et les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");

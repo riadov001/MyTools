@@ -89,6 +89,16 @@ export default function AdminInvoices() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  // Pré-sélectionner le dernier client créé quand on ouvre le dialog
+  useEffect(() => {
+    if ((isDialogOpen || createDirectInvoiceDialog) && users.length > 0 && !selectedClientId) {
+      const clients = users.filter(u => u.role?.includes("client"));
+      if (clients.length > 0) {
+        setSelectedClientId(clients[clients.length - 1].id);
+      }
+    }
+  }, [isDialogOpen, createDirectInvoiceDialog, users]);
+
   const approvedQuotes = quotes.filter((q) => q.status === "approved");
 
   // États pour la recherche et les filtres
