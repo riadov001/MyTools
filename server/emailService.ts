@@ -81,6 +81,11 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; me
     });
 
     if (result.error) {
+      console.error('Resend error:', result.error);
+      // If domain is not verified, suggest fallback
+      if (result.error.message?.includes('not verified') || result.error.message?.includes('not found')) {
+        console.warn(`Domain "${fromEmail}" not verified in Resend. To fix this, verify the domain in your Resend dashboard (https://resend.com/domains)`);
+      }
       return { success: false, error: result.error.message };
     }
 
