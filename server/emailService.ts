@@ -389,7 +389,7 @@ const COMPANY_INFO = {
   tva: 'FR73913678199',
 };
 
-// Load logo as base64
+// Load logo as base64 for server
 function getLogoBase64(): string {
   try {
     const logoPath = path.join(process.cwd(), 'attached_assets', 'logo-myjantes-n2iUZrkN_1759796960103.png');
@@ -401,7 +401,7 @@ function getLogoBase64(): string {
   }
 }
 
-// PDF Generation - EXACT SAME LOGIC AS CLIENT
+// Exact same logic as client generateQuotePDF
 export function generateQuotePDF(data: {
   quoteNumber: string;
   quoteDate: string;
@@ -409,36 +409,33 @@ export function generateQuotePDF(data: {
   status?: string;
   items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
   amount: string;
-  totalHT?: string;
-  totalVAT?: string;
-  totalTTC?: string;
   companyName: string;
 }): Buffer {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo (LEFT side)
-  const logoBase64 = getLogoBase64();
-  if (logoBase64) {
-    try {
-      doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
-    } catch (error) {
-      console.warn('Failed to add logo to PDF:', error);
-    }
+  // Add logo (LEFT side) - EXACT SAME AS CLIENT
+  try {
+    const logoBase64 = getLogoBase64();
+    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
+  } catch (error) {
+    console.error('Failed to load logo:', error);
   }
   
-  // Document title (CENTER)
+  // Document title (CENTER) - EXACT SAME AS CLIENT
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(`DEVIS - ${data.quoteNumber}`, pageWidth / 2, 20, { align: 'center' });
+  const quoteNumber = `DV-${new Date().getFullYear()}-${data.quoteNumber.substring(0, 6)}`;
+  doc.text(`DEVIS - ${quoteNumber}`, pageWidth / 2, 20, { align: 'center' });
   
-  // Dates and operation type (RIGHT side)
+  // Dates and operation type (RIGHT side) - EXACT SAME AS CLIENT
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Date de facturation: ${data.quoteDate}`, pageWidth - 20, 28, { align: 'right' });
+  const billingDate = data.quoteDate;
+  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
   doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
   
-  // Add status if provided (RIGHT side, highlighted in red)
+  // Add status if provided (RED)
   if (data.status) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -447,7 +444,7 @@ export function generateQuotePDF(data: {
     doc.setTextColor(0, 0, 0);
   }
   
-  // Company info (LEFT side, below logo)
+  // Company info (LEFT side, below logo) - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text(COMPANY_INFO.name, 20, 50);
@@ -460,27 +457,35 @@ export function generateQuotePDF(data: {
   doc.text(COMPANY_INFO.email, 20, 71);
   doc.text(COMPANY_INFO.website, 20, 76);
   
-  // Client info (RIGHT side)
+  // Client info (RIGHT side) - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   const clientName = data.clientName || 'Client';
   doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  // Table - exact same columns as client
-  const tableData = data.items.map(item => [
-    item.description,
-    new Date(data.quoteDate).toLocaleDateString('fr-FR'),
-    item.quantity.toString(),
-    'pce',
-    item.unitPrice,
-    '20 %',
-    item.total,
-  ]);
+  // Table - EXACT SAME AS CLIENT (7 columns)
+  const tableData = data.items.map(item => ({
+    description: item.description,
+    date: billingDate,
+    quantity: item.quantity.toString(),
+    unit: 'pce',
+    unitPrice: item.unitPrice,
+    vat: '20 %',
+    amount: item.total,
+  }));
   
   autoTable(doc, {
     startY: 90,
     head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
-    body: tableData,
+    body: tableData.map(item => [
+      item.description,
+      item.date,
+      item.quantity,
+      item.unit,
+      `${item.unitPrice} €`,
+      item.vat,
+      `${item.amount} €`,
+    ]),
     theme: 'grid',
     headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
     styles: { fontSize: 9, cellPadding: 3 },
@@ -489,32 +494,33 @@ export function generateQuotePDF(data: {
     },
   });
   
-  // Totals - Calculate from items
+  // Totals - EXACT SAME LOGIC AS CLIENT
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  let totalHT = 0;
-  let totalVAT = 0;
-  let totalTTC = 0;
   
+  // Parse amounts from formatted strings
+  let totalHT = 0;
+  let totalTTC = 0;
   data.items.forEach(item => {
-    const price = parseFloat(item.unitPrice.replace(' €', '').replace(',', '.'));
-    const itemTotal = parseFloat(item.total.replace(' €', '').replace(',', '.'));
-    totalHT += price;
-    totalTTC += itemTotal;
+    const priceValue = parseFloat(item.unitPrice.replace(' €', '').replace(/,/g, '.'));
+    const totalValue = parseFloat(item.total.replace(' €', '').replace(/,/g, '.'));
+    totalHT += priceValue;
+    totalTTC += totalValue;
   });
-  totalVAT = totalTTC - totalHT;
+  const totalVAT = totalTTC - totalHT;
+  const vatRate = 20; // Default rate
   
   doc.setFontSize(10);
   doc.text(`Total HT`, 120, finalY);
   doc.text(`${totalHT.toFixed(2)} €`, 170, finalY, { align: 'right' });
   
-  doc.text(`TVA 20 %`, 120, finalY + 6);
+  doc.text(`TVA ${vatRate.toFixed(2)} %`, 120, finalY + 6);
   doc.text(`${totalVAT.toFixed(2)} €`, 170, finalY + 6, { align: 'right' });
   
   doc.setFont('helvetica', 'bold');
   doc.text(`Total TTC`, 120, finalY + 12);
   doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
   
-  // Payment methods
+  // Payment methods - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Moyens de paiement:', 20, finalY + 20);
@@ -526,12 +532,12 @@ export function generateQuotePDF(data: {
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
   doc.text('30 jours', 20, finalY + 45);
   
-  // Payment conditions
+  // Payment conditions - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Conditions de paiement:', 20, finalY + 57);
   
-  // Footer
+  // Footer - EXACT SAME AS CLIENT
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
@@ -544,6 +550,7 @@ export function generateQuotePDF(data: {
   return Buffer.from(doc.output('arraybuffer'));
 }
 
+// Exact same logic as client generateInvoicePDF
 export function generateInvoicePDF(data: {
   invoiceNumber: string;
   invoiceDate: string;
@@ -552,37 +559,34 @@ export function generateInvoicePDF(data: {
   status?: string;
   items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
   amount: string;
-  totalHT?: string;
-  totalVAT?: string;
-  totalTTC?: string;
   companyName: string;
 }): Buffer {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo (LEFT side)
-  const logoBase64 = getLogoBase64();
-  if (logoBase64) {
-    try {
-      doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
-    } catch (error) {
-      console.warn('Failed to add logo to PDF:', error);
-    }
+  // Add logo (LEFT side) - EXACT SAME AS CLIENT
+  try {
+    const logoBase64 = getLogoBase64();
+    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
+  } catch (error) {
+    console.error('Failed to load logo:', error);
   }
   
-  // Document title (CENTER)
+  // Document title (CENTER) - EXACT SAME AS CLIENT
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text(`FACTURE - ${data.invoiceNumber}`, pageWidth / 2, 20, { align: 'center' });
   
-  // Dates and operation type (RIGHT side)
+  // Dates and operation type (RIGHT side) - EXACT SAME AS CLIENT
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Date de facturation: ${data.invoiceDate}`, pageWidth - 20, 28, { align: 'right' });
-  doc.text(`Échéance: ${data.dueDate}`, pageWidth - 20, 34, { align: 'right' });
+  const billingDate = data.invoiceDate;
+  const dueDate = data.dueDate;
+  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 34, { align: 'right' });
   doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
   
-  // Add status if provided (RIGHT side, highlighted in red)
+  // Add status if provided (RED)
   if (data.status) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -591,7 +595,7 @@ export function generateInvoicePDF(data: {
     doc.setTextColor(0, 0, 0);
   }
   
-  // Company info (LEFT side, below logo)
+  // Company info (LEFT side, below logo) - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text(COMPANY_INFO.name, 20, 50);
@@ -604,27 +608,35 @@ export function generateInvoicePDF(data: {
   doc.text(COMPANY_INFO.email, 20, 71);
   doc.text(COMPANY_INFO.website, 20, 76);
   
-  // Client info (RIGHT side)
+  // Client info (RIGHT side) - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   const clientName = data.clientName || 'Client';
   doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  // Table - exact same columns as client
-  const tableData = data.items.map(item => [
-    item.description,
-    new Date(data.invoiceDate).toLocaleDateString('fr-FR'),
-    item.quantity.toString(),
-    'pce',
-    item.unitPrice,
-    '20 %',
-    item.total,
-  ]);
+  // Table - EXACT SAME AS CLIENT (7 columns)
+  const tableData = data.items.map(item => ({
+    description: item.description,
+    date: billingDate,
+    quantity: item.quantity.toString(),
+    unit: 'pce',
+    unitPrice: item.unitPrice,
+    vat: '20 %',
+    amount: item.total,
+  }));
   
   autoTable(doc, {
     startY: 90,
     head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
-    body: tableData,
+    body: tableData.map(item => [
+      item.description,
+      item.date,
+      item.quantity,
+      item.unit,
+      `${item.unitPrice} €`,
+      item.vat,
+      `${item.amount} €`,
+    ]),
     theme: 'grid',
     headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
     styles: { fontSize: 9, cellPadding: 3 },
@@ -633,32 +645,33 @@ export function generateInvoicePDF(data: {
     },
   });
   
-  // Totals - Calculate from items
+  // Totals - EXACT SAME LOGIC AS CLIENT
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  let totalHT = 0;
-  let totalVAT = 0;
-  let totalTTC = 0;
   
+  // Parse amounts from formatted strings
+  let totalHT = 0;
+  let totalTTC = 0;
   data.items.forEach(item => {
-    const price = parseFloat(item.unitPrice.replace(' €', '').replace(',', '.'));
-    const itemTotal = parseFloat(item.total.replace(' €', '').replace(',', '.'));
-    totalHT += price;
-    totalTTC += itemTotal;
+    const priceValue = parseFloat(item.unitPrice.replace(' €', '').replace(/,/g, '.'));
+    const totalValue = parseFloat(item.total.replace(' €', '').replace(/,/g, '.'));
+    totalHT += priceValue;
+    totalTTC += totalValue;
   });
-  totalVAT = totalTTC - totalHT;
+  const totalVAT = totalTTC - totalHT;
+  const vatRate = 20; // Default rate
   
   doc.setFontSize(10);
   doc.text(`Total HT`, 120, finalY);
   doc.text(`${totalHT.toFixed(2)} €`, 170, finalY, { align: 'right' });
   
-  doc.text(`TVA 20 %`, 120, finalY + 6);
+  doc.text(`TVA ${vatRate.toFixed(2)} %`, 120, finalY + 6);
   doc.text(`${totalVAT.toFixed(2)} €`, 170, finalY + 6, { align: 'right' });
   
   doc.setFont('helvetica', 'bold');
   doc.text(`Total TTC`, 120, finalY + 12);
   doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
   
-  // Payment methods
+  // Payment methods - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Moyens de paiement:', 20, finalY + 20);
@@ -670,12 +683,12 @@ export function generateInvoicePDF(data: {
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
   doc.text('30 jours', 20, finalY + 45);
   
-  // Payment conditions
+  // Payment conditions - EXACT SAME AS CLIENT
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Conditions de paiement:', 20, finalY + 57);
   
-  // Footer
+  // Footer - EXACT SAME AS CLIENT
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
