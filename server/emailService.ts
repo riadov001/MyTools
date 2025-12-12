@@ -16,24 +16,39 @@ export async function getResendClient() {
   };
 }
 
+interface Attachment {
+  filename: string;
+  content: Buffer | string;
+}
+
 interface EmailData {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: Attachment[];
 }
 
 export async function sendEmail(data: EmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     const { client, fromEmail } = await getResendClient();
     
-    const result = await client.emails.send({
+    const emailPayload: any = {
       from: fromEmail || 'MyJantes <noreply@resend.dev>',
       to: data.to,
       subject: data.subject,
       html: data.html,
       text: data.text,
-    });
+    };
+    
+    if (data.attachments && data.attachments.length > 0) {
+      emailPayload.attachments = data.attachments.map(att => ({
+        filename: att.filename,
+        content: typeof att.content === 'string' ? Buffer.from(att.content, 'base64') : att.content,
+      }));
+    }
+    
+    const result = await client.emails.send(emailPayload);
 
     if (result.error) {
       console.error('Resend error:', result.error);
