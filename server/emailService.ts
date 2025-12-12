@@ -190,3 +190,190 @@ export function generateInvoiceEmailHtml(data: {
     </html>
   `;
 }
+
+export function generateReservationConfirmedEmailHtml(data: {
+  clientName: string;
+  reservationDate: string;
+  reservationTime: string;
+  serviceName: string;
+  companyName: string;
+  notes?: string;
+}): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Réservation Confirmée</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #16a34a; margin-top: 0;">Réservation Confirmée</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Nous avons le plaisir de vous confirmer votre réservation.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Service:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${data.serviceName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Date:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${data.reservationDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Heure:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${data.reservationTime}</td>
+            </tr>
+          </table>
+        </div>
+        
+        ${data.notes ? `<p style="color: #666;"><strong>Notes:</strong> ${data.notes}</p>` : ''}
+        
+        <p style="margin-top: 30px;">Nous vous attendons à la date prévue. N'hésitez pas à nous contacter si vous avez besoin de modifier votre rendez-vous.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateInvoicePaidEmailHtml(data: {
+  clientName: string;
+  invoiceNumber: string;
+  amount: string;
+  paymentDate: string;
+  companyName: string;
+}): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Paiement Reçu</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #16a34a; margin-top: 0;">Paiement Reçu</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Nous vous confirmons la bonne réception de votre paiement.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Facture N°:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${data.invoiceNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Montant:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #16a34a;">${data.amount}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Date de paiement:</td>
+              <td style="padding: 8px 0; font-weight: bold;">${data.paymentDate}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p style="margin-top: 30px;">Merci pour votre confiance. Nous restons à votre disposition pour tout besoin futur.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateQuoteApprovedEmailHtml(data: {
+  clientName: string;
+  quoteNumber: string;
+  quoteDate: string;
+  amount: string;
+  companyName: string;
+  items: Array<{ description: string; quantity: number; unitPrice: string; total: string }>;
+}): string {
+  const itemsHtml = data.items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.unitPrice}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${item.total}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Devis Validé ${data.quoteNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #16a34a; margin-top: 0;">Devis Validé - N° ${data.quoteNumber}</h2>
+        
+        <p>Bonjour ${data.clientName},</p>
+        
+        <p>Bonne nouvelle ! Votre devis du ${data.quoteDate} a été validé.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background: white; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background: #f3f4f6;">
+              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Description</th>
+              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qté</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Prix unit.</th>
+              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        
+        <div style="text-align: right; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+          <p style="font-size: 18px; font-weight: bold; color: #16a34a; margin: 0;">Total TTC: ${data.amount}</p>
+        </div>
+        
+        <p style="margin-top: 30px;">Nous allons maintenant préparer votre facture. Vous serez notifié dès qu'elle sera disponible.</p>
+        
+        <p>N'hésitez pas à nous contacter pour toute question.</p>
+        
+        <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé automatiquement depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
