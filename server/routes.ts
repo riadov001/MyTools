@@ -42,7 +42,7 @@ async function logAuditEvent(ctx: AuditContext): Promise<void> {
     // Compute field-level changes
     const changes: { field: string; previousValue: any; newValue: any }[] = [];
     if (ctx.previousData && ctx.newData) {
-      const allKeys = [...new Set([...Object.keys(ctx.previousData), ...Object.keys(ctx.newData)])];
+      const allKeys = Array.from(new Set([...Object.keys(ctx.previousData), ...Object.keys(ctx.newData)]));
       for (const key of allKeys) {
         const prev = ctx.previousData[key];
         const curr = ctx.newData[key];
@@ -399,13 +399,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send WebSocket notification
-      const client = wsClients.get(quote.clientId);
-      if (client && client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
+      const wsClient = wsClients.get(quote.clientId);
+      if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(JSON.stringify({
           type: "quote_updated",
           quoteId: quote.id,
           status: quote.status,
         }));
+      }
+      
+      // Send automatic email when quote is approved
+      if (req.body.status === "approved" && previousQuote?.status !== "approved") {
+        try {
+          const clientUser = await storage.getUser(quote.clientId);
+          if (clientUser?.email) {
+            const items = await storage.getQuoteItems(id);
+            const settings = await storage.getApplicationSettings();
+            const { sendEmail, generateQuoteApprovedEmailHtml } = await import("./emailService");
+            
+            const formatPrice = (value: string | number | null): string => {
+              if (value === null || value === undefined) return "0,00 €";
+              const num = typeof value === "string" ? parseFloat(value) : value;
+              return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+            };
+            
+            const html = generateQuoteApprovedEmailHtml({
+              clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+              quoteNumber: quote.id.slice(0, 8).toUpperCase(),
+              quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
+              amount: formatPrice(quote.quoteAmount),
+              companyName: settings?.companyName || "MyJantes",
+              items: items.map(item => ({
+                description: item.description,
+                quantity: parseFloat(item.quantity || "1"),
+                unitPrice: formatPrice(item.unitPriceExcludingTax),
+                total: formatPrice(item.totalIncludingTax),
+              })),
+            });
+            
+            await sendEmail({
+              to: clientUser.email,
+              subject: `Devis validé - ${quote.id.slice(0, 8).toUpperCase()} | MyJantes`,
+              html,
+            });
+            console.log(`Auto-email sent: Quote approved to ${clientUser.email}`);
+          }
+        } catch (emailError) {
+          console.error("Error sending quote approved email:", emailError);
+        }
       }
       
       res.json(quote);
@@ -657,12 +698,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send WebSocket notification
-      const client = wsClients.get(invoice.clientId);
-      if (client && client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
+      const wsClient = wsClients.get(invoice.clientId);
+      if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(JSON.stringify({
           type: "invoice_created",
           invoiceId: invoice.id,
         }));
+      }
+      
+      // Send automatic email for new invoice (pending)
+      try {
+        const clientUser = await storage.getUser(invoice.clientId);
+        if (clientUser?.email) {
+          const items = await storage.getInvoiceItems(invoice.id);
+          const settings = await storage.getApplicationSettings();
+          const { sendEmail, generateInvoiceEmailHtml } = await import("./emailService");
+          
+          const formatPrice = (value: string | number | null): string => {
+            if (value === null || value === undefined) return "0,00 €";
+            const num = typeof value === "string" ? parseFloat(value) : value;
+            return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+          };
+          
+          const invoiceCreatedAt = new Date();
+          const dueDate = invoice.dueDate 
+            ? new Date(invoice.dueDate).toLocaleDateString("fr-FR")
+            : new Date(invoiceCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR");
+          
+          const html = generateInvoiceEmailHtml({
+            clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+            invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+            invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+            dueDate,
+            amount: formatPrice(invoice.amount),
+            companyName: settings?.companyName || "MyJantes",
+            items: items.map(item => ({
+              description: item.description,
+              quantity: parseFloat(item.quantity || "1"),
+              unitPrice: formatPrice(item.unitPriceExcludingTax),
+              total: formatPrice(item.totalIncludingTax),
+            })),
+          });
+          
+          await sendEmail({
+            to: clientUser.email,
+            subject: `Nouvelle facture - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
+            html,
+          });
+          console.log(`Auto-email sent: Invoice created to ${clientUser.email}`);
+        }
+      } catch (emailError) {
+        console.error("Error sending invoice created email:", emailError);
       }
       
       res.json(invoice);
@@ -755,12 +841,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send WebSocket notification
-      const client = wsClients.get(invoice.clientId);
-      if (client && client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
+      const wsClient = wsClients.get(invoice.clientId);
+      if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(JSON.stringify({
           type: "invoice_created",
           invoiceId: invoice.id,
         }));
+      }
+      
+      // Send automatic email for new direct invoice (pending)
+      try {
+        const clientUser = await storage.getUser(invoice.clientId);
+        if (clientUser?.email) {
+          const items = await storage.getInvoiceItems(invoice.id);
+          const settings = await storage.getApplicationSettings();
+          const { sendEmail, generateInvoiceEmailHtml } = await import("./emailService");
+          
+          const formatPrice = (value: string | number | null): string => {
+            if (value === null || value === undefined) return "0,00 €";
+            const num = typeof value === "string" ? parseFloat(value) : value;
+            return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+          };
+          
+          const invoiceCreatedAt = new Date();
+          const dueDate = invoice.dueDate 
+            ? new Date(invoice.dueDate).toLocaleDateString("fr-FR")
+            : new Date(invoiceCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR");
+          
+          const html = generateInvoiceEmailHtml({
+            clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+            invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+            invoiceDate: invoiceCreatedAt.toLocaleDateString("fr-FR"),
+            dueDate,
+            amount: formatPrice(invoice.amount),
+            companyName: settings?.companyName || "MyJantes",
+            items: items.map(item => ({
+              description: item.description,
+              quantity: parseFloat(item.quantity || "1"),
+              unitPrice: formatPrice(item.unitPriceExcludingTax),
+              total: formatPrice(item.totalIncludingTax),
+            })),
+          });
+          
+          await sendEmail({
+            to: clientUser.email,
+            subject: `Nouvelle facture - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
+            html,
+          });
+          console.log(`Auto-email sent: Direct invoice created to ${clientUser.email}`);
+        }
+      } catch (emailError) {
+        console.error("Error sending direct invoice created email:", emailError);
       }
       
       res.json(invoice);
@@ -834,6 +965,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         previousData: previousInvoice,
         newData: invoice,
       });
+      
+      // Send automatic email when invoice is paid
+      if (updateData.status === "paid" && previousInvoice?.status !== "paid") {
+        try {
+          const clientUser = await storage.getUser(invoice.clientId);
+          if (clientUser?.email) {
+            const settings = await storage.getApplicationSettings();
+            const { sendEmail, generateInvoicePaidEmailHtml } = await import("./emailService");
+            
+            const formatPrice = (value: string | number | null): string => {
+              if (value === null || value === undefined) return "0,00 €";
+              const num = typeof value === "string" ? parseFloat(value) : value;
+              return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+            };
+            
+            const html = generateInvoicePaidEmailHtml({
+              clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+              invoiceNumber: invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase(),
+              amount: formatPrice(invoice.amount),
+              paymentDate: new Date().toLocaleDateString("fr-FR"),
+              companyName: settings?.companyName || "MyJantes",
+            });
+            
+            await sendEmail({
+              to: clientUser.email,
+              subject: `Paiement reçu - Facture ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
+              html,
+            });
+            console.log(`Auto-email sent: Invoice paid to ${clientUser.email}`);
+          }
+        } catch (emailError) {
+          console.error("Error sending invoice paid email:", emailError);
+        }
+      }
       
       res.json(invoice);
     } catch (error: any) {
@@ -1167,13 +1332,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Send WebSocket notification
-        const client = wsClients.get(reservation.clientId);
-        if (client && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
+        const wsClient = wsClients.get(reservation.clientId);
+        if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify({
             type: "reservation_updated",
             reservationId: reservation.id,
             status: validatedData.status,
           }));
+        }
+      }
+      
+      // Send automatic email when reservation is confirmed
+      if (validatedData.status === "confirmed" && previousReservation?.status !== "confirmed") {
+        try {
+          const clientUser = await storage.getUser(reservation.clientId);
+          if (clientUser?.email) {
+            const service = reservation.serviceId ? await storage.getService(reservation.serviceId) : null;
+            const settings = await storage.getApplicationSettings();
+            const { sendEmail, generateReservationConfirmedEmailHtml } = await import("./emailService");
+            
+            const scheduledDate = reservation.scheduledDate 
+              ? new Date(reservation.scheduledDate).toLocaleDateString("fr-FR", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+              : "Date à confirmer";
+            
+            const scheduledTime = reservation.scheduledDate
+              ? new Date(reservation.scheduledDate).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })
+              : "Horaire à confirmer";
+            
+            const html = generateReservationConfirmedEmailHtml({
+              clientName: `${clientUser.firstName || ""} ${clientUser.lastName || ""}`.trim() || clientUser.email,
+              reservationDate: scheduledDate,
+              reservationTime: scheduledTime,
+              serviceName: service?.name || "Service",
+              companyName: settings?.companyName || "MyJantes",
+              notes: reservation.notes || undefined,
+            });
+            
+            await sendEmail({
+              to: clientUser.email,
+              subject: `Réservation confirmée - ${scheduledDate} | MyJantes`,
+              html,
+            });
+            console.log(`Auto-email sent: Reservation confirmed to ${clientUser.email}`);
+          }
+        } catch (emailError) {
+          console.error("Error sending reservation confirmed email:", emailError);
         }
       }
 
