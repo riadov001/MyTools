@@ -609,7 +609,7 @@ export default function AdminInvoices() {
                 <SelectContent>
                   {approvedQuotes.map((quote) => (
                     <SelectItem key={quote.id} value={quote.id}>
-                      Devis #{quote.id.slice(0, 8)} - {quote.quoteAmount} €
+                      {quote.reference || `Devis #${quote.id.slice(0, 8)}`} - {quote.quoteAmount} €
                     </SelectItem>
                   ))}
                 </SelectContent>

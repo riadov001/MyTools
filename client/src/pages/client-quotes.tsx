@@ -119,7 +119,7 @@ export default function ClientQuotes() {
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
                     <div className="min-w-0">
-                      <CardTitle className="text-lg">Devis #{quote.id.slice(0, 8).toUpperCase()}</CardTitle>
+                      <CardTitle className="text-lg">{quote.reference || `Devis #${quote.id.slice(0, 8).toUpperCase()}`}</CardTitle>
                       <p className="text-sm text-muted-foreground">
                         Créé le {format(new Date(quote.createdAt!), "d MMMM yyyy", { locale: fr })}
                       </p>

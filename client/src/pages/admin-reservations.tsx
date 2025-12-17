@@ -176,6 +176,12 @@ export default function AdminReservations() {
     return service?.name || `Service-${serviceId.slice(0, 8)}`;
   };
 
+  // Fonction pour obtenir la référence du devis
+  const getQuoteReference = (quoteId: string) => {
+    const quote = quotes.find(q => q.id === quoteId);
+    return quote?.reference || `#${quoteId.slice(0, 8)}`;
+  };
+
   // Filtrage des réservations
   const filteredReservations = reservations.filter(reservation => {
     const clientName = getClientName(reservation.clientId).toLowerCase();
@@ -579,7 +585,7 @@ export default function AdminReservations() {
                         <span className="font-medium">Service:</span> {getServiceName(reservation.serviceId)}
                       </p>
                       {reservation.quoteId && (
-                        <p className="text-sm text-muted-foreground">Devis: {reservation.quoteId.slice(0, 8)}</p>
+                        <p className="text-sm text-muted-foreground">Devis: {getQuoteReference(reservation.quoteId)}</p>
                       )}
                       {reservation.wheelCount && (
                         <p className="text-sm text-muted-foreground">Jantes: {reservation.wheelCount} | Diamètre: {reservation.diameter || "N/A"}</p>
@@ -673,7 +679,7 @@ export default function AdminReservations() {
                     <SelectContent>
                       {approvedQuotes.map((quote) => (
                         <SelectItem key={quote.id} value={quote.id}>
-                          Devis #{quote.id.slice(0, 8)} - {quote.quoteAmount ? `${parseFloat(quote.quoteAmount).toFixed(2)} €` : "N/A"}
+                          {quote.reference || `Devis #${quote.id.slice(0, 8)}`} - {quote.quoteAmount ? `${parseFloat(quote.quoteAmount).toFixed(2)} €` : "N/A"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -682,9 +688,9 @@ export default function AdminReservations() {
 
                 {selectedQuoteDetails && (
                   <div className="p-4 bg-muted rounded-md space-y-2">
-                    <p className="font-semibold">Détails du devis</p>
-                    <p className="text-sm">Client: {selectedQuoteDetails.clientId.slice(0, 8)}</p>
-                    <p className="text-sm">Service: {selectedQuoteDetails.serviceId.slice(0, 8)}</p>
+                    <p className="font-semibold">Détails du devis: {selectedQuoteDetails.reference || `#${selectedQuoteDetails.id.slice(0, 8)}`}</p>
+                    <p className="text-sm">Client: {getClientName(selectedQuoteDetails.clientId)}</p>
+                    <p className="text-sm">Service: {getServiceName(selectedQuoteDetails.serviceId)}</p>
                     {selectedQuoteDetails.wheelCount && (
                       <p className="text-sm">Jantes: {selectedQuoteDetails.wheelCount} | Diamètre: {selectedQuoteDetails.diameter || "N/A"}</p>
                     )}

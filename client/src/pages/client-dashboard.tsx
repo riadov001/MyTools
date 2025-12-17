@@ -145,7 +145,7 @@ export default function ClientDashboard() {
                   data-testid={`quote-card-${quote.id}`}
                 >
                   <div className="flex-1">
-                    <p className="font-medium">Devis #{quote.id.slice(0, 8)}</p>
+                    <p className="font-medium">{quote.reference || `Devis #${quote.id.slice(0, 8)}`}</p>
                     <p className="text-sm text-muted-foreground">
                       {quote.createdAt && formatDistanceToNow(new Date(quote.createdAt), { addSuffix: true, locale: fr })}
                     </p>

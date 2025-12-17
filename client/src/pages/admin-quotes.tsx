@@ -666,7 +666,7 @@ export default function AdminQuotes() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <p className="font-semibold">Devis #{quote.id.slice(0, 8)}</p>
+                      <p className="font-semibold">{quote.reference || `Devis #${quote.id.slice(0, 8)}`}</p>
                       <StatusBadge status={quote.status as any} />
                     </div>
                     <p className="text-sm text-muted-foreground">
