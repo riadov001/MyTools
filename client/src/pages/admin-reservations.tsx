@@ -59,6 +59,7 @@ export default function AdminReservations() {
   const [newClientTvaNumber, setNewClientTvaNumber] = useState("");
   const [newClientCompanyAddress, setNewClientCompanyAddress] = useState("");
   const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [estimatedEndDate, setEstimatedEndDate] = useState<string>("");
   const [wheelCount, setWheelCount] = useState<string>("1");
   const [diameter, setDiameter] = useState<string>("");
   const [priceHT, setPriceHT] = useState<string>("");
@@ -247,6 +248,7 @@ export default function AdminReservations() {
     setSelectedClient("");
     setSelectedService("");
     setScheduledDate("");
+    setEstimatedEndDate("");
     setWheelCount("1");
     setDiameter("");
     setPriceHT("");
@@ -291,6 +293,7 @@ export default function AdminReservations() {
         clientId: quote.clientId,
         serviceId: quote.serviceId,
         scheduledDate,
+        estimatedEndDate: estimatedEndDate || undefined,
         wheelCount: quote.wheelCount,
         diameter: quote.diameter,
         priceExcludingTax: quote.priceExcludingTax,
@@ -364,6 +367,7 @@ export default function AdminReservations() {
           clientId,
           serviceId: selectedService,
           scheduledDate,
+          estimatedEndDate: estimatedEndDate || undefined,
           wheelCount: parseInt(wheelCount),
           diameter: diameter || undefined,
           priceExcludingTax: priceHT || undefined,
@@ -403,6 +407,7 @@ export default function AdminReservations() {
       id: selectedReservation.id,
       data: {
         scheduledDate,
+        estimatedEndDate: estimatedEndDate || undefined,
         wheelCount: wheelCount ? parseInt(wheelCount) : undefined,
         diameter: diameter || undefined,
         priceExcludingTax: priceHT || undefined,
@@ -418,6 +423,7 @@ export default function AdminReservations() {
   const openEditDialog = (reservation: Reservation) => {
     setSelectedReservation(reservation);
     setScheduledDate(reservation.scheduledDate ? new Date(reservation.scheduledDate).toISOString().slice(0, 16) : "");
+    setEstimatedEndDate(reservation.estimatedEndDate ? new Date(reservation.estimatedEndDate).toISOString().slice(0, 16) : "");
     setWheelCount(reservation.wheelCount?.toString() || "1");
     setDiameter(reservation.diameter || "");
     setPriceHT(reservation.priceExcludingTax || "");
@@ -630,16 +636,29 @@ export default function AdminReservations() {
                   </div>
                 )}
 
-                <div>
-                  <Label htmlFor="scheduled-date">Date de réservation *</Label>
-                  <Input
-                    id="scheduled-date"
-                    type="datetime-local"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="mt-2"
-                    data-testid="input-scheduled-date"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="scheduled-date">Date de début *</Label>
+                    <Input
+                      id="scheduled-date"
+                      type="datetime-local"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-scheduled-date"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="estimated-end-date">Date de fin</Label>
+                    <Input
+                      id="estimated-end-date"
+                      type="datetime-local"
+                      value={estimatedEndDate}
+                      onChange={(e) => setEstimatedEndDate(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-estimated-end-date"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -750,16 +769,29 @@ export default function AdminReservations() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="scheduled-date-direct">Date de réservation *</Label>
-                  <Input
-                    id="scheduled-date-direct"
-                    type="datetime-local"
-                    value={scheduledDate}
-                    onChange={(e) => setScheduledDate(e.target.value)}
-                    className="mt-2"
-                    data-testid="input-scheduled-date-direct"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="scheduled-date-direct">Date de début *</Label>
+                    <Input
+                      id="scheduled-date-direct"
+                      type="datetime-local"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-scheduled-date-direct"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="estimated-end-date-direct">Date de fin</Label>
+                    <Input
+                      id="estimated-end-date-direct"
+                      type="datetime-local"
+                      value={estimatedEndDate}
+                      onChange={(e) => setEstimatedEndDate(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-estimated-end-date-direct"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -911,16 +943,29 @@ export default function AdminReservations() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
-            <div>
-              <Label htmlFor="edit-scheduled-date">Date de réservation *</Label>
-              <Input
-                id="edit-scheduled-date"
-                type="datetime-local"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                className="mt-2"
-                data-testid="input-edit-scheduled-date"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-scheduled-date">Date de début *</Label>
+                <Input
+                  id="edit-scheduled-date"
+                  type="datetime-local"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-scheduled-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-estimated-end-date">Date de fin</Label>
+                <Input
+                  id="edit-estimated-end-date"
+                  type="datetime-local"
+                  value={estimatedEndDate}
+                  onChange={(e) => setEstimatedEndDate(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-estimated-end-date"
+                />
+              </div>
             </div>
 
             <div>
