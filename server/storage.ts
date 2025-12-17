@@ -244,7 +244,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(quoteData: InsertQuote): Promise<Quote> {
-    const [quote] = await db.insert(quotes).values(quoteData).returning();
+    // Generate quote reference: DEV-DD-MM-YYYY-TRI-NNN
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    
+    // Get client trigram
+    const client = await this.getUser(quoteData.clientId);
+    let trigram = 'CLI';
+    if (client) {
+      const lastName = client.lastName || '';
+      const firstName = client.firstName || '';
+      // Use first 3 letters of lastName, or firstName if lastName not available
+      const name = lastName || firstName || 'CLI';
+      trigram = name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X').padEnd(3, 'X');
+    }
+    
+    // Get sequential number for today
+    const datePrefix = `DEV-${day}-${month}-${year}-${trigram}`;
+    const existingQuotes = await db.select({ reference: quotes.reference })
+      .from(quotes)
+      .where(sql`${quotes.reference} LIKE ${datePrefix + '-%'}`);
+    
+    const sequentialNumber = existingQuotes.length + 1;
+    const reference = `${datePrefix}-${String(sequentialNumber).padStart(3, '0')}`;
+    
+    const [quote] = await db.insert(quotes).values({ ...quoteData, reference }).returning();
     return quote;
   }
 
