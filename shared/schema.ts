@@ -482,6 +482,9 @@ export const insertReservationSchema = createInsertSchema(reservations)
     scheduledDate: z.union([z.date(), z.string()]).transform(val => 
       typeof val === 'string' ? new Date(val) : val
     ),
+    estimatedEndDate: z.union([z.date(), z.string()]).transform(val => 
+      typeof val === 'string' ? new Date(val) : val
+    ).optional().nullable(),
     quoteId: z.string().nullable().optional(),
     wheelCount: z.number().min(1).max(4).nullable().optional(),
     diameter: z.string().nullable().optional(),
