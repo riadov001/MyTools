@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +70,11 @@ export default function AdminReservations() {
 
   // Form state for quote-based reservation
   const [selectedQuote, setSelectedQuote] = useState<string>("");
+  
+  // Highlight state for notification navigation
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const highlightedRef = useRef<HTMLDivElement>(null);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -84,11 +89,12 @@ export default function AdminReservations() {
     }
   }, [isAuthenticated, isLoading, isAdmin, toast]);
 
-  // Détection des paramètres URL pour ouvrir le dialogue après redirection
+  // Détection des paramètres URL pour ouvrir le dialogue après redirection ou highlight
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const shouldOpenDialog = params.get("openDialog") === "true";
     const clientId = params.get("clientId");
+    const highlight = params.get("highlight");
 
     if (shouldOpenDialog && isAuthenticated && isAdmin) {
       setCreateReservationDialog(true);
@@ -100,6 +106,27 @@ export default function AdminReservations() {
       // Nettoyer les paramètres URL sans recharger la page
       window.history.replaceState({}, "", window.location.pathname);
     }
+    
+    if (highlight && isAuthenticated && isAdmin) {
+      // Clear any existing timeout before setting a new one
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      setHighlightedId(highlight);
+      // Nettoyer les paramètres URL sans recharger la page
+      window.history.replaceState({}, "", window.location.pathname);
+      // Supprimer le highlight après 5 secondes
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedId(null);
+      }, 5000);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
   }, [isAuthenticated, isAdmin]);
 
   const { data: reservations = [], isLoading: reservationsLoading } = useQuery<Reservation[]>({
@@ -123,6 +150,13 @@ export default function AdminReservations() {
   });
 
   const approvedQuotes = quotes.filter(q => q.status === "approved");
+  
+  // Scroll vers l'élément highlighted quand les réservations sont chargées
+  useEffect(() => {
+    if (highlightedId && highlightedRef.current && !reservationsLoading) {
+      highlightedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightedId, reservationsLoading]);
 
   // États pour la recherche et les filtres
   const [searchTerm, setSearchTerm] = useState("");
@@ -505,7 +539,12 @@ export default function AdminReservations() {
               {filteredReservations.map((reservation) => (
                 <div
                   key={reservation.id}
-                  className="flex flex-col gap-4 p-4 border border-border rounded-md hover-elevate"
+                  ref={reservation.id === highlightedId ? highlightedRef : undefined}
+                  className={`flex flex-col gap-4 p-4 border rounded-md hover-elevate transition-all duration-500 ${
+                    reservation.id === highlightedId 
+                      ? "border-primary ring-2 ring-primary/50 bg-primary/5" 
+                      : "border-border"
+                  }`}
                   data-testid={`reservation-item-${reservation.id}`}
                 >
                   <div className="flex flex-col md:flex-row gap-4">

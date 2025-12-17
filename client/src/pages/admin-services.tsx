@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,11 @@ export default function AdminServices() {
     basePrice: "",
     category: "",
   });
+  
+  // Highlight state for notification navigation
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const highlightedRef = useRef<HTMLDivElement>(null);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -37,11 +42,43 @@ export default function AdminServices() {
       }, 500);
     }
   }, [isAuthenticated, isLoading, isAdmin, toast]);
+  
+  // Détection du paramètre highlight dans l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const highlight = params.get("highlight");
+    
+    if (highlight && isAuthenticated && isAdmin) {
+      // Clear any existing timeout before setting a new one
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      setHighlightedId(highlight);
+      window.history.replaceState({}, "", window.location.pathname);
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedId(null);
+      }, 5000);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, [isAuthenticated, isAdmin]);
 
   const { data: services = [], isLoading: servicesLoading } = useQuery<Service[]>({
     queryKey: ["/api/admin/services"],
     enabled: isAuthenticated && isAdmin,
   });
+  
+  // Scroll vers l'élément highlighted quand les services sont chargés
+  useEffect(() => {
+    if (highlightedId && highlightedRef.current && !servicesLoading) {
+      highlightedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightedId, servicesLoading]);
 
   const createServiceMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -191,7 +228,12 @@ export default function AdminServices() {
               {services.map((service) => (
                 <div
                   key={service.id}
-                  className="flex flex-col gap-3 p-4 border border-border rounded-md hover-elevate"
+                  ref={service.id === highlightedId ? highlightedRef : undefined}
+                  className={`flex flex-col gap-3 p-4 border rounded-md hover-elevate transition-all duration-500 ${
+                    service.id === highlightedId 
+                      ? "border-primary ring-2 ring-primary/50 bg-primary/5" 
+                      : "border-border"
+                  }`}
                   data-testid={`service-item-${service.id}`}
                 >
                   <div className="flex-1">

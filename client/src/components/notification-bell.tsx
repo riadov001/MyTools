@@ -51,12 +51,12 @@ export function NotificationBell() {
           setLocation(`/admin/invoices/${notification.relatedId}/edit`);
           break;
         case "reservation":
-          // Navigate to reservations list (no detail page exists yet)
-          setLocation("/admin/reservations");
+          // Navigate to reservations list with highlight parameter
+          setLocation(`/admin/reservations?highlight=${notification.relatedId}`);
           break;
         case "service":
-          // Navigate to services list
-          setLocation("/admin/services");
+          // Navigate to services list with highlight parameter
+          setLocation(`/admin/services?highlight=${notification.relatedId}`);
           break;
         default:
           break;
