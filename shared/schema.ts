@@ -140,7 +140,9 @@ export const reservations = pgTable("reservations", {
   quoteId: varchar("quote_id").references(() => quotes.id, { onDelete: 'cascade' }), // Optional - nullable for direct reservations
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
+  assignedEmployeeId: varchar("assigned_employee_id").references(() => users.id, { onDelete: 'set null' }), // Employee assigned to the reservation
   scheduledDate: timestamp("scheduled_date").notNull(),
+  estimatedEndDate: timestamp("estimated_end_date"), // Estimated end time for calendar display
   wheelCount: integer("wheel_count"), // Number of wheels: 1, 2, 3, or 4
   diameter: varchar("diameter", { length: 50 }), // Wheel diameter
   priceExcludingTax: decimal("price_excluding_tax", { precision: 10, scale: 2 }), // Prix HT
