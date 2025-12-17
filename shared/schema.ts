@@ -155,6 +155,17 @@ export const reservations = pgTable("reservations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Reservation Services (table de liaison pour services multiples par réservation)
+export const reservationServices = pgTable("reservation_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reservationId: varchar("reservation_id").notNull().references(() => reservations.id, { onDelete: 'cascade' }),
+  serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
+  quantity: integer("quantity").notNull().default(1),
+  priceExcludingTax: decimal("price_excluding_tax", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notifications
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -355,7 +366,7 @@ export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
   }),
 }));
 
-export const reservationsRelations = relations(reservations, ({ one }) => ({
+export const reservationsRelations = relations(reservations, ({ one, many }) => ({
   quote: one(quotes, {
     fields: [reservations.quoteId],
     references: [quotes.id],
@@ -366,6 +377,18 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
   }),
   service: one(services, {
     fields: [reservations.serviceId],
+    references: [services.id],
+  }),
+  additionalServices: many(reservationServices),
+}));
+
+export const reservationServicesRelations = relations(reservationServices, ({ one }) => ({
+  reservation: one(reservations, {
+    fields: [reservationServices.reservationId],
+    references: [reservations.id],
+  }),
+  service: one(services, {
+    fields: [reservationServices.serviceId],
     references: [services.id],
   }),
 }));
@@ -496,6 +519,7 @@ export const insertReservationSchema = createInsertSchema(reservations)
 
 export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertQuoteItemSchema = createInsertSchema(quoteItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReservationServiceSchema = createInsertSchema(reservationServices).omit({ id: true, createdAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertInvoiceCounterSchema = createInsertSchema(invoiceCounters).omit({ id: true, updatedAt: true });
 export const insertQuoteMediaSchema = createInsertSchema(quoteMedia).omit({ id: true, createdAt: true });
@@ -524,6 +548,8 @@ export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type InsertReservation = z.infer<typeof insertReservationSchema>;
 export type Reservation = typeof reservations.$inferSelect;
+export type InsertReservationService = z.infer<typeof insertReservationServiceSchema>;
+export type ReservationService = typeof reservationServices.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertInvoiceCounter = z.infer<typeof insertInvoiceCounterSchema>;
