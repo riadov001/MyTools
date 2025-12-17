@@ -48,6 +48,7 @@ export default function AdminReservations() {
   // Form state for direct reservation
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
+  const [additionalServiceIds, setAdditionalServiceIds] = useState<string[]>([]);
   
   // Form state for new client
   const [newClientEmail, setNewClientEmail] = useState("");
@@ -281,6 +282,7 @@ export default function AdminReservations() {
     setClientSelection("existing");
     setSelectedClient("");
     setSelectedService("");
+    setAdditionalServiceIds([]);
     setScheduledDate("");
     setEstimatedEndDate("");
     setWheelCount("1");
@@ -400,6 +402,7 @@ export default function AdminReservations() {
         createReservationMutation.mutate({
           clientId,
           serviceId: selectedService,
+          additionalServiceIds: additionalServiceIds.length > 0 ? additionalServiceIds : undefined,
           scheduledDate,
           estimatedEndDate: estimatedEndDate || undefined,
           wheelCount: parseInt(wheelCount),
@@ -450,11 +453,12 @@ export default function AdminReservations() {
         productDetails: productDetails || undefined,
         notes: notes || undefined,
         status: reservationStatus,
+        additionalServiceIds,
       },
     });
   };
 
-  const openEditDialog = (reservation: Reservation) => {
+  const openEditDialog = async (reservation: Reservation) => {
     setSelectedReservation(reservation);
     setScheduledDate(reservation.scheduledDate ? new Date(reservation.scheduledDate).toISOString().slice(0, 16) : "");
     setEstimatedEndDate(reservation.estimatedEndDate ? new Date(reservation.estimatedEndDate).toISOString().slice(0, 16) : "");
@@ -465,6 +469,21 @@ export default function AdminReservations() {
     setProductDetails(reservation.productDetails || "");
     setNotes(reservation.notes || "");
     setReservationStatus(reservation.status);
+    
+    // Fetch additional services for this reservation
+    try {
+      const response = await fetch(`/api/admin/reservations/${reservation.id}/services`);
+      if (response.ok) {
+        const additionalServicesData = await response.json();
+        setAdditionalServiceIds(additionalServicesData.map((s: any) => s.serviceId));
+      } else {
+        setAdditionalServiceIds([]);
+      }
+    } catch (error) {
+      console.error("Error fetching reservation services:", error);
+      setAdditionalServiceIds([]);
+    }
+    
     setEditReservationDialog(true);
   };
 
@@ -793,8 +812,12 @@ export default function AdminReservations() {
                 )}
 
                 <div>
-                  <Label htmlFor="service">Service *</Label>
-                  <Select value={selectedService} onValueChange={setSelectedService}>
+                  <Label htmlFor="service">Service principal *</Label>
+                  <Select value={selectedService} onValueChange={(value) => {
+                    setSelectedService(value);
+                    // Remove from additional services if selected as main
+                    setAdditionalServiceIds(prev => prev.filter(id => id !== value));
+                  }}>
                     <SelectTrigger className="mt-2" data-testid="select-service">
                       <SelectValue placeholder="Sélectionner un service" />
                     </SelectTrigger>
@@ -807,6 +830,39 @@ export default function AdminReservations() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {selectedService && services.filter(s => s.isActive && s.id !== selectedService).length > 0 && (
+                  <div>
+                    <Label>Services additionnels</Label>
+                    <div className="mt-2 p-3 border border-border rounded-md space-y-2 max-h-40 overflow-y-auto">
+                      {services.filter(s => s.isActive && s.id !== selectedService).map((service) => (
+                        <label key={service.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={additionalServiceIds.includes(service.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setAdditionalServiceIds(prev => [...prev, service.id]);
+                              } else {
+                                setAdditionalServiceIds(prev => prev.filter(id => id !== service.id));
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                            data-testid={`checkbox-service-${service.id}`}
+                          />
+                          <span className="text-sm">
+                            {service.name} {service.basePrice ? `- ${parseFloat(service.basePrice).toFixed(2)} €` : ""}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {additionalServiceIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {additionalServiceIds.length} service{additionalServiceIds.length > 1 ? "s" : ""} additionnel{additionalServiceIds.length > 1 ? "s" : ""} sélectionné{additionalServiceIds.length > 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1021,6 +1077,39 @@ export default function AdminReservations() {
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedReservation && services.filter(s => s.isActive && s.id !== selectedReservation.serviceId).length > 0 && (
+              <div>
+                <Label>Services additionnels</Label>
+                <div className="mt-2 p-3 border border-border rounded-md space-y-2 max-h-40 overflow-y-auto">
+                  {services.filter(s => s.isActive && s.id !== selectedReservation.serviceId).map((service) => (
+                    <label key={service.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={additionalServiceIds.includes(service.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setAdditionalServiceIds(prev => [...prev, service.id]);
+                          } else {
+                            setAdditionalServiceIds(prev => prev.filter(id => id !== service.id));
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                        data-testid={`checkbox-edit-service-${service.id}`}
+                      />
+                      <span className="text-sm">
+                        {service.name} {service.basePrice ? `- ${parseFloat(service.basePrice).toFixed(2)} €` : ""}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {additionalServiceIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {additionalServiceIds.length} service{additionalServiceIds.length > 1 ? "s" : ""} additionnel{additionalServiceIds.length > 1 ? "s" : ""} sélectionné{additionalServiceIds.length > 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

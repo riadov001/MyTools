@@ -6,6 +6,7 @@ import {
   invoices,
   invoiceItems,
   reservations,
+  reservationServices,
   notifications,
   invoiceCounters,
   applicationSettings,
@@ -30,6 +31,8 @@ import {
   type InsertInvoiceItem,
   type Reservation,
   type InsertReservation,
+  type ReservationService,
+  type InsertReservationService,
   type Notification,
   type InsertNotification,
   type InvoiceCounter,
@@ -91,6 +94,10 @@ export interface IStorage {
   getReservation(id: string): Promise<Reservation | undefined>;
   createReservation(reservation: InsertReservation): Promise<Reservation>;
   updateReservation(id: string, reservation: Partial<InsertReservation>): Promise<Reservation>;
+  getReservationServices(reservationId: string): Promise<(ReservationService & { service: Service })[]>;
+  addReservationService(data: InsertReservationService): Promise<ReservationService>;
+  deleteReservationServices(reservationId: string): Promise<void>;
+  setReservationServices(reservationId: string, serviceIds: string[]): Promise<void>;
   getNotifications(userId: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: string): Promise<void>;
@@ -399,6 +406,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reservations.id, id))
       .returning();
     return reservation;
+  }
+
+  async getReservationServices(reservationId: string): Promise<(ReservationService & { service: Service })[]> {
+    const results = await db
+      .select({
+        id: reservationServices.id,
+        reservationId: reservationServices.reservationId,
+        serviceId: reservationServices.serviceId,
+        quantity: reservationServices.quantity,
+        priceExcludingTax: reservationServices.priceExcludingTax,
+        notes: reservationServices.notes,
+        createdAt: reservationServices.createdAt,
+        service: services,
+      })
+      .from(reservationServices)
+      .innerJoin(services, eq(reservationServices.serviceId, services.id))
+      .where(eq(reservationServices.reservationId, reservationId));
+    return results;
+  }
+
+  async addReservationService(data: InsertReservationService): Promise<ReservationService> {
+    const [result] = await db.insert(reservationServices).values(data).returning();
+    return result;
+  }
+
+  async deleteReservationServices(reservationId: string): Promise<void> {
+    await db.delete(reservationServices).where(eq(reservationServices.reservationId, reservationId));
+  }
+
+  async setReservationServices(reservationId: string, serviceIds: string[]): Promise<void> {
+    // Delete existing additional services
+    await this.deleteReservationServices(reservationId);
+    // Add new services if any
+    if (serviceIds.length > 0) {
+      const values = serviceIds.map(serviceId => ({
+        reservationId,
+        serviceId,
+        quantity: 1,
+      }));
+      await db.insert(reservationServices).values(values);
+    }
   }
 
   async getNotifications(userId: string): Promise<Notification[]> {

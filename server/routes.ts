@@ -1278,10 +1278,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get additional services for a specific reservation
+  app.get("/api/admin/reservations/:id/services", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const services = await storage.getReservationServices(id);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching reservation services:", error);
+      res.status(500).json({ message: "Failed to fetch reservation services" });
+    }
+  });
+
   app.post("/api/admin/reservations", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const validatedData = insertReservationSchema.parse(req.body);
+      const { additionalServiceIds, ...reservationData } = req.body;
+      const validatedData = insertReservationSchema.parse(reservationData);
       const reservation = await storage.createReservation(validatedData);
+
+      // Add additional services if provided
+      if (additionalServiceIds && Array.isArray(additionalServiceIds) && additionalServiceIds.length > 0) {
+        await storage.setReservationServices(reservation.id, additionalServiceIds);
+      }
 
       // Initialize workflow tasks for this reservation if service has workflows
       try {
@@ -1312,10 +1330,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
       }
       
-      res.json(reservation);
+      // Return reservation with additional services
+      const additionalServices = await storage.getReservationServices(reservation.id);
+      res.json({ ...reservation, additionalServices });
     } catch (error: any) {
       console.error("Error creating reservation:", error);
       res.status(400).json({ message: error.message || "Failed to create reservation" });
+    }
+  });
+  
+  // Get additional services for a reservation
+  app.get("/api/admin/reservations/:id/services", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const services = await storage.getReservationServices(id);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching reservation services:", error);
+      res.status(500).json({ message: "Failed to fetch reservation services" });
     }
   });
 
@@ -1407,12 +1439,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/reservations/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const { additionalServiceIds, ...bodyData } = req.body;
       
       // Get previous state for audit logging
       const previousReservation = await storage.getReservation(id);
       
-      const validatedData = insertReservationSchema.partial().parse(req.body);
+      const validatedData = insertReservationSchema.partial().parse(bodyData);
       const reservation = await storage.updateReservation(id, validatedData);
+      
+      // Update additional services if provided
+      if (additionalServiceIds !== undefined && Array.isArray(additionalServiceIds)) {
+        await storage.setReservationServices(id, additionalServiceIds);
+      }
 
       // Determine action type based on status change
       let action: ActionType = "updated";
@@ -1498,7 +1536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json(reservation);
+      // Return reservation with additional services
+      const additionalServices = await storage.getReservationServices(id);
+      res.json({ ...reservation, additionalServices });
     } catch (error: any) {
       console.error("Error updating reservation:", error);
       res.status(400).json({ message: error.message || "Failed to update reservation" });
