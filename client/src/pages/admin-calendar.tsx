@@ -125,6 +125,18 @@ export default function AdminCalendar() {
 
   const selectedDayReservations = selectedDate ? getReservationsForDay(selectedDate) : [];
 
+  const escapeICSText = (text: string) => {
+    return text
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+  };
+
+  const formatICSDate = (date: Date) => {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+
   const generateICS = (reservation: Reservation) => {
     const startDate = new Date(reservation.scheduledDate);
     const duration = getServiceDuration(reservation.serviceId);
@@ -132,33 +144,31 @@ export default function AdminCalendar() {
       ? new Date(reservation.estimatedEndDate) 
       : new Date(startDate.getTime() + duration * 60000);
 
-    const formatICSDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const clientName = getClientName(reservation.clientId);
-    const employeeName = getEmployeeName(reservation.assignedEmployeeId);
-    const serviceName = getServiceName(reservation.serviceId);
+    const clientName = escapeICSText(getClientName(reservation.clientId));
+    const employeeName = escapeICSText(getEmployeeName(reservation.assignedEmployeeId));
+    const serviceName = escapeICSText(getServiceName(reservation.serviceId));
     const reservationUrl = `${window.location.origin}/admin/reservations`;
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MyJantes//Reservation Calendar//FR
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-DTSTART:${formatICSDate(startDate)}
-DTEND:${formatICSDate(endDate)}
-DTSTAMP:${formatICSDate(new Date())}
-UID:${reservation.id}@myjantes.fr
-SUMMARY:${serviceName} - ${clientName}
-DESCRIPTION:Réservation ID: ${reservation.id.slice(0, 8)}\\nClient: ${clientName}\\nEmployé: ${employeeName}\\nService: ${serviceName}\\n\\nLien: ${reservationUrl}
-LOCATION:MyJantes Atelier
-ORGANIZER:CN=MyJantes:mailto:contact@myjantes.fr
-STATUS:${reservation.status === 'confirmed' ? 'CONFIRMED' : reservation.status === 'cancelled' ? 'CANCELLED' : 'TENTATIVE'}
-END:VEVENT
-END:VCALENDAR`;
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//MyJantes//Reservation Calendar//FR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `DTSTART:${formatICSDate(startDate)}`,
+      `DTEND:${formatICSDate(endDate)}`,
+      `DTSTAMP:${formatICSDate(new Date())}`,
+      `UID:${reservation.id}@myjantes.fr`,
+      `SUMMARY:${serviceName} - ${clientName}`,
+      `DESCRIPTION:Reservation ID: ${reservation.id.slice(0, 8)}\\nClient: ${clientName}\\nEmploye: ${employeeName}\\nService: ${serviceName}\\n\\nLien: ${reservationUrl}`,
+      'LOCATION:MyJantes Atelier',
+      `STATUS:${reservation.status === 'confirmed' ? 'CONFIRMED' : reservation.status === 'cancelled' ? 'CANCELLED' : 'TENTATIVE'}`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
 
+    const icsContent = icsLines.join('\r\n');
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -176,43 +186,45 @@ END:VCALENDAR`;
   };
 
   const generateAllICS = () => {
-    const events = filteredReservations.map(reservation => {
+    const eventLines: string[] = [];
+
+    filteredReservations.forEach(reservation => {
       const startDate = new Date(reservation.scheduledDate);
       const duration = getServiceDuration(reservation.serviceId);
       const endDate = reservation.estimatedEndDate 
         ? new Date(reservation.estimatedEndDate) 
         : new Date(startDate.getTime() + duration * 60000);
 
-      const formatICSDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      };
-
-      const clientName = getClientName(reservation.clientId);
-      const employeeName = getEmployeeName(reservation.assignedEmployeeId);
-      const serviceName = getServiceName(reservation.serviceId);
+      const clientName = escapeICSText(getClientName(reservation.clientId));
+      const employeeName = escapeICSText(getEmployeeName(reservation.assignedEmployeeId));
+      const serviceName = escapeICSText(getServiceName(reservation.serviceId));
       const reservationUrl = `${window.location.origin}/admin/reservations`;
 
-      return `BEGIN:VEVENT
-DTSTART:${formatICSDate(startDate)}
-DTEND:${formatICSDate(endDate)}
-DTSTAMP:${formatICSDate(new Date())}
-UID:${reservation.id}@myjantes.fr
-SUMMARY:${serviceName} - ${clientName}
-DESCRIPTION:Réservation ID: ${reservation.id.slice(0, 8)}\\nClient: ${clientName}\\nEmployé: ${employeeName}\\nService: ${serviceName}\\n\\nLien: ${reservationUrl}
-LOCATION:MyJantes Atelier
-ORGANIZER:CN=MyJantes:mailto:contact@myjantes.fr
-STATUS:${reservation.status === 'confirmed' ? 'CONFIRMED' : reservation.status === 'cancelled' ? 'CANCELLED' : 'TENTATIVE'}
-END:VEVENT`;
-    }).join('\n');
+      eventLines.push(
+        'BEGIN:VEVENT',
+        `DTSTART:${formatICSDate(startDate)}`,
+        `DTEND:${formatICSDate(endDate)}`,
+        `DTSTAMP:${formatICSDate(new Date())}`,
+        `UID:${reservation.id}@myjantes.fr`,
+        `SUMMARY:${serviceName} - ${clientName}`,
+        `DESCRIPTION:Reservation ID: ${reservation.id.slice(0, 8)}\\nClient: ${clientName}\\nEmploye: ${employeeName}\\nService: ${serviceName}\\n\\nLien: ${reservationUrl}`,
+        'LOCATION:MyJantes Atelier',
+        `STATUS:${reservation.status === 'confirmed' ? 'CONFIRMED' : reservation.status === 'cancelled' ? 'CANCELLED' : 'TENTATIVE'}`,
+        'END:VEVENT'
+      );
+    });
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MyJantes//Reservation Calendar//FR
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-${events}
-END:VCALENDAR`;
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//MyJantes//Reservation Calendar//FR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      ...eventLines,
+      'END:VCALENDAR'
+    ];
 
+    const icsContent = icsLines.join('\r\n');
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

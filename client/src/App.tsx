@@ -26,6 +26,7 @@ import AdminInvoices from "@/pages/admin-invoices";
 import AdminInvoiceEdit from "@/pages/admin-invoice-edit";
 import AdminQuoteEdit from "@/pages/admin-quote-edit";
 import AdminReservations from "@/pages/admin-reservations";
+import AdminCalendar from "@/pages/admin-calendar";
 import AdminSettings from "@/pages/admin-settings";
 import AdminUsers from "@/pages/admin-users";
 import AdminEngagements from "@/pages/admin-engagements";
@@ -94,6 +95,7 @@ function Router() {
                 <Route path="/admin/invoices/:id/edit" component={AdminInvoiceEdit} />
                 <Route path="/admin/invoices" component={AdminInvoices} />
                 <Route path="/admin/reservations" component={AdminReservations} />
+                <Route path="/admin/calendar" component={AdminCalendar} />
                 <Route path="/admin/workshop" component={WorkshopManagement} />
                 <Route path="/admin/services-catalog" component={EmployeeServices} />
                 <Route path="/admin/users" component={AdminUsers} />
