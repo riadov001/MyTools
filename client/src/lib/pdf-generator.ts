@@ -81,7 +81,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   // Document title (CENTER)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  const quoteNumber = `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
+  const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
   doc.text(`DEVIS - ${quoteNumber}`, pageWidth / 2, 20, { align: 'center' });
   
   // Dates and operation type (RIGHT side)
