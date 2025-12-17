@@ -137,6 +137,39 @@ export default function AdminCalendar() {
     return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   };
 
+  const foldICSLine = (line: string): string => {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(line);
+    const maxBytes = 75;
+    
+    if (bytes.length <= maxBytes) return line;
+    
+    const result: string[] = [];
+    const decoder = new TextDecoder();
+    let start = 0;
+    let isFirst = true;
+    
+    while (start < bytes.length) {
+      const limit = isFirst ? maxBytes : maxBytes - 1;
+      let end = Math.min(start + limit, bytes.length);
+      
+      while (end > start && (bytes[end] & 0xC0) === 0x80) {
+        end--;
+      }
+      
+      const chunk = decoder.decode(bytes.slice(start, end));
+      result.push(isFirst ? chunk : ' ' + chunk);
+      start = end;
+      isFirst = false;
+    }
+    
+    return result.join('\r\n');
+  };
+
+  const buildICSContent = (lines: string[]): string => {
+    return lines.map(line => foldICSLine(line)).join('\r\n');
+  };
+
   const generateICS = (reservation: Reservation) => {
     const startDate = new Date(reservation.scheduledDate);
     const duration = getServiceDuration(reservation.serviceId);
@@ -168,7 +201,7 @@ export default function AdminCalendar() {
       'END:VCALENDAR'
     ];
 
-    const icsContent = icsLines.join('\r\n');
+    const icsContent = buildICSContent(icsLines);
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -224,7 +257,7 @@ export default function AdminCalendar() {
       'END:VCALENDAR'
     ];
 
-    const icsContent = icsLines.join('\r\n');
+    const icsContent = buildICSContent(icsLines);
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
