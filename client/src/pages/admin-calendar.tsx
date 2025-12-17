@@ -525,9 +525,18 @@ export default function AdminCalendar() {
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date:</span>
+                  <span className="text-muted-foreground">Début:</span>
                   <span className="font-medium">
                     {format(new Date(selectedReservation.scheduledDate), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fin:</span>
+                  <span className="font-medium">
+                    {selectedReservation.estimatedEndDate 
+                      ? format(new Date(selectedReservation.estimatedEndDate), 'dd/MM/yyyy HH:mm', { locale: fr })
+                      : format(new Date(new Date(selectedReservation.scheduledDate).getTime() + getServiceDuration(selectedReservation.serviceId) * 60000), 'dd/MM/yyyy HH:mm', { locale: fr })
+                    }
                   </span>
                 </div>
                 <div className="flex justify-between">
