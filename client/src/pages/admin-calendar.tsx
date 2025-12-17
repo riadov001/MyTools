@@ -506,69 +506,71 @@ export default function AdminCalendar() {
       )}
 
       <Dialog open={!!selectedReservation} onOpenChange={() => setSelectedReservation(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Détails de la réservation
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Détails de la réservation</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {selectedReservation && `ID: ${selectedReservation.id.slice(0, 8)}`}
             </DialogDescription>
           </DialogHeader>
           {selectedReservation && (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center gap-2">
-                <Badge className={`${getStatusColor(selectedReservation.status)} text-white`}>
+                <Badge className={`${getStatusColor(selectedReservation.status)} text-white text-xs`}>
                   {getStatusLabel(selectedReservation.status)}
                 </Badge>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Début:</span>
-                  <span className="font-medium">
+              <div className="space-y-2 text-xs sm:text-sm">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground shrink-0">Début:</span>
+                  <span className="font-medium break-words">
                     {format(new Date(selectedReservation.scheduledDate), 'dd/MM/yyyy HH:mm', { locale: fr })}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fin:</span>
-                  <span className="font-medium">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground shrink-0">Fin:</span>
+                  <span className="font-medium break-words">
                     {selectedReservation.estimatedEndDate 
                       ? format(new Date(selectedReservation.estimatedEndDate), 'dd/MM/yyyy HH:mm', { locale: fr })
                       : format(new Date(new Date(selectedReservation.scheduledDate).getTime() + getServiceDuration(selectedReservation.serviceId) * 60000), 'dd/MM/yyyy HH:mm', { locale: fr })
                     }
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Service:</span>
-                  <span className="font-medium">{getServiceName(selectedReservation.serviceId)}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground shrink-0">Service:</span>
+                  <span className="font-medium break-words">{getServiceName(selectedReservation.serviceId)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Client:</span>
-                  <span className="font-medium">{getClientName(selectedReservation.clientId)}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground shrink-0">Client:</span>
+                  <span className="font-medium break-words">{getClientName(selectedReservation.clientId)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Employé:</span>
-                  <span className="font-medium">{getEmployeeName(selectedReservation.assignedEmployeeId)}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                  <span className="text-muted-foreground shrink-0">Employé:</span>
+                  <span className="font-medium break-words">{getEmployeeName(selectedReservation.assignedEmployeeId)}</span>
                 </div>
                 {selectedReservation.productDetails && (
                   <div className="pt-2 border-t">
                     <span className="text-muted-foreground">Détails:</span>
-                    <p className="mt-1">{selectedReservation.productDetails}</p>
+                    <p className="mt-1 break-words">{selectedReservation.productDetails}</p>
                   </div>
                 )}
               </div>
-              <div className="flex gap-2 pt-4">
+              <div className="flex flex-col sm:flex-row gap-2 pt-3 sm:pt-4">
                 <Button
                   onClick={() => generateICS(selectedReservation)}
                   className="flex-1"
+                  size="sm"
                   data-testid="button-modal-download-ics"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Télécharger ICS
+                  <span className="text-xs sm:text-sm">Télécharger ICS</span>
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     setSelectedReservation(null);
                     setLocation("/admin/reservations");
@@ -577,7 +579,7 @@ export default function AdminCalendar() {
                   data-testid="button-modal-view-reservation"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Voir prestation
+                  <span className="text-xs sm:text-sm">Voir prestation</span>
                 </Button>
               </div>
             </div>
