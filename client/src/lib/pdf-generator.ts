@@ -44,26 +44,21 @@ const COMPANY_INFO = {
   tva: 'FR73913678199',
 };
 
-// Helper function to load logo as base64
+// Helper function to load logo as base64 using fetch
 async function getLogoBase64(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      } else {
-        reject(new Error('Failed to get canvas context'));
-      }
-    };
-    img.onerror = reject;
-    img.src = logoImage;
-  });
+  try {
+    const response = await fetch(logoImage);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to fetch logo:', error);
+    throw error;
+  }
 }
 
 export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
@@ -76,7 +71,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     const logoBase64 = await getLogoBase64();
     doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
   } catch (error) {
-    console.error('Failed to load logo:', error);
+    console.error('Failed to add logo:', error);
   }
   
   // Document title (TOP LEFT) - after logo
@@ -264,7 +259,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     const logoBase64 = await getLogoBase64();
     doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
   } catch (error) {
-    console.error('Failed to load logo:', error);
+    console.error('Failed to add logo:', error);
   }
   
   // Document title (TOP LEFT) - after logo
