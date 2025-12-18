@@ -70,19 +70,19 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo (LEFT side)
-  try {
-    const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
-  } catch (error) {
-    console.error('Failed to load logo:', error);
-  }
-  
-  // Document title (CENTER)
+  // Document title (TOP LEFT)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
-  doc.text(`DEVIS - ${quoteNumber}`, pageWidth / 2, 20, { align: 'center' });
+  doc.text(`DEVIS - ${quoteNumber}`, 20, 15);
+  
+  // Add logo (CENTER)
+  try {
+    const logoBase64 = await getLogoBase64();
+    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
+  } catch (error) {
+    console.error('Failed to load logo:', error);
+  }
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -259,18 +259,18 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo (LEFT side)
+  // Document title (TOP LEFT)
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 15);
+  
+  // Add logo (CENTER)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', 20, 10, 40, 20);
+    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
   } catch (error) {
     console.error('Failed to load logo:', error);
   }
-  
-  // Document title (CENTER)
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE - ${invoice.invoiceNumber}`, pageWidth / 2, 20, { align: 'center' });
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
