@@ -69,20 +69,20 @@ async function getLogoBase64(): Promise<string> {
 export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  
-  // Document title (TOP LEFT)
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
   const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
-  doc.text(`DEVIS - ${quoteNumber}`, 20, 15);
   
-  // Add logo (CENTER)
+  // Add logo first (CENTER)
   try {
     const logoBase64 = await getLogoBase64();
     doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
   } catch (error) {
     console.error('Failed to load logo:', error);
   }
+  
+  // Document title (TOP LEFT) - after logo
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`DEVIS - ${quoteNumber}`, 20, 15);
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -252,38 +252,25 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
-  try {
-    const pdfBlob = doc.output('blob');
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `devis-${quoteNumber}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Error downloading PDF:', error);
-    throw error;
-  }
+  doc.save(`devis-${quoteNumber}.pdf`);
 }
 
 export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Document title (TOP LEFT)
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 15);
-  
-  // Add logo (CENTER)
+  // Add logo first (CENTER)
   try {
     const logoBase64 = await getLogoBase64();
     doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
   } catch (error) {
     console.error('Failed to load logo:', error);
   }
+  
+  // Document title (TOP LEFT) - after logo
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 15);
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -460,20 +447,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
-  try {
-    const pdfBlob = doc.output('blob');
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `facture-${invoice.invoiceNumber}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Error downloading PDF:', error);
-    throw error;
-  }
+  doc.save(`facture-${invoice.invoiceNumber}.pdf`);
 }
 
 // Generate labels PDF with QR codes for wheels and car key
