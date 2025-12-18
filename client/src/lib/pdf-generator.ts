@@ -62,28 +62,22 @@ async function getLogoBase64(): Promise<string> {
 }
 
 export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
-  console.log('=== generateQuotePDF START ===');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
-  console.log('Quote number:', quoteNumber);
   
-  // Add logo first (CENTER) - skip for now to test
+  // Add logo first (CENTER)
   try {
-    console.log('Loading logo...');
     const logoBase64 = await getLogoBase64();
-    console.log('Logo loaded, adding to PDF...');
     doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
-    console.log('Logo added');
   } catch (error) {
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP LEFT) - after logo
+  // Document title (TOP LEFT)
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text(`DEVIS - ${quoteNumber}`, 20, 15);
-  console.log('Title added');
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -253,9 +247,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
-  console.log('=== Saving PDF... ===');
   doc.save(`devis-${quoteNumber}.pdf`);
-  console.log('=== PDF saved ===');
 }
 
 export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
