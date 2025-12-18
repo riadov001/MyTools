@@ -252,7 +252,20 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
-  doc.save(`devis-${quoteNumber}.pdf`);
+  try {
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `devis-${quoteNumber}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw error;
+  }
 }
 
 export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
@@ -447,7 +460,20 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   
   // Save PDF
-  doc.save(`facture-${invoice.invoiceNumber}.pdf`);
+  try {
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `facture-${invoice.invoiceNumber}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw error;
+  }
 }
 
 // Generate labels PDF with QR codes for wheels and car key
