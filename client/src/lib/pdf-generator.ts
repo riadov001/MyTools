@@ -66,18 +66,18 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   const pageWidth = doc.internal.pageSize.width;
   const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
   
-  // Add logo first (CENTER)
+  // Add logo first (CENTER at top)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
+    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 8, 40, 20);
   } catch (error) {
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP LEFT)
-  doc.setFontSize(16);
+  // Document title (TOP LEFT, below logo area)
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`DEVIS - ${quoteNumber}`, 20, 15);
+  doc.text(`DEVIS - ${quoteNumber}`, 20, 38);
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -85,36 +85,56 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   const billingDate = new Date(quote.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = quote.validUntil ? new Date(quote.validUntil).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
-  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 34, { align: 'right' });
-  doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 38, { align: 'right' });
+  doc.text(`Validité: ${dueDate}`, pageWidth - 20, 44, { align: 'right' });
   
-  // Company info (LEFT side, below logo)
+  // Company info (LEFT side)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 50);
+  doc.text(COMPANY_INFO.name, 20, 55);
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 56);
-  doc.text(COMPANY_INFO.city, 20, 61);
-  doc.text(COMPANY_INFO.phone, 20, 66);
-  doc.text(COMPANY_INFO.email, 20, 71);
-  doc.text(COMPANY_INFO.website, 20, 76);
+  doc.text(COMPANY_INFO.address, 20, 61);
+  doc.text(COMPANY_INFO.city, 20, 66);
+  doc.text(`Tél: ${COMPANY_INFO.phone}`, 20, 71);
+  doc.text(COMPANY_INFO.email, 20, 76);
   
-  // Client info (RIGHT side)
+  // Client info (RIGHT side) - with full details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  const clientName = clientInfo?.name || clientInfo?.email?.split('@')[0] || 'Client';
-  doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
+  doc.text('CLIENT:', pageWidth - 20, 55, { align: 'right' });
+  
+  // Build client name from firstName + lastName or fallback to name/email
+  let clientDisplayName = 'Client';
+  if (clientInfo?.firstName && clientInfo?.lastName) {
+    clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
+  } else if (clientInfo?.name) {
+    clientDisplayName = clientInfo.name;
+  } else if (clientInfo?.email) {
+    clientDisplayName = clientInfo.email.split('@')[0];
+  }
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
+  let clientY = 61;
+  doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
+  clientY += 5;
+  
   if (clientInfo?.email) {
-    doc.text(clientInfo.email, pageWidth - 20, 56, { align: 'right' });
+    doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  if (clientInfo?.phone) {
+    doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
   }
   if (clientInfo?.address) {
-    doc.text(clientInfo.address, pageWidth - 20, 61, { align: 'right' });
+    doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  if (clientInfo?.city) {
+    doc.text(clientInfo.city, pageWidth - 20, clientY, { align: 'right' });
   }
   
   // Table - Use quote items if available, otherwise fall back to legacy single item
@@ -254,18 +274,18 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo first (CENTER)
+  // Add logo first (CENTER at top)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 10, 40, 20);
+    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 8, 40, 20);
   } catch (error) {
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP LEFT) - after logo
-  doc.setFontSize(16);
+  // Document title (TOP LEFT, below logo area)
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 15);
+  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 38);
   
   // Dates and operation type (RIGHT side)
   doc.setFontSize(9);
@@ -273,36 +293,56 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   const billingDate = new Date(invoice.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date de facturation: ${billingDate}`, pageWidth - 20, 28, { align: 'right' });
-  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 34, { align: 'right' });
-  doc.text('Type d\'opération: Opération interne', pageWidth - 20, 40, { align: 'right' });
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 38, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 44, { align: 'right' });
   
-  // Company info (LEFT side, below logo)
+  // Company info (LEFT side)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 50);
+  doc.text(COMPANY_INFO.name, 20, 55);
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 56);
-  doc.text(COMPANY_INFO.city, 20, 61);
-  doc.text(COMPANY_INFO.phone, 20, 66);
-  doc.text(COMPANY_INFO.email, 20, 71);
-  doc.text(COMPANY_INFO.website, 20, 76);
+  doc.text(COMPANY_INFO.address, 20, 61);
+  doc.text(COMPANY_INFO.city, 20, 66);
+  doc.text(`Tél: ${COMPANY_INFO.phone}`, 20, 71);
+  doc.text(COMPANY_INFO.email, 20, 76);
   
-  // Client info (RIGHT side)
+  // Client info (RIGHT side) - with full details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  const clientName = clientInfo?.name || clientInfo?.email?.split('@')[0] || 'Client';
-  doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
+  doc.text('CLIENT:', pageWidth - 20, 55, { align: 'right' });
+  
+  // Build client name from firstName + lastName or fallback to name/email
+  let clientDisplayName = 'Client';
+  if (clientInfo?.firstName && clientInfo?.lastName) {
+    clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
+  } else if (clientInfo?.name) {
+    clientDisplayName = clientInfo.name;
+  } else if (clientInfo?.email) {
+    clientDisplayName = clientInfo.email.split('@')[0];
+  }
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
+  let clientY = 61;
+  doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
+  clientY += 5;
+  
   if (clientInfo?.email) {
-    doc.text(clientInfo.email, pageWidth - 20, 56, { align: 'right' });
+    doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  if (clientInfo?.phone) {
+    doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
   }
   if (clientInfo?.address) {
-    doc.text(clientInfo.address, pageWidth - 20, 61, { align: 'right' });
+    doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  if (clientInfo?.city) {
+    doc.text(clientInfo.city, pageWidth - 20, clientY, { align: 'right' });
   }
   
   // Table - Use invoice items if available, otherwise fall back to legacy single item
