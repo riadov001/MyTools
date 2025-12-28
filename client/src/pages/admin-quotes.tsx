@@ -1038,12 +1038,7 @@ export default function AdminQuotes() {
             <div className="space-y-2">
               <Label htmlFor="client-selection">Sélection du client *</Label>
               <Select value={clientSelection} onValueChange={(value: "existing" | "new") => {
-                if (value === "new") {
-                  initiateClientCreationRedirect("quote");
-                  setLocation("/admin/users");
-                } else {
-                  setClientSelection(value);
-                }
+                setClientSelection(value);
               }}>
                 <SelectTrigger id="client-selection" data-testid="select-client-type">
                   <SelectValue placeholder="Choisir une option" />

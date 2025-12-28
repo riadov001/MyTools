@@ -773,12 +773,7 @@ export default function AdminReservations() {
                 <div className="space-y-2">
                   <Label htmlFor="client-selection-res">Sélection du client *</Label>
                   <Select value={clientSelection} onValueChange={(value: "existing" | "new") => {
-                    if (value === "new") {
-                      initiateClientCreationRedirect("reservation");
-                      setLocation("/admin/users");
-                    } else {
-                      setClientSelection(value);
-                    }
+                    setClientSelection(value);
                   }}>
                     <SelectTrigger id="client-selection-res" data-testid="select-client-type-res">
                       <SelectValue placeholder="Choisir une option" />
