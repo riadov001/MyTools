@@ -66,44 +66,46 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   const pageWidth = doc.internal.pageSize.width;
   const quoteNumber = quote.reference || `DV-${new Date().getFullYear()}-${quote.id.slice(0, 6)}`;
   
-  // Add logo first (CENTER at top)
+  // Add logo (LEFT side)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 8, 40, 20);
+    doc.addImage(logoBase64, 'PNG', 15, 10, 45, 22);
   } catch (error) {
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP LEFT, below logo area)
-  doc.setFontSize(12);
+  // Document title (TOP RIGHT)
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(`DEVIS - ${quoteNumber}`, 20, 38);
+  doc.text(`DEVIS`, pageWidth - 20, 15, { align: 'right' });
+  doc.setFontSize(10);
+  doc.text(`N° ${quoteNumber}`, pageWidth - 20, 22, { align: 'right' });
   
-  // Dates and operation type (RIGHT side)
+  // Dates (RIGHT side, below title)
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(quote.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = quote.validUntil ? new Date(quote.validUntil).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date: ${billingDate}`, pageWidth - 20, 38, { align: 'right' });
-  doc.text(`Validité: ${dueDate}`, pageWidth - 20, 44, { align: 'right' });
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 30, { align: 'right' });
+  doc.text(`Validité: ${dueDate}`, pageWidth - 20, 35, { align: 'right' });
   
-  // Company info (LEFT side)
+  // Company info (LEFT side, below logo)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 55);
+  doc.text(COMPANY_INFO.name, 15, 40);
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 61);
-  doc.text(COMPANY_INFO.city, 20, 66);
-  doc.text(`Tél: ${COMPANY_INFO.phone}`, 20, 71);
-  doc.text(COMPANY_INFO.email, 20, 76);
+  doc.text(COMPANY_INFO.address, 15, 45);
+  doc.text(COMPANY_INFO.city, 15, 50);
+  doc.text(`Tél: ${COMPANY_INFO.phone}`, 15, 55);
+  doc.text(COMPANY_INFO.email, 15, 60);
   
-  // Client info (RIGHT side) - with full details
+  // Client info (RIGHT side) - all details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('CLIENT:', pageWidth - 20, 55, { align: 'right' });
+  doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
   // Build client name from firstName + lastName or fallback to name/email
   let clientDisplayName = 'Client';
@@ -117,7 +119,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  let clientY = 61;
+  let clientY = 51;
   doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
   clientY += 5;
   
@@ -133,8 +135,11 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.city) {
-    doc.text(clientInfo.city, pageWidth - 20, clientY, { align: 'right' });
+  if (clientInfo?.postalCode || clientInfo?.city) {
+    const location = [clientInfo?.postalCode, clientInfo?.city].filter(Boolean).join(' ');
+    if (location) {
+      doc.text(location, pageWidth - 20, clientY, { align: 'right' });
+    }
   }
   
   // Table - Use quote items if available, otherwise fall back to legacy single item
@@ -274,44 +279,46 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
-  // Add logo first (CENTER at top)
+  // Add logo (LEFT side)
   try {
     const logoBase64 = await getLogoBase64();
-    doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, 8, 40, 20);
+    doc.addImage(logoBase64, 'PNG', 15, 10, 45, 22);
   } catch (error) {
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP LEFT, below logo area)
-  doc.setFontSize(12);
+  // Document title (TOP RIGHT)
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE - ${invoice.invoiceNumber}`, 20, 38);
+  doc.text(`FACTURE`, pageWidth - 20, 15, { align: 'right' });
+  doc.setFontSize(10);
+  doc.text(`N° ${invoice.invoiceNumber}`, pageWidth - 20, 22, { align: 'right' });
   
-  // Dates and operation type (RIGHT side)
+  // Dates (RIGHT side, below title)
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(invoice.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date: ${billingDate}`, pageWidth - 20, 38, { align: 'right' });
-  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 44, { align: 'right' });
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 30, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 35, { align: 'right' });
   
-  // Company info (LEFT side)
+  // Company info (LEFT side, below logo)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(COMPANY_INFO.name, 20, 55);
+  doc.text(COMPANY_INFO.name, 15, 40);
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(COMPANY_INFO.address, 20, 61);
-  doc.text(COMPANY_INFO.city, 20, 66);
-  doc.text(`Tél: ${COMPANY_INFO.phone}`, 20, 71);
-  doc.text(COMPANY_INFO.email, 20, 76);
+  doc.text(COMPANY_INFO.address, 15, 45);
+  doc.text(COMPANY_INFO.city, 15, 50);
+  doc.text(`Tél: ${COMPANY_INFO.phone}`, 15, 55);
+  doc.text(COMPANY_INFO.email, 15, 60);
   
-  // Client info (RIGHT side) - with full details
+  // Client info (RIGHT side) - all details
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('CLIENT:', pageWidth - 20, 55, { align: 'right' });
+  doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
   // Build client name from firstName + lastName or fallback to name/email
   let clientDisplayName = 'Client';
@@ -325,7 +332,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  let clientY = 61;
+  let clientY = 51;
   doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
   clientY += 5;
   
@@ -341,8 +348,11 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.city) {
-    doc.text(clientInfo.city, pageWidth - 20, clientY, { align: 'right' });
+  if (clientInfo?.postalCode || clientInfo?.city) {
+    const location = [clientInfo?.postalCode, clientInfo?.city].filter(Boolean).join(' ');
+    if (location) {
+      doc.text(location, pageWidth - 20, clientY, { align: 'right' });
+    }
   }
   
   // Table - Use invoice items if available, otherwise fall back to legacy single item
