@@ -54,6 +54,10 @@ export default function AdminReservations() {
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientFirstName, setNewClientFirstName] = useState("");
   const [newClientLastName, setNewClientLastName] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientAddress, setNewClientAddress] = useState("");
+  const [newClientPostalCode, setNewClientPostalCode] = useState("");
+  const [newClientCity, setNewClientCity] = useState("");
   const [newClientRole, setNewClientRole] = useState<"client" | "client_professionnel">("client");
   const [newClientCompanyName, setNewClientCompanyName] = useState("");
   const [newClientSiret, setNewClientSiret] = useState("");
@@ -271,7 +275,11 @@ export default function AdminReservations() {
     mutationFn: async (data: { 
       email: string; 
       firstName: string; 
-      lastName: string; 
+      lastName: string;
+      phone?: string;
+      address?: string;
+      postalCode?: string;
+      city?: string;
       role: "client" | "client_professionnel";
       companyName?: string;
       siret?: string;
@@ -302,6 +310,10 @@ export default function AdminReservations() {
     setNewClientEmail("");
     setNewClientFirstName("");
     setNewClientLastName("");
+    setNewClientPhone("");
+    setNewClientAddress("");
+    setNewClientPostalCode("");
+    setNewClientCity("");
     setNewClientRole("client");
     setNewClientCompanyName("");
     setNewClientSiret("");
@@ -385,6 +397,10 @@ export default function AdminReservations() {
             email: newClientEmail,
             firstName: newClientFirstName,
             lastName: newClientLastName,
+            phone: newClientPhone || undefined,
+            address: newClientAddress || undefined,
+            postalCode: newClientPostalCode || undefined,
+            city: newClientCity || undefined,
             role: newClientRole,
             companyName: newClientRole === "client_professionnel" ? newClientCompanyName : undefined,
             siret: newClientRole === "client_professionnel" ? newClientSiret : undefined,
@@ -800,6 +816,14 @@ export default function AdminReservations() {
                       setFirstName={setNewClientFirstName}
                       lastName={newClientLastName}
                       setLastName={setNewClientLastName}
+                      phone={newClientPhone}
+                      setPhone={setNewClientPhone}
+                      address={newClientAddress}
+                      setAddress={setNewClientAddress}
+                      postalCode={newClientPostalCode}
+                      setPostalCode={setNewClientPostalCode}
+                      city={newClientCity}
+                      setCity={setNewClientCity}
                       role={newClientRole}
                       setRole={setNewClientRole}
                       companyName={newClientCompanyName}
