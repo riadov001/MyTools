@@ -149,9 +149,18 @@ export default function AdminInvoices() {
     try {
       const quote = quotes.find(q => q.id === invoice.quoteId);
       const service = services.find(s => s.id === quote?.serviceId);
-      const clientInfo = { 
-        name: `Client-${invoice.clientId.slice(0, 8)}`,
-        email: 'client@myjantes.fr'
+      const client = users.find(u => u.id === invoice.clientId);
+      const clientInfo = client || { 
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        companyName: '',
+        siret: '',
+        role: 'client'
       };
       
       // Fetch invoice items

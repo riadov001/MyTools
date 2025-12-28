@@ -169,9 +169,18 @@ export default function AdminQuotes() {
       const quoteItems = response.ok ? await response.json() : [];
       
       const service = services.find(s => s.id === quote.serviceId);
-      const clientInfo = { 
-        name: `Client-${quote.clientId.slice(0, 8)}`,
-        email: 'client@myjantes.fr'
+      const client = users.find(u => u.id === quote.clientId);
+      const clientInfo = client || { 
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        companyName: '',
+        siret: '',
+        role: 'client'
       };
       await generateQuotePDF(quote, clientInfo, service, quoteItems);
     } catch (error) {
