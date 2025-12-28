@@ -30,6 +30,10 @@ export default function AdminUsers() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserFirstName, setNewUserFirstName] = useState("");
   const [newUserLastName, setNewUserLastName] = useState("");
+  const [newUserPhone, setNewUserPhone] = useState("");
+  const [newUserAddress, setNewUserAddress] = useState("");
+  const [newUserPostalCode, setNewUserPostalCode] = useState("");
+  const [newUserCity, setNewUserCity] = useState("");
   const [newUserRole, setNewUserRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
 
   const [editFirstName, setEditFirstName] = useState("");
@@ -67,7 +71,7 @@ export default function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (data: { email: string; firstName?: string; lastName?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
+    mutationFn: async (data: { email: string; firstName?: string; lastName?: string; phone?: string; address?: string; postalCode?: string; city?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
       const response = await apiRequest("POST", "/api/admin/users", data);
       return response;
     },
@@ -80,6 +84,10 @@ export default function AdminUsers() {
       setNewUserEmail("");
       setNewUserFirstName("");
       setNewUserLastName("");
+      setNewUserPhone("");
+      setNewUserAddress("");
+      setNewUserPostalCode("");
+      setNewUserCity("");
       setNewUserRole("client");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
 
@@ -166,6 +174,10 @@ export default function AdminUsers() {
       email: newUserEmail,
       firstName: newUserFirstName || undefined,
       lastName: newUserLastName || undefined,
+      phone: newUserPhone || undefined,
+      address: newUserAddress || undefined,
+      postalCode: newUserPostalCode || undefined,
+      city: newUserCity || undefined,
       role: newUserRole,
     });
   };
@@ -333,6 +345,56 @@ export default function AdminUsers() {
               />
             </div>
             <div>
+              <Label htmlFor="new-user-phone">Téléphone</Label>
+              <Input
+                id="new-user-phone"
+                type="tel"
+                placeholder="+33 6 12 34 56 78"
+                value={newUserPhone}
+                onChange={(e) => setNewUserPhone(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-user-phone"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-user-address">Adresse</Label>
+              <Input
+                id="new-user-address"
+                type="text"
+                placeholder="123 rue de la Paix"
+                value={newUserAddress}
+                onChange={(e) => setNewUserAddress(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-user-address"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="new-user-postal-code">Code postal</Label>
+                <Input
+                  id="new-user-postal-code"
+                  type="text"
+                  placeholder="75001"
+                  value={newUserPostalCode}
+                  onChange={(e) => setNewUserPostalCode(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-new-user-postal-code"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-user-city">Ville</Label>
+                <Input
+                  id="new-user-city"
+                  type="text"
+                  placeholder="Paris"
+                  value={newUserCity}
+                  onChange={(e) => setNewUserCity(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-new-user-city"
+                />
+              </div>
+            </div>
+            <div>
               <Label htmlFor="new-user-role">Rôle</Label>
               <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as "client" | "client_professionnel" | "employe" | "admin")}>
                 <SelectTrigger className="mt-2" data-testid="select-new-user-role">
@@ -355,6 +417,10 @@ export default function AdminUsers() {
                 setNewUserEmail("");
                 setNewUserFirstName("");
                 setNewUserLastName("");
+                setNewUserPhone("");
+                setNewUserAddress("");
+                setNewUserPostalCode("");
+                setNewUserCity("");
                 setNewUserRole("client");
               }}
               data-testid="button-cancel-create-user"
