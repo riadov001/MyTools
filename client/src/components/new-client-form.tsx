@@ -9,6 +9,14 @@ interface NewClientFormProps {
   setFirstName: (value: string) => void;
   lastName: string;
   setLastName: (value: string) => void;
+  phone?: string;
+  setPhone?: (value: string) => void;
+  address?: string;
+  setAddress?: (value: string) => void;
+  postalCode?: string;
+  setPostalCode?: (value: string) => void;
+  city?: string;
+  setCity?: (value: string) => void;
   role: "client" | "client_professionnel";
   setRole: (value: "client" | "client_professionnel") => void;
   companyName: string;
@@ -28,6 +36,14 @@ export function NewClientForm({
   setFirstName,
   lastName,
   setLastName,
+  phone = '',
+  setPhone = () => {},
+  address = '',
+  setAddress = () => {},
+  postalCode = '',
+  setPostalCode = () => {},
+  city = '',
+  setCity = () => {},
   role,
   setRole,
   companyName,
@@ -76,6 +92,53 @@ export function NewClientForm({
             onChange={(e) => setLastName(e.target.value)}
             data-testid="input-client-lastname"
             required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="client-phone">Téléphone</Label>
+        <Input
+          id="client-phone"
+          type="tel"
+          placeholder="+33 6 12 34 56 78"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          data-testid="input-client-phone"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="client-address">Adresse personnelle</Label>
+        <Input
+          id="client-address"
+          placeholder="123 rue de la Paix"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          data-testid="input-client-address"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="client-postalcode">Code postal</Label>
+          <Input
+            id="client-postalcode"
+            placeholder="75001"
+            value={postalCode}
+            onChange={(e) => setPostalCode(e.target.value)}
+            data-testid="input-client-postalcode"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="client-city">Ville</Label>
+          <Input
+            id="client-city"
+            placeholder="Paris"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            data-testid="input-client-city"
           />
         </div>
       </div>
