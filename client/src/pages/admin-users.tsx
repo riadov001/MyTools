@@ -34,6 +34,10 @@ export default function AdminUsers() {
 
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editPostalCode, setEditPostalCode] = useState("");
+  const [editCity, setEditCity] = useState("");
   const [editRole, setEditRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
 
   useEffect(() => {
@@ -99,10 +103,14 @@ export default function AdminUsers() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (data: { id: string; firstName?: string; lastName?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
+    mutationFn: async (data: { id: string; firstName?: string; lastName?: string; phone?: string; address?: string; postalCode?: string; city?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
       return apiRequest("PATCH", `/api/admin/users/${data.id}`, {
         firstName: data.firstName,
         lastName: data.lastName,
+        phone: data.phone,
+        address: data.address,
+        postalCode: data.postalCode,
+        city: data.city,
         role: data.role,
       });
     },
@@ -169,6 +177,10 @@ export default function AdminUsers() {
       id: editUserDialog.id,
       firstName: editFirstName || undefined,
       lastName: editLastName || undefined,
+      phone: editPhone || undefined,
+      address: editAddress || undefined,
+      postalCode: editPostalCode || undefined,
+      city: editCity || undefined,
       role: editRole,
     });
   };
@@ -247,6 +259,10 @@ export default function AdminUsers() {
                         setEditUserDialog(user);
                         setEditFirstName(user.firstName || "");
                         setEditLastName(user.lastName || "");
+                        setEditPhone(user.phone || "");
+                        setEditAddress(user.address || "");
+                        setEditPostalCode(user.postalCode || "");
+                        setEditCity(user.city || "");
                         setEditRole(user.role);
                       }}
                       data-testid={`button-edit-${user.id}`}
@@ -388,6 +404,56 @@ export default function AdminUsers() {
                 className="mt-2"
                 data-testid="input-edit-user-last-name"
               />
+            </div>
+            <div>
+              <Label htmlFor="edit-user-phone">Téléphone</Label>
+              <Input
+                id="edit-user-phone"
+                type="tel"
+                placeholder="+33 6 12 34 56 78"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="mt-2"
+                data-testid="input-edit-user-phone"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-user-address">Adresse</Label>
+              <Input
+                id="edit-user-address"
+                type="text"
+                placeholder="123 rue de la Paix"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="mt-2"
+                data-testid="input-edit-user-address"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="edit-user-postal-code">Code postal</Label>
+                <Input
+                  id="edit-user-postal-code"
+                  type="text"
+                  placeholder="75001"
+                  value={editPostalCode}
+                  onChange={(e) => setEditPostalCode(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-user-postal-code"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-user-city">Ville</Label>
+                <Input
+                  id="edit-user-city"
+                  type="text"
+                  placeholder="Paris"
+                  value={editCity}
+                  onChange={(e) => setEditCity(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-user-city"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="edit-user-role">Rôle</Label>
