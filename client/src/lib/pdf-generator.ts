@@ -107,10 +107,12 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.setFont('helvetica', 'bold');
   doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
-  // Build client name from firstName + lastName or fallback to name/email
+  // Build client info
   let clientDisplayName = 'Client';
   if (clientInfo?.firstName && clientInfo?.lastName) {
     clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
+  } else if (clientInfo?.companyName) {
+    clientDisplayName = clientInfo.companyName;
   } else if (clientInfo?.name) {
     clientDisplayName = clientInfo.name;
   } else if (clientInfo?.email) {
@@ -123,6 +125,12 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
   clientY += 5;
   
+  // Add SIRET for professional clients
+  if (clientInfo?.siret) {
+    doc.text(`SIRET: ${clientInfo.siret}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  
   if (clientInfo?.email) {
     doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
@@ -131,8 +139,9 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.address) {
-    doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
+  if (clientInfo?.address || clientInfo?.companyAddress) {
+    const address = clientInfo?.address || clientInfo?.companyAddress;
+    doc.text(address, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
   if (clientInfo?.postalCode || clientInfo?.city) {
@@ -256,11 +265,6 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
   doc.text('30 jours', 20, finalY + 45);
   
-  // Payment conditions
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Conditions de paiement:', 20, finalY + 57);
-  
   // Footer
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(9);
@@ -320,10 +324,12 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.setFont('helvetica', 'bold');
   doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
-  // Build client name from firstName + lastName or fallback to name/email
+  // Build client info
   let clientDisplayName = 'Client';
   if (clientInfo?.firstName && clientInfo?.lastName) {
     clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
+  } else if (clientInfo?.companyName) {
+    clientDisplayName = clientInfo.companyName;
   } else if (clientInfo?.name) {
     clientDisplayName = clientInfo.name;
   } else if (clientInfo?.email) {
@@ -336,6 +342,12 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text(clientDisplayName.toUpperCase(), pageWidth - 20, clientY, { align: 'right' });
   clientY += 5;
   
+  // Add SIRET for professional clients
+  if (clientInfo?.siret) {
+    doc.text(`SIRET: ${clientInfo.siret}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
+  
   if (clientInfo?.email) {
     doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
@@ -344,8 +356,9 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.address) {
-    doc.text(clientInfo.address, pageWidth - 20, clientY, { align: 'right' });
+  if (clientInfo?.address || clientInfo?.companyAddress) {
+    const address = clientInfo?.address || clientInfo?.companyAddress;
+    doc.text(address, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
   if (clientInfo?.postalCode || clientInfo?.city) {
@@ -475,11 +488,6 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
   doc.text('30 jours', 20, finalY + 45);
-  
-  // Payment conditions
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Conditions de paiement:', 20, finalY + 57);
   
   // Footer
   const pageHeight = doc.internal.pageSize.height;
