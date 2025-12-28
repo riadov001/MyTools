@@ -1602,6 +1602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: z.enum(["client", "client_professionnel", "employe", "admin"]).optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        postalCode: z.string().optional(),
+        city: z.string().optional(),
       });
       const validatedData = updateSchema.parse(req.body);
       const user = await storage.updateUser(id, validatedData);
@@ -1619,6 +1623,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: z.string().email(),
         firstName: z.string().min(1, "Le prénom est requis"),
         lastName: z.string().min(1, "Le nom est requis"),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+        postalCode: z.string().optional(),
+        city: z.string().optional(),
         role: z.enum(["client", "client_professionnel"]),
         companyName: z.string().optional(),
         siret: z.string().optional(),
@@ -1643,6 +1651,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: defaultPassword,
         firstName: validatedData.firstName || null,
         lastName: validatedData.lastName || null,
+        phone: validatedData.phone || null,
+        address: validatedData.address || null,
+        postalCode: validatedData.postalCode || null,
+        city: validatedData.city || null,
         role: validatedData.role,
       };
 

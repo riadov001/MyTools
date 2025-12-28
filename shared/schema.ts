@@ -35,6 +35,10 @@ export const users = pgTable("users", {
   password: varchar("password", { length: 255 }), // Hashed password
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  address: text("address"),
+  postalCode: varchar("postal_code"),
+  city: varchar("city"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { enum: ["client", "client_professionnel", "employe", "admin"] }).notNull().default("client"),
   // Champs pour clients professionnels
