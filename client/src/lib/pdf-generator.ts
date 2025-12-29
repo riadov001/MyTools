@@ -263,7 +263,6 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
   doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
-  doc.text('30 jours', 20, finalY + 45);
   
   // Footer
   const pageHeight = doc.internal.pageSize.height;
@@ -487,7 +486,6 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
   doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
   doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
-  doc.text('30 jours', 20, finalY + 45);
   
   // Footer
   const pageHeight = doc.internal.pageSize.height;
