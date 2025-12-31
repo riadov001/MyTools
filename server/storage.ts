@@ -17,7 +17,10 @@ import {
   workshopTasks,
   auditLogs,
   auditLogChanges,
+  passwordResetTokens,
   type User,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
   type UpsertUser,
   type Service,
   type InsertService,
@@ -144,6 +147,10 @@ export interface IStorage {
   }): Promise<{ logs: (AuditLog & { actor?: User; changes: AuditLogChange[] })[]; total: number }>;
   getAuditLog(id: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] }) | undefined>;
   getEntityAuditHistory(entityType: string, entityId: string): Promise<(AuditLog & { actor?: User; changes: AuditLogChange[] })[]>;
+  // Password reset tokens
+  createPasswordResetToken(data: { userId: string; token: string; expiresAt: Date }): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(token: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -792,6 +799,34 @@ export class DatabaseStorage implements IStorage {
       
       return { ...log, actor, changes };
     }));
+  }
+
+  // Password reset tokens
+  async createPasswordResetToken(data: { userId: string; token: string; expiresAt: Date }): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        userId: data.userId,
+        token: data.token,
+        expiresAt: data.expiresAt,
+      })
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken;
+  }
+
+  async markPasswordResetTokenUsed(token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token));
   }
 }
 

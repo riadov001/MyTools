@@ -6,6 +6,9 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./localAuth";
 import { insertServiceSchema, insertQuoteSchema, insertInvoiceSchema, insertReservationSchema, type User, type InsertAuditLog } from "@shared/schema";
+import { sendEmail } from "./emailService";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 // WebSocket clients map
 const wsClients = new Map<string, WebSocket>();
@@ -114,6 +117,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Forgot password - Request password reset
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "L'email est requis" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      
+      // Always return success message to prevent email enumeration
+      if (!user) {
+        return res.json({ 
+          message: "Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation." 
+        });
+      }
+      
+      // Generate a secure token
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      
+      // Save the token
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+      
+      // Get the base URL for the reset link
+      const baseUrl = process.env.REPLIT_DEPLOYMENT_URL 
+        ? `https://${process.env.REPLIT_DEPLOYMENT_URL}`
+        : process.env.REPL_SLUG && process.env.REPL_OWNER
+          ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+          : 'http://localhost:5000';
+      
+      const resetUrl = `${baseUrl}/reset-password/${token}`;
+      
+      // Send email
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Réinitialisation de mot de passe</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">MY JANTES</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #dc2626; margin-top: 0;">Réinitialisation de mot de passe</h2>
+            
+            <p>Bonjour ${user.firstName || user.email},</p>
+            
+            <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background-color: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Réinitialiser mon mot de passe
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">Ce lien est valable pendant 1 heure.</p>
+            
+            <p style="color: #666; font-size: 14px;">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>
+            
+            <p>Cordialement,<br><strong>L'équipe MY JANTES</strong></p>
+          </div>
+          
+          <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+            <p>Ce message a été envoyé automatiquement depuis MY JANTES.</p>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const emailResult = await sendEmail({
+        to: user.email,
+        subject: "Réinitialisation de votre mot de passe - MY JANTES",
+        html: emailHtml,
+        text: `Bonjour, cliquez sur ce lien pour réinitialiser votre mot de passe: ${resetUrl}. Ce lien est valable 1 heure.`,
+      });
+      
+      if (!emailResult.success) {
+        console.error("Failed to send password reset email:", emailResult.error);
+      }
+      
+      res.json({ 
+        message: "Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation." 
+      });
+    } catch (error) {
+      console.error("Error in forgot-password:", error);
+      res.status(500).json({ message: "Une erreur est survenue. Veuillez réessayer." });
+    }
+  });
+
+  // Verify reset token
+  app.get('/api/auth/reset-password/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.status(400).json({ valid: false, message: "Lien invalide ou expiré" });
+      }
+      
+      if (resetToken.used) {
+        return res.status(400).json({ valid: false, message: "Ce lien a déjà été utilisé" });
+      }
+      
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ valid: false, message: "Ce lien a expiré" });
+      }
+      
+      res.json({ valid: true });
+    } catch (error) {
+      console.error("Error verifying reset token:", error);
+      res.status(500).json({ valid: false, message: "Une erreur est survenue" });
+    }
+  });
+
+  // Reset password with token
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token et mot de passe requis" });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Le mot de passe doit contenir au moins 6 caractères" });
+      }
+      
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.status(400).json({ message: "Lien invalide ou expiré" });
+      }
+      
+      if (resetToken.used) {
+        return res.status(400).json({ message: "Ce lien a déjà été utilisé" });
+      }
+      
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ message: "Ce lien a expiré" });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Update user's password
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      
+      // Mark token as used
+      await storage.markPasswordResetTokenUsed(token);
+      
+      res.json({ message: "Mot de passe réinitialisé avec succès" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Une erreur est survenue. Veuillez réessayer." });
     }
   });
 
