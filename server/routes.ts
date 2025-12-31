@@ -1815,7 +1815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate a default password that can be changed later
       const { hashPassword } = await import("./localAuth");
-      const defaultPassword = await hashPassword("client123");
+      const defaultPassword = await hashPassword("123user");
 
       const userData: any = {
         email: validatedData.email,

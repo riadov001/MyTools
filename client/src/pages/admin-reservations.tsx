@@ -831,7 +831,7 @@ export default function AdminReservations() {
                       setCompanyAddress={setNewClientCompanyAddress}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Mot de passe par défaut: <span className="font-mono font-semibold">client123</span> (à changer lors de la première connexion)
+                      Mot de passe par défaut: <span className="font-mono font-semibold">123user</span> (à changer lors de la première connexion)
                     </p>
                   </div>
                 )}
