@@ -34,6 +34,8 @@ import AdminServiceWorkflows from "@/pages/admin-service-workflows";
 import AdminAuditLogs from "@/pages/admin-audit-logs";
 import WorkshopManagement from "@/pages/workshop-management";
 import EmployeeServices from "@/pages/employee-services";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -55,6 +57,8 @@ function Router() {
       <Switch>
         <Route path="/landing" component={Landing} />
         <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password/:token" component={ResetPassword} />
         <Route path="/">
           <Redirect to="/login" />
         </Route>
