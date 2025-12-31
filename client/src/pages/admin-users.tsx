@@ -253,7 +253,7 @@ export default function AdminUsers() {
       });
       return;
     }
-    changePasswordMutation.mutate({ id: changePasswordDialog.id, newPassword });
+    changePasswordMutation.mutate({ id: changePasswordDialog.id, newPassword: newPassword.trim() });
   };
 
   if (isLoading || !isAdmin) {

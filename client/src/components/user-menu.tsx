@@ -85,7 +85,7 @@ export function UserMenu() {
       });
       return;
     }
-    changePasswordMutation.mutate({ currentPassword, newPassword });
+    changePasswordMutation.mutate({ currentPassword: currentPassword.trim(), newPassword: newPassword.trim() });
   };
 
   const handleLogout = async () => {
