@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Key } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getRedirectionContext, performReturnRedirect } from "@/lib/navigation";
@@ -25,6 +25,9 @@ export default function AdminUsers() {
   const [createUserDialog, setCreateUserDialog] = useState(false);
   const [editUserDialog, setEditUserDialog] = useState<User | null>(null);
   const [deleteUserDialog, setDeleteUserDialog] = useState<User | null>(null);
+  const [changePasswordDialog, setChangePasswordDialog] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [redirectionContext, setRedirectionContext] = useState(getRedirectionContext());
   
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -160,6 +163,28 @@ export default function AdminUsers() {
     },
   });
 
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { id: string; newPassword: string }) => {
+      return apiRequest("PATCH", `/api/admin/users/${data.id}/password`, { newPassword: data.newPassword });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Mot de passe modifié avec succès",
+      });
+      setChangePasswordDialog(null);
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de la modification du mot de passe",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateUser = () => {
     if (!newUserEmail) {
       toast({
@@ -200,6 +225,35 @@ export default function AdminUsers() {
   const handleDeleteUser = () => {
     if (!deleteUserDialog) return;
     deleteUserMutation.mutate(deleteUserDialog.id);
+  };
+
+  const handleChangePassword = () => {
+    if (!changePasswordDialog) return;
+    if (!newPassword) {
+      toast({
+        title: "Erreur",
+        description: "Le nouveau mot de passe est requis",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas",
+        variant: "destructive",
+      });
+      return;
+    }
+    changePasswordMutation.mutate({ id: changePasswordDialog.id, newPassword });
   };
 
   if (isLoading || !isAdmin) {
@@ -263,7 +317,7 @@ export default function AdminUsers() {
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                     <p className="text-xs text-muted-foreground truncate mt-1">ID: {user.id}</p>
                   </div>
-                  <div className="flex flex-row items-center gap-2">
+                  <div className="flex flex-row items-center gap-2 flex-wrap">
                     <Button
                       size="sm"
                       variant="outline"
@@ -281,6 +335,19 @@ export default function AdminUsers() {
                     >
                       <Pencil className="h-4 w-4 mr-2" />
                       Modifier
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setChangePasswordDialog(user);
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }}
+                      data-testid={`button-change-password-${user.id}`}
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Mot de passe
                     </Button>
                     <Button
                       size="sm"
@@ -576,6 +643,59 @@ export default function AdminUsers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!changePasswordDialog} onOpenChange={(open) => !open && setChangePasswordDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le mot de passe</DialogTitle>
+            <DialogDescription>
+              Modifier le mot de passe de {changePasswordDialog?.firstName} {changePasswordDialog?.lastName} ({changePasswordDialog?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-password">Nouveau mot de passe *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Minimum 6 caractères"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirm-password">Confirmer le mot de passe *</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Répétez le mot de passe"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-confirm-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setChangePasswordDialog(null)}
+              data-testid="button-cancel-change-password"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={changePasswordMutation.isPending}
+              data-testid="button-save-change-password"
+            >
+              {changePasswordMutation.isPending ? "Modification..." : "Modifier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1787,6 +1787,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin route to change user password
+  app.patch("/api/admin/users/:id/password", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const passwordSchema = z.object({
+        newPassword: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+      });
+      const { newPassword } = passwordSchema.parse(req.body);
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(id, { password: hashedPassword });
+      
+      res.json({ message: "Mot de passe modifié avec succès" });
+    } catch (error: any) {
+      console.error("Error changing user password:", error);
+      res.status(400).json({ message: error.message || "Échec de la modification du mot de passe" });
+    }
+  });
+
+  // User route to change own password
+  app.patch("/api/user/password", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const passwordSchema = z.object({
+        currentPassword: z.string().min(1, "Le mot de passe actuel est requis"),
+        newPassword: z.string().min(6, "Le nouveau mot de passe doit contenir au moins 6 caractères"),
+      });
+      const { currentPassword, newPassword } = passwordSchema.parse(req.body);
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Mot de passe actuel incorrect" });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(userId, { password: hashedPassword });
+      
+      res.json({ message: "Mot de passe modifié avec succès" });
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      res.status(400).json({ message: error.message || "Échec de la modification du mot de passe" });
+    }
+  });
+
   // Admin route to create a new client (professionnel or particulier) without password
   app.post("/api/admin/clients", isAuthenticated, isAdmin, async (req, res) => {
     try {
