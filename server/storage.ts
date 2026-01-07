@@ -9,6 +9,8 @@ import {
   reservationServices,
   notifications,
   invoiceCounters,
+  quoteMedia,
+  invoiceMedia,
   applicationSettings,
   engagements,
   workflows,
@@ -109,6 +111,8 @@ export interface IStorage {
   incrementInvoiceCounter(paymentType: "cash" | "wire_transfer" | "card"): Promise<InvoiceCounter>;
   createQuoteMedia(media: { quoteId: string; filePath: string; fileType: string; fileName?: string }): Promise<void>;
   createInvoiceMedia(media: { invoiceId: string; filePath: string; fileType: string; fileName?: string }): Promise<void>;
+  getQuoteMedia(quoteId: string): Promise<{ id: string; quoteId: string; fileType: string; filePath: string; fileName: string; fileSize: number | null; createdAt: Date | null }[]>;
+  getInvoiceMedia(invoiceId: string): Promise<{ id: string; invoiceId: string; fileType: string; filePath: string; fileName: string; fileSize: number | null; createdAt: Date | null }[]>;
   getApplicationSettings(): Promise<ApplicationSettings | undefined>;
   createOrUpdateApplicationSettings(settings: Partial<InsertApplicationSettings>): Promise<ApplicationSettings>;
   getEngagements(clientId?: string): Promise<Engagement[]>;
@@ -526,11 +530,11 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getQuoteMedia(quoteId: string) {
+  async getQuoteMedia(quoteId: string): Promise<(typeof quoteMedia.$inferSelect)[]> {
     return await db.select().from(quoteMedia).where(eq(quoteMedia.quoteId, quoteId));
   }
 
-  async getInvoiceMedia(invoiceId: string) {
+  async getInvoiceMedia(invoiceId: string): Promise<(typeof invoiceMedia.$inferSelect)[]> {
     return await db.select().from(invoiceMedia).where(eq(invoiceMedia.invoiceId, invoiceId));
   }
 

@@ -10,20 +10,24 @@ const FROM_EMAIL = 'MyJantes <contact@pointdepart.com>';
 
 async function getFileBuffer(filePath: string): Promise<Buffer | null> {
   try {
-    // filePath usually looks like "quote_images/..." or just the key
-    // We need to fetch it from Replit Object Storage
-    // For now, if it's a local file (unlikely for user uploads) we read it
+    // If it's a local file we read it
     if (fs.existsSync(filePath)) {
       return fs.readFileSync(filePath);
     }
     
-    // Most likely it's in @replit/object-storage
-    const { bucket } = await import('@replit/object-storage');
-    const file = (bucket as any).file(filePath);
-    const [exists] = await file.exists();
-    if (exists) {
-      const [content] = await file.download();
-      return content;
+    // Use @replit/object-storage Client
+    const { Client } = await import('@replit/object-storage');
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) {
+      console.error('DEFAULT_OBJECT_STORAGE_BUCKET_ID not set');
+      return null;
+    }
+    
+    const client = new Client({ bucketId });
+    const result = await client.downloadAsBytes(filePath);
+    
+    if (result.ok) {
+      return Buffer.isBuffer(result.value) ? result.value : Buffer.from(result.value as unknown as Uint8Array);
     }
     return null;
   } catch (error) {

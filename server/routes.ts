@@ -9,6 +9,10 @@ import { insertServiceSchema, insertQuoteSchema, insertInvoiceSchema, insertRese
 import { sendEmail } from "./emailService";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { ObjectStorageService } from "./objectStorage";
+
+// Global object storage service instance for media attachments
+const objectStorageService = new ObjectStorageService();
 
 // WebSocket clients map
 const wsClients = new Map<string, WebSocket>();
@@ -626,18 +630,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Get quote photos
             const media = await storage.getQuoteMedia(id);
-            const photoAttachments = [];
+            const photoAttachments: { filename: string; content: Buffer }[] = [];
+            const fs = await import('fs');
+            const path = await import('path');
             for (const item of media) {
               if (item.fileType === 'image') {
-                const { bucket } = await import('@replit/object-storage');
                 try {
-                  const file = (bucket as any).file(item.filePath);
-                  const [exists] = await file.exists();
-                  if (exists) {
-                    const [content] = await file.download();
+                  let data: Buffer | null = null;
+                  // Try local file first (for uploads saved to ./uploads/)
+                  const localPath = item.filePath.startsWith('/') ? `.${item.filePath}` : item.filePath;
+                  if (fs.existsSync(localPath)) {
+                    data = fs.readFileSync(localPath);
+                  } else {
+                    // Try object storage
+                    const result = await objectStorageService.getObject(item.filePath);
+                    data = result.data;
+                  }
+                  if (data) {
                     photoAttachments.push({
                       filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
-                      content: content,
+                      content: data,
                     });
                   }
                 } catch (err) {
@@ -729,18 +741,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get quote photos
       const media = await storage.getQuoteMedia(id);
-      const photoAttachments = [];
+      const photoAttachments: { filename: string; content: Buffer }[] = [];
+      const fs = await import('fs');
       for (const item of media) {
         if (item.fileType === 'image') {
-          const { bucket } = await import('@replit/object-storage');
           try {
-            const file = (bucket as any).file(item.filePath);
-            const [exists] = await file.exists();
-            if (exists) {
-              const [content] = await file.download();
+            let data: Buffer | null = null;
+            // Try local file first (for uploads saved to ./uploads/)
+            const localPath = item.filePath.startsWith('/') ? `.${item.filePath}` : item.filePath;
+            if (fs.existsSync(localPath)) {
+              data = fs.readFileSync(localPath);
+            } else {
+              // Try object storage
+              const result = await objectStorageService.getObject(item.filePath);
+              data = result.data;
+            }
+            if (data) {
               photoAttachments.push({
                 filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
-                content: content,
+                content: data,
               });
             }
           } catch (err) {
@@ -1037,18 +1056,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get invoice photos
           const media = await storage.getInvoiceMedia(invoice.id);
-          const photoAttachments = [];
+          const photoAttachments: { filename: string; content: Buffer }[] = [];
+          const fs = await import('fs');
           for (const item of media) {
             if (item.fileType === 'image') {
-              const { bucket } = await import('@replit/object-storage');
               try {
-                const file = (bucket as any).file(item.filePath);
-                const [exists] = await file.exists();
-                if (exists) {
-                  const [content] = await file.download();
+                let data: Buffer | null = null;
+                // Try local file first (for uploads saved to ./uploads/)
+                const localPath = item.filePath.startsWith('/') ? `.${item.filePath}` : item.filePath;
+                if (fs.existsSync(localPath)) {
+                  data = fs.readFileSync(localPath);
+                } else {
+                  // Try object storage
+                  const result = await objectStorageService.getObject(item.filePath);
+                  data = result.data;
+                }
+                if (data) {
                   photoAttachments.push({
                     filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
-                    content: content,
+                    content: data,
                   });
                 }
               } catch (err) {
@@ -1414,18 +1440,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get invoice photos
       const media = await storage.getInvoiceMedia(id);
-      const photoAttachments = [];
+      const photoAttachments: { filename: string; content: Buffer }[] = [];
+      const fs = await import('fs');
       for (const item of media) {
         if (item.fileType === 'image') {
-          const { bucket } = await import('@replit/object-storage');
           try {
-            const file = (bucket as any).file(item.filePath);
-            const [exists] = await file.exists();
-            if (exists) {
-              const [content] = await file.download();
+            let data: Buffer | null = null;
+            // Try local file first (for uploads saved to ./uploads/)
+            const localPath = item.filePath.startsWith('/') ? `.${item.filePath}` : item.filePath;
+            if (fs.existsSync(localPath)) {
+              data = fs.readFileSync(localPath);
+            } else {
+              // Try object storage
+              const result = await objectStorageService.getObject(item.filePath);
+              data = result.data;
+            }
+            if (data) {
               photoAttachments.push({
                 filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
-                content: content,
+                content: data,
               });
             }
           } catch (err) {
@@ -1927,6 +1960,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify current password
+      if (!user.password) {
+        return res.status(400).json({ message: "Ce compte utilise une authentification externe" });
+      }
       const isValidPassword = await bcrypt.compare(currentPassword, user.password);
       if (!isValidPassword) {
         return res.status(400).json({ message: "Mot de passe actuel incorrect" });

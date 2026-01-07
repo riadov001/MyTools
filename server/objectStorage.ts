@@ -63,39 +63,56 @@ export class ObjectStorageService {
     };
   }
 
-  // Gets an object from storage by path
-  async getObject(objectPath: string): Promise<{ data: Buffer; exists: boolean }> {
-    if (!objectPath.startsWith("/objects/")) {
-      throw new ObjectNotFoundError();
-    }
-
-    const parts = objectPath.slice(1).split("/");
-    if (parts.length < 2) {
-      throw new ObjectNotFoundError();
-    }
-
-    const entityId = parts.slice(1).join("/");
-    const storagePath = `.private/${entityId}`;
-    
-    const result = await this.client.downloadAsBytes(storagePath);
-    
-    if (!result.ok) {
-      throw new ObjectNotFoundError();
-    }
-    
-    // The SDK returns the bytes directly
-    const value = result.value as unknown;
-    let buffer: Buffer;
+  // Helper to convert result value to Buffer
+  private toBuffer(value: unknown): Buffer {
     if (Buffer.isBuffer(value)) {
-      buffer = value;
+      return value;
     } else if (value instanceof Uint8Array) {
-      buffer = Buffer.from(value);
+      return Buffer.from(value);
     } else if (Array.isArray(value) && value.length > 0) {
-      buffer = Buffer.isBuffer(value[0]) ? value[0] : Buffer.from(value[0] as Uint8Array);
+      return Buffer.isBuffer(value[0]) ? value[0] : Buffer.from(value[0] as Uint8Array);
     } else {
-      buffer = Buffer.from(value as ArrayBuffer);
+      return Buffer.from(value as ArrayBuffer);
     }
-    return { data: buffer, exists: true };
+  }
+
+  // Gets an object from storage by path - supports multiple path formats
+  async getObject(objectPath: string): Promise<{ data: Buffer; exists: boolean }> {
+    // Try multiple path resolution strategies
+    const pathsToTry: string[] = [];
+    
+    // Strategy 1: If path starts with /objects/, convert to .private/
+    if (objectPath.startsWith("/objects/")) {
+      const parts = objectPath.slice(1).split("/");
+      if (parts.length >= 2) {
+        const entityId = parts.slice(1).join("/");
+        pathsToTry.push(`.private/${entityId}`);
+      }
+    }
+    
+    // Strategy 2: Try the raw path directly (for legacy uploads)
+    pathsToTry.push(objectPath);
+    
+    // Strategy 3: If path doesn't start with .private/, try adding it
+    if (!objectPath.startsWith(".private/") && !objectPath.startsWith("/")) {
+      pathsToTry.push(`.private/${objectPath}`);
+    }
+    
+    // Strategy 4: Try without leading slash
+    if (objectPath.startsWith("/")) {
+      pathsToTry.push(objectPath.slice(1));
+    }
+    
+    // Try each path until one works
+    for (const storagePath of pathsToTry) {
+      const result = await this.client.downloadAsBytes(storagePath);
+      if (result.ok) {
+        return { data: this.toBuffer(result.value), exists: true };
+      }
+    }
+    
+    // None of the paths worked
+    throw new ObjectNotFoundError();
   }
 
   // Check if object exists
