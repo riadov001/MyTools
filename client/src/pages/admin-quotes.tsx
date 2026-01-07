@@ -21,7 +21,7 @@ import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search, Mai
 import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
-import { NewClientForm } from "@/components/new-client-form";
+import { CreateClientDialog } from "@/components/create-client-dialog";
 import { initiateClientCreationRedirect } from "@/lib/navigation";
 
 export default function AdminQuotes() {
@@ -45,8 +45,9 @@ export default function AdminQuotes() {
   const [selectedQuoteForLabels, setSelectedQuoteForLabels] = useState<Quote | null>(null);
   
   const [createQuoteDialog, setCreateQuoteDialog] = useState(false);
-  const [clientSelection, setClientSelection] = useState<"existing" | "new">("existing");
+  const [createClientDialog, setCreateClientDialog] = useState(false);
   const [newQuoteClientId, setNewQuoteClientId] = useState("");
+  const [selectedClientName, setSelectedClientName] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedServices, setSelectedServices] = useState<Array<{
     serviceId: string;
@@ -61,19 +62,6 @@ export default function AdminQuotes() {
   const [newQuoteTaxRate, setNewQuoteTaxRate] = useState("20");
   const [newQuoteProductDetails, setNewQuoteProductDetails] = useState("");
   const [quoteMediaFiles, setQuoteMediaFiles] = useState<Array<{key: string; type: string; name: string}>>([]);
-  
-  const [newClientEmail, setNewClientEmail] = useState("");
-  const [newClientFirstName, setNewClientFirstName] = useState("");
-  const [newClientLastName, setNewClientLastName] = useState("");
-  const [newClientPhone, setNewClientPhone] = useState("");
-  const [newClientAddress, setNewClientAddress] = useState("");
-  const [newClientPostalCode, setNewClientPostalCode] = useState("");
-  const [newClientCity, setNewClientCity] = useState("");
-  const [newClientRole, setNewClientRole] = useState<"client" | "client_professionnel">("client");
-  const [newClientCompanyName, setNewClientCompanyName] = useState("");
-  const [newClientSiret, setNewClientSiret] = useState("");
-  const [newClientTvaNumber, setNewClientTvaNumber] = useState("");
-  const [newClientCompanyAddress, setNewClientCompanyAddress] = useState("");
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -98,7 +86,6 @@ export default function AdminQuotes() {
       setCreateQuoteDialog(true);
       if (clientId) {
         setNewQuoteClientId(clientId);
-        setClientSelection("existing");
       }
       // Nettoyer les paramètres URL sans recharger la page
       window.history.replaceState({}, "", window.location.pathname);
@@ -411,8 +398,8 @@ export default function AdminQuotes() {
         description: "Devis créé avec succès",
       });
       setCreateQuoteDialog(false);
-      setClientSelection("existing");
       setNewQuoteClientId("");
+      setSelectedClientName("");
       setSelectedServiceId("");
       setSelectedServices([]);
       setNewQuotePaymentMethod("wire_transfer");
@@ -422,18 +409,6 @@ export default function AdminQuotes() {
       setNewQuoteTaxRate("20");
       setNewQuoteProductDetails("");
       setQuoteMediaFiles([]);
-      setNewClientEmail("");
-      setNewClientFirstName("");
-      setNewClientLastName("");
-      setNewClientPhone("");
-      setNewClientAddress("");
-      setNewClientPostalCode("");
-      setNewClientCity("");
-      setNewClientRole("client");
-      setNewClientCompanyName("");
-      setNewClientSiret("");
-      setNewClientTvaNumber("");
-      setNewClientCompanyAddress("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/quotes"] });
     },
     onError: (error: Error) => {
@@ -445,25 +420,15 @@ export default function AdminQuotes() {
     },
   });
 
-  const createClientMutation = useMutation({
-    mutationFn: async (data: { 
-      email: string; 
-      firstName: string; 
-      lastName: string;
-      phone?: string;
-      address?: string;
-      postalCode?: string;
-      city?: string;
-      role: "client" | "client_professionnel";
-      companyName?: string;
-      siret?: string;
-      tvaNumber?: string;
-      companyAddress?: string;
-    }) => {
-      const response = await apiRequest("POST", "/api/admin/clients", data);
-      return response;
-    },
-  });
+  const handleClientCreated = async (clientId: string, clientName: string) => {
+    await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+    setNewQuoteClientId(clientId);
+    setSelectedClientName(clientName);
+    toast({
+      title: "Client sélectionné",
+      description: `${clientName} a été créé et sélectionné pour ce devis.`,
+    });
+  };
 
   const addServiceToQuote = () => {
     if (!selectedServiceId) return;
@@ -515,25 +480,13 @@ export default function AdminQuotes() {
   };
 
   const handleCreateNewQuote = async () => {
-    // Validation
-    if (clientSelection === "new") {
-      if (!newClientEmail || !newClientFirstName || !newClientLastName) {
-        toast({
-          title: "Erreur",
-          description: "Email, prénom et nom sont requis pour créer un nouveau client",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else {
-      if (!newQuoteClientId) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner un client",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!newQuoteClientId) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un client",
+        variant: "destructive",
+      });
+      return;
     }
     
     if (selectedServices.length === 0) {
@@ -555,71 +508,32 @@ export default function AdminQuotes() {
       return;
     }
     
-    try {
-      let clientId = newQuoteClientId;
-      
-      // Create client if needed
-      if (clientSelection === "new") {
-        const newClient: any = await createClientMutation.mutateAsync({
-          email: newClientEmail,
-          firstName: newClientFirstName,
-          lastName: newClientLastName,
-          phone: newClientPhone || undefined,
-          address: newClientAddress || undefined,
-          postalCode: newClientPostalCode || undefined,
-          city: newClientCity || undefined,
-          role: newClientRole,
-          companyName: newClientRole === "client_professionnel" ? newClientCompanyName : undefined,
-          siret: newClientRole === "client_professionnel" ? newClientSiret : undefined,
-          tvaNumber: newClientRole === "client_professionnel" ? newClientTvaNumber : undefined,
-          companyAddress: newClientRole === "client_professionnel" ? newClientCompanyAddress : undefined,
-        });
-        
-        if (!newClient || !newClient.id) {
-          throw new Error("Échec de la création du client");
-        }
-        
-        clientId = newClient.id;
-        // Invalidate users cache to refresh the list
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      }
-      
-      // Calcul du montant TTC avec les services sélectionnés
-      const totalHT = calculateTotalHT();
-      const taxRate = parseFloat(newQuoteTaxRate) || 0;
-      const taxAmount = calculateTaxAmount();
-      const totalAmount = calculateTotalTTC();
-      
-      // Utiliser le premier service comme service principal pour la compatibilité
-      const mainServiceId = selectedServices[0].serviceId;
-      
-      createNewQuoteMutation.mutate({
-        clientId,
-        serviceId: mainServiceId,
-        paymentMethod: newQuotePaymentMethod,
-        requestDetails: newQuoteDetails ? { notes: newQuoteDetails } : undefined,
-        mediaFiles: quoteMediaFiles,
-        wheelCount: parseInt(newQuoteWheelCount),
-        diameter: newQuoteDiameter,
-        priceExcludingTax: totalHT.toFixed(2),
-        taxRate: newQuoteTaxRate,
-        taxAmount: taxAmount.toFixed(2),
-        productDetails: newQuoteProductDetails,
-        quoteAmount: totalAmount.toFixed(2),
-        services: selectedServices.map(s => ({
-          serviceId: s.serviceId,
-          serviceName: s.serviceName,
-          quantity: parseFloat(s.quantity),
-          unitPrice: parseFloat(s.unitPrice),
-        })),
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Échec de la création du client ou du devis",
-        variant: "destructive",
-      });
-    }
+    const totalHT = calculateTotalHT();
+    const taxAmount = calculateTaxAmount();
+    const totalAmount = calculateTotalTTC();
+    
+    const mainServiceId = selectedServices[0].serviceId;
+    
+    createNewQuoteMutation.mutate({
+      clientId: newQuoteClientId,
+      serviceId: mainServiceId,
+      paymentMethod: newQuotePaymentMethod,
+      requestDetails: newQuoteDetails ? { notes: newQuoteDetails } : undefined,
+      mediaFiles: quoteMediaFiles,
+      wheelCount: parseInt(newQuoteWheelCount),
+      diameter: newQuoteDiameter,
+      priceExcludingTax: totalHT.toFixed(2),
+      taxRate: newQuoteTaxRate,
+      taxAmount: taxAmount.toFixed(2),
+      productDetails: newQuoteProductDetails,
+      quoteAmount: totalAmount.toFixed(2),
+      services: selectedServices.map(s => ({
+        serviceId: s.serviceId,
+        serviceName: s.serviceName,
+        quantity: parseFloat(s.quantity),
+        unitPrice: parseFloat(s.unitPrice),
+      })),
+    });
   };
 
   if (isLoading || !isAdmin) {
@@ -938,7 +852,6 @@ export default function AdminQuotes() {
                   'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
                   'video/*': ['.mp4', '.webm', '.mov']
                 }}
-                mediaEndpoint="/api/invoice-media"
                 data-testid="uploader-invoice-media"
               />
               {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
@@ -1036,25 +949,16 @@ export default function AdminQuotes() {
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="space-y-2">
-              <Label htmlFor="client-selection">Sélection du client *</Label>
-              <Select value={clientSelection} onValueChange={(value: "existing" | "new") => {
-                setClientSelection(value);
-              }}>
-                <SelectTrigger id="client-selection" data-testid="select-client-type">
-                  <SelectValue placeholder="Choisir une option" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="existing">Client existant</SelectItem>
-                  <SelectItem value="new">Nouveau client</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {clientSelection === "existing" ? (
-              <div className="space-y-2">
-                <Label htmlFor="new-quote-client">Client *</Label>
-                <Select value={newQuoteClientId} onValueChange={setNewQuoteClientId}>
-                  <SelectTrigger id="new-quote-client" data-testid="select-new-quote-client">
+              <Label htmlFor="new-quote-client">Client *</Label>
+              <div className="flex gap-2">
+                <Select value={newQuoteClientId} onValueChange={(id) => {
+                  setNewQuoteClientId(id);
+                  const client = users.find(u => u.id === id);
+                  if (client) {
+                    setSelectedClientName(`${client.firstName} ${client.lastName}`);
+                  }
+                }}>
+                  <SelectTrigger id="new-quote-client" className="flex-1" data-testid="select-new-quote-client">
                     <SelectValue placeholder="Sélectionner un client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1065,41 +969,22 @@ export default function AdminQuotes() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setCreateClientDialog(true)}
+                  data-testid="button-create-new-client"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nouveau
+                </Button>
               </div>
-            ) : (
-              <div className="p-3 bg-muted rounded-md space-y-4">
-                <p className="text-sm font-semibold">Informations du nouveau client</p>
-                <NewClientForm
-                  email={newClientEmail}
-                  setEmail={setNewClientEmail}
-                  firstName={newClientFirstName}
-                  setFirstName={setNewClientFirstName}
-                  lastName={newClientLastName}
-                  setLastName={setNewClientLastName}
-                  phone={newClientPhone}
-                  setPhone={setNewClientPhone}
-                  address={newClientAddress}
-                  setAddress={setNewClientAddress}
-                  postalCode={newClientPostalCode}
-                  setPostalCode={setNewClientPostalCode}
-                  city={newClientCity}
-                  setCity={setNewClientCity}
-                  role={newClientRole}
-                  setRole={setNewClientRole}
-                  companyName={newClientCompanyName}
-                  setCompanyName={setNewClientCompanyName}
-                  siret={newClientSiret}
-                  setSiret={setNewClientSiret}
-                  tvaNumber={newClientTvaNumber}
-                  setTvaNumber={setNewClientTvaNumber}
-                  companyAddress={newClientCompanyAddress}
-                  setCompanyAddress={setNewClientCompanyAddress}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Mot de passe par défaut: <span className="font-mono font-semibold">123user</span> (à changer lors de la première connexion)
+              {selectedClientName && (
+                <p className="text-sm text-muted-foreground">
+                  Client sélectionné: <span className="font-medium">{selectedClientName}</span>
                 </p>
-              </div>
-            )}
+              )}
+            </div>
             <div className="space-y-3">
               <Label>Services</Label>
               <div className="flex gap-2">
@@ -1300,14 +1185,13 @@ export default function AdminQuotes() {
               onClick={handleCreateNewQuote}
               disabled={
                 createNewQuoteMutation.isPending || 
-                createClientMutation.isPending ||
-                (clientSelection === "new" ? (!newClientEmail || !newClientFirstName || !newClientLastName) : !newQuoteClientId) ||
+                !newQuoteClientId ||
                 selectedServices.length === 0 ||
                 quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3
               }
               data-testid="button-save-new-quote"
             >
-              {(createNewQuoteMutation.isPending || createClientMutation.isPending) ? "Création..." : "Créer Devis"}
+              {createNewQuoteMutation.isPending ? "Création..." : "Créer Devis"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1319,6 +1203,12 @@ export default function AdminQuotes() {
         documentNumber={selectedQuoteForLabels?.id || ""}
         onDownload={handleConfirmDownloadLabels}
         type="quote"
+      />
+
+      <CreateClientDialog
+        open={createClientDialog}
+        onOpenChange={setCreateClientDialog}
+        onClientCreated={handleClientCreated}
       />
     </div>
   );

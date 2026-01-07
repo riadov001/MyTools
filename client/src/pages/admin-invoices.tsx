@@ -20,6 +20,7 @@ import { Plus, Download, Tags, Pencil, X, Search, Mail, Loader2 } from "lucide-r
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { LabelsPreview } from "@/components/labels-preview";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { CreateClientDialog } from "@/components/create-client-dialog";
 
 export default function AdminInvoices() {
   const [, setLocation] = useLocation();
@@ -39,7 +40,9 @@ export default function AdminInvoices() {
   });
 
   // Direct invoice creation states
+  const [createClientDialog, setCreateClientDialog] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientName, setSelectedClientName] = useState("");
   const [selectedServices, setSelectedServices] = useState<Array<{
     serviceId: string;
     serviceName: string;
@@ -55,6 +58,16 @@ export default function AdminInvoices() {
   const [invoiceNotes, setInvoiceNotes] = useState("");
   const [invoiceDueDate, setInvoiceDueDate] = useState("");
   const [invoiceMediaFiles, setInvoiceMediaFiles] = useState<any[]>([]);
+
+  const handleClientCreated = async (clientId: string, clientName: string) => {
+    await queryClient.refetchQueries({ queryKey: ["/api/admin/users"] });
+    setSelectedClientId(clientId);
+    setSelectedClientName(clientName);
+    toast({
+      title: "Client sélectionné",
+      description: `${clientName} a été créé et sélectionné pour cette facture.`,
+    });
+  };
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -689,20 +702,42 @@ export default function AdminInvoices() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 overflow-y-auto pr-2 flex-1">
-            <div>
-              <Label htmlFor="direct-invoice-client">Client</Label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger className="mt-2" data-testid="select-direct-invoice-client">
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.filter(u => u.role === "client" || u.role === "client_professionnel").map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} ({user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label htmlFor="direct-invoice-client">Client *</Label>
+              <div className="flex gap-2">
+                <Select value={selectedClientId} onValueChange={(id) => {
+                  setSelectedClientId(id);
+                  const client = users.find(u => u.id === id);
+                  if (client) {
+                    setSelectedClientName(`${client.firstName} ${client.lastName}`);
+                  }
+                }}>
+                  <SelectTrigger className="flex-1" data-testid="select-direct-invoice-client">
+                    <SelectValue placeholder="Sélectionner un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.filter(u => u.role === "client" || u.role === "client_professionnel").map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName} ({user.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setCreateClientDialog(true)}
+                  data-testid="button-create-new-client-invoice"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nouveau
+                </Button>
+              </div>
+              {selectedClientName && (
+                <p className="text-sm text-muted-foreground">
+                  Client sélectionné: <span className="font-medium">{selectedClientName}</span>
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -921,7 +956,6 @@ export default function AdminInvoices() {
                   'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
                   'video/*': ['.mp4', '.webm', '.mov']
                 }}
-                mediaEndpoint="/api/invoice-media"
                 data-testid="uploader-direct-invoice-media"
               />
               {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
@@ -966,6 +1000,12 @@ export default function AdminInvoices() {
         documentNumber={selectedInvoiceForLabels?.invoiceNumber || ""}
         onDownload={handleConfirmDownloadLabels}
         type="invoice"
+      />
+
+      <CreateClientDialog
+        open={createClientDialog}
+        onOpenChange={setCreateClientDialog}
+        onClientCreated={handleClientCreated}
       />
     </div>
   );
