@@ -74,21 +74,21 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP RIGHT)
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`DEVIS`, pageWidth - 20, 15, { align: 'right' });
-  doc.setFontSize(10);
-  doc.text(`N° ${quoteNumber}`, pageWidth - 20, 22, { align: 'right' });
-  
   // Dates (RIGHT side, below title)
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(quote.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = quote.validUntil ? new Date(quote.validUntil).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date: ${billingDate}`, pageWidth - 20, 30, { align: 'right' });
-  doc.text(`Validité: ${dueDate}`, pageWidth - 20, 35, { align: 'right' });
+  // Document title (TOP RIGHT, smaller)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`DEVIS N° ${quoteNumber}`, pageWidth - 20, 15, { align: 'right' });
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 22, { align: 'right' });
+  doc.text(`Validité: ${dueDate}`, pageWidth - 20, 27, { align: 'right' });
   
   // Company info (LEFT side, below logo)
   doc.setFontSize(10);
@@ -273,17 +273,6 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`Total TTC`, 120, finalY + 12);
   doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
   
-  // Payment methods
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 20);
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
-  
   // Footer
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(9);
@@ -310,21 +299,21 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     console.error('Failed to add logo:', error);
   }
   
-  // Document title (TOP RIGHT)
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`FACTURE`, pageWidth - 20, 15, { align: 'right' });
-  doc.setFontSize(10);
-  doc.text(`N° ${invoice.invoiceNumber}`, pageWidth - 20, 22, { align: 'right' });
-  
   // Dates (RIGHT side, below title)
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const billingDate = new Date(invoice.createdAt || Date.now()).toLocaleDateString('fr-FR');
   const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR');
   
-  doc.text(`Date: ${billingDate}`, pageWidth - 20, 30, { align: 'right' });
-  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 35, { align: 'right' });
+  // Document title (TOP RIGHT, smaller)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`FACTURE N° ${invoice.invoiceNumber}`, pageWidth - 20, 15, { align: 'right' });
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Date: ${billingDate}`, pageWidth - 20, 22, { align: 'right' });
+  doc.text(`Échéance: ${dueDate}`, pageWidth - 20, 27, { align: 'right' });
   
   // Company info (LEFT side, below logo)
   doc.setFontSize(10);
@@ -515,17 +504,6 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.setFont('helvetica', 'bold');
   doc.text(`Total TTC`, 120, finalY + 12);
   doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
-  
-  // Payment methods
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 20);
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
   
   // Footer
   const pageHeight = doc.internal.pageSize.height;
