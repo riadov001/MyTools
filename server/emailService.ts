@@ -4,8 +4,33 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import fs from 'fs';
 import path from 'path';
+import { storage } from './storage';
 
 const FROM_EMAIL = 'MyJantes <contact@pointdepart.com>';
+
+async function getFileBuffer(filePath: string): Promise<Buffer | null> {
+  try {
+    // filePath usually looks like "quote_images/..." or just the key
+    // We need to fetch it from Replit Object Storage
+    // For now, if it's a local file (unlikely for user uploads) we read it
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath);
+    }
+    
+    // Most likely it's in @replit/object-storage
+    const { bucket } = await import('@replit/object-storage');
+    const file = (bucket as any).file(filePath);
+    const [exists] = await file.exists();
+    if (exists) {
+      const [content] = await file.download();
+      return content;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error getting file buffer for ${filePath}:`, error);
+    return null;
+  }
+}
 
 export async function getResendClient() {
   const apiKey = process.env.Resend;

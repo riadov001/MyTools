@@ -624,14 +624,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
               companyName: settings?.companyName || "MyJantes",
             });
             
+            // Get quote photos
+            const media = await storage.getQuoteMedia(id);
+            const photoAttachments = [];
+            for (const item of media) {
+              if (item.fileType === 'image') {
+                const { bucket } = await import('@replit/object-storage');
+                try {
+                  const file = (bucket as any).file(item.filePath);
+                  const [exists] = await file.exists();
+                  if (exists) {
+                    const [content] = await file.download();
+                    photoAttachments.push({
+                      filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
+                      content: content,
+                    });
+                  }
+                } catch (err) {
+                  console.error("Error attaching photo to quote email:", err);
+                }
+              }
+            }
+            
             await sendEmail({
               to: clientUser.email,
               subject: `Devis validé - ${quote.id.slice(0, 8).toUpperCase()} | MyJantes`,
               html,
-              attachments: [{
-                filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
-                content: pdfBuffer,
-              }],
+              attachments: [
+                {
+                  filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
+                  content: pdfBuffer,
+                },
+                ...photoAttachments
+              ],
             });
             console.log(`Auto-email sent: Quote approved to ${clientUser.email}`);
           }
@@ -702,14 +727,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: settings?.companyName || "MyJantes",
       });
 
+      // Get quote photos
+      const media = await storage.getQuoteMedia(id);
+      const photoAttachments = [];
+      for (const item of media) {
+        if (item.fileType === 'image') {
+          const { bucket } = await import('@replit/object-storage');
+          try {
+            const file = (bucket as any).file(item.filePath);
+            const [exists] = await file.exists();
+            if (exists) {
+              const [content] = await file.download();
+              photoAttachments.push({
+                filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
+                content: content,
+              });
+            }
+          } catch (err) {
+            console.error("Error attaching photo to manual quote email:", err);
+          }
+        }
+      }
+
       const result = await sendEmail({
         to: client.email,
         subject: `Votre devis MyJantes - ${quote.id.slice(0, 8).toUpperCase()}`,
         html,
-        attachments: [{
-          filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
-          content: pdfBuffer,
-        }],
+        attachments: [
+          {
+            filename: `Devis-${quote.id.slice(0, 8).toUpperCase()}.pdf`,
+            content: pdfBuffer,
+          },
+          ...photoAttachments
+        ],
       });
 
       if (!result.success) {
@@ -985,14 +1035,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             companyName: settings?.companyName || "MyJantes",
           });
           
+          // Get invoice photos
+          const media = await storage.getInvoiceMedia(invoice.id);
+          const photoAttachments = [];
+          for (const item of media) {
+            if (item.fileType === 'image') {
+              const { bucket } = await import('@replit/object-storage');
+              try {
+                const file = (bucket as any).file(item.filePath);
+                const [exists] = await file.exists();
+                if (exists) {
+                  const [content] = await file.download();
+                  photoAttachments.push({
+                    filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
+                    content: content,
+                  });
+                }
+              } catch (err) {
+                console.error("Error attaching photo to auto invoice email:", err);
+              }
+            }
+          }
+          
           await sendEmail({
             to: clientUser.email,
             subject: `Nouvelle facture - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()} | MyJantes`,
             html,
-            attachments: [{
-              filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
-              content: invoicePdfBuffer,
-            }],
+            attachments: [
+              {
+                filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
+                content: invoicePdfBuffer,
+              },
+              ...photoAttachments
+            ],
           });
           console.log(`Auto-email sent: Invoice created to ${clientUser.email}`);
         }
@@ -1337,14 +1412,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: settings?.companyName || "MyJantes",
       });
 
+      // Get invoice photos
+      const media = await storage.getInvoiceMedia(id);
+      const photoAttachments = [];
+      for (const item of media) {
+        if (item.fileType === 'image') {
+          const { bucket } = await import('@replit/object-storage');
+          try {
+            const file = (bucket as any).file(item.filePath);
+            const [exists] = await file.exists();
+            if (exists) {
+              const [content] = await file.download();
+              photoAttachments.push({
+                filename: item.fileName || `photo-${item.id.slice(0, 4)}.jpg`,
+                content: content,
+              });
+            }
+          } catch (err) {
+            console.error("Error attaching photo to manual invoice email:", err);
+          }
+        }
+      }
+
       const result = await sendEmail({
         to: client.email,
         subject: `Votre facture MyJantes - ${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}`,
         html,
-        attachments: [{
-          filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
-          content: sendPdfBuffer,
-        }],
+        attachments: [
+          {
+            filename: `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8).toUpperCase()}.pdf`,
+            content: sendPdfBuffer,
+          },
+          ...photoAttachments
+        ],
       });
 
       if (!result.success) {

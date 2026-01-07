@@ -509,11 +509,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuoteMedia(media: { quoteId: string; filePath: string; fileType: string; fileName?: string }): Promise<void> {
-    // Media storage handled separately
+    await db.insert(quoteMedia).values({
+      quoteId: media.quoteId,
+      filePath: media.filePath,
+      fileType: media.fileType as any,
+      fileName: media.fileName || "file",
+    });
   }
 
   async createInvoiceMedia(media: { invoiceId: string; filePath: string; fileType: string; fileName?: string }): Promise<void> {
-    // Media storage handled separately
+    await db.insert(invoiceMedia).values({
+      invoiceId: media.invoiceId,
+      filePath: media.filePath,
+      fileType: media.fileType as any,
+      fileName: media.fileName || "file",
+    });
+  }
+
+  async getQuoteMedia(quoteId: string) {
+    return await db.select().from(quoteMedia).where(eq(quoteMedia.quoteId, quoteId));
+  }
+
+  async getInvoiceMedia(invoiceId: string) {
+    return await db.select().from(invoiceMedia).where(eq(invoiceMedia.invoiceId, invoiceId));
   }
 
   async getApplicationSettings(): Promise<ApplicationSettings | undefined> {
