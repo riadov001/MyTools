@@ -108,15 +108,23 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
   // Build client info
-  let clientDisplayName = 'Client';
+  let clientDisplayName = '';
   if (clientInfo?.firstName && clientInfo?.lastName) {
     clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
-  } else if (clientInfo?.companyName) {
-    clientDisplayName = clientInfo.companyName;
-  } else if (clientInfo?.name) {
-    clientDisplayName = clientInfo.name;
-  } else if (clientInfo?.email) {
-    clientDisplayName = clientInfo.email.split('@')[0];
+  }
+  
+  if (clientInfo?.companyName) {
+    clientDisplayName = clientInfo.companyName + (clientDisplayName ? ` (${clientDisplayName})` : '');
+  }
+  
+  if (!clientDisplayName) {
+    if (clientInfo?.name) {
+      clientDisplayName = clientInfo.name;
+    } else if (clientInfo?.email) {
+      clientDisplayName = clientInfo.email.split('@')[0];
+    } else {
+      clientDisplayName = 'Client';
+    }
   }
   
   doc.setFontSize(9);
@@ -130,6 +138,12 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     doc.text(`SIRET: ${clientInfo.siret}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
+
+  // Add TVA for professional clients
+  if (clientInfo?.tvaNumber) {
+    doc.text(`TVA: ${clientInfo.tvaNumber}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
   
   if (clientInfo?.email) {
     doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
@@ -139,15 +153,21 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.address || clientInfo?.companyAddress) {
-    const address = clientInfo?.address || clientInfo?.companyAddress;
-    doc.text(address, pageWidth - 20, clientY, { align: 'right' });
-    clientY += 5;
+
+  const clientAddress = clientInfo?.companyAddress || clientInfo?.address;
+  if (clientAddress) {
+    const addressLines = doc.splitTextToSize(clientAddress, 80);
+    addressLines.forEach((line: string) => {
+      doc.text(line, pageWidth - 20, clientY, { align: 'right' });
+      clientY += 5;
+    });
   }
+
   if (clientInfo?.postalCode || clientInfo?.city) {
     const location = [clientInfo?.postalCode, clientInfo?.city].filter(Boolean).join(' ');
     if (location) {
       doc.text(location, pageWidth - 20, clientY, { align: 'right' });
+      clientY += 5;
     }
   }
   
@@ -324,15 +344,23 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text('CLIENT:', pageWidth - 20, 45, { align: 'right' });
   
   // Build client info
-  let clientDisplayName = 'Client';
+  let clientDisplayName = '';
   if (clientInfo?.firstName && clientInfo?.lastName) {
     clientDisplayName = `${clientInfo.firstName} ${clientInfo.lastName}`;
-  } else if (clientInfo?.companyName) {
-    clientDisplayName = clientInfo.companyName;
-  } else if (clientInfo?.name) {
-    clientDisplayName = clientInfo.name;
-  } else if (clientInfo?.email) {
-    clientDisplayName = clientInfo.email.split('@')[0];
+  }
+  
+  if (clientInfo?.companyName) {
+    clientDisplayName = clientInfo.companyName + (clientDisplayName ? ` (${clientDisplayName})` : '');
+  }
+  
+  if (!clientDisplayName) {
+    if (clientInfo?.name) {
+      clientDisplayName = clientInfo.name;
+    } else if (clientInfo?.email) {
+      clientDisplayName = clientInfo.email.split('@')[0];
+    } else {
+      clientDisplayName = 'Client';
+    }
   }
   
   doc.setFontSize(9);
@@ -346,6 +374,12 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     doc.text(`SIRET: ${clientInfo.siret}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
+
+  // Add TVA for professional clients
+  if (clientInfo?.tvaNumber) {
+    doc.text(`TVA: ${clientInfo.tvaNumber}`, pageWidth - 20, clientY, { align: 'right' });
+    clientY += 5;
+  }
   
   if (clientInfo?.email) {
     doc.text(clientInfo.email, pageWidth - 20, clientY, { align: 'right' });
@@ -355,15 +389,21 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     doc.text(`Tél: ${clientInfo.phone}`, pageWidth - 20, clientY, { align: 'right' });
     clientY += 5;
   }
-  if (clientInfo?.address || clientInfo?.companyAddress) {
-    const address = clientInfo?.address || clientInfo?.companyAddress;
-    doc.text(address, pageWidth - 20, clientY, { align: 'right' });
-    clientY += 5;
+
+  const clientAddress = clientInfo?.companyAddress || clientInfo?.address;
+  if (clientAddress) {
+    const addressLines = doc.splitTextToSize(clientAddress, 80);
+    addressLines.forEach((line: string) => {
+      doc.text(line, pageWidth - 20, clientY, { align: 'right' });
+      clientY += 5;
+    });
   }
+
   if (clientInfo?.postalCode || clientInfo?.city) {
     const location = [clientInfo?.postalCode, clientInfo?.city].filter(Boolean).join(' ');
     if (location) {
       doc.text(location, pageWidth - 20, clientY, { align: 'right' });
+      clientY += 5;
     }
   }
   
