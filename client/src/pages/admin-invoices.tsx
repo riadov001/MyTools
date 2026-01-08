@@ -766,7 +766,7 @@ export default function AdminInvoices() {
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="border rounded-md p-3 space-y-2">
+                <div className="border rounded-md p-3 space-y-3">
                   <p className="text-sm font-medium">Services ajoutés:</p>
                   {selectedServices.map((service, index) => {
                     const wheelMultiplier = parseInt(invoiceWheelCount) || 1;
@@ -829,6 +829,26 @@ export default function AdminInvoices() {
                       </div>
                     );
                   })}
+                  
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Minimum 3 images requises. Vidéos optionnelles.
+                    </p>
+                    <ObjectUploader
+                      onUploadComplete={(files) => setInvoiceMediaFiles(files)}
+                      accept={{
+                        'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+                        'video/*': ['.mp4', '.webm', '.mov']
+                      }}
+                      label="Photos Après"
+                      data-testid="uploader-direct-invoice-media"
+                    />
+                    {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
+                      <p className="text-sm text-destructive mt-2">
+                        Au moins 3 images sont requises ({invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -945,26 +965,7 @@ export default function AdminInvoices() {
               />
             </div>
 
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Minimum 3 images requises. Vidéos optionnelles.
-              </p>
-              <ObjectUploader
-                onUploadComplete={(files) => setInvoiceMediaFiles(files)}
-                accept={{
-                  'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-                  'video/*': ['.mp4', '.webm', '.mov']
-                }}
-                label="Photos Après"
-                data-testid="uploader-direct-invoice-media"
-              />
-              {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
-                <p className="text-sm text-destructive mt-2">
-                  Au moins 3 images sont requises ({invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
-                </p>
-              )}
             </div>
-          </div>
           <DialogFooter className="shrink-0 gap-2">
             <Button
               variant="outline"

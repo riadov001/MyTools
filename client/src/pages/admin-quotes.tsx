@@ -1050,7 +1050,7 @@ L'équipe MyJantes`;
               </div>
 
               {selectedServices.length > 0 && (
-                <div className="border rounded-md p-3 space-y-2">
+                <div className="border rounded-md p-3 space-y-3">
                   <p className="text-sm font-medium">Services ajoutés:</p>
                   {selectedServices.map((service, index) => (
                     <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
@@ -1092,6 +1092,26 @@ L'équipe MyJantes`;
                       </Button>
                     </div>
                   ))}
+                  
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Minimum 3 images requises. Vidéos optionnelles.
+                    </p>
+                    <ObjectUploader
+                      onUploadComplete={(files) => setQuoteMediaFiles(files)}
+                      accept={{
+                        'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+                        'video/*': ['.mp4', '.webm', '.mov']
+                      }}
+                      label="Photos Avant"
+                      data-testid="uploader-quote-media"
+                    />
+                    {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
+                      <p className="text-sm text-destructive mt-2">
+                        Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1189,26 +1209,7 @@ L'équipe MyJantes`;
                 data-testid="textarea-new-quote-details"
               />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Minimum 3 images requises. Vidéos optionnelles.
-              </p>
-              <ObjectUploader
-                onUploadComplete={(files) => setQuoteMediaFiles(files)}
-                accept={{
-                  'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-                  'video/*': ['.mp4', '.webm', '.mov']
-                }}
-                label="Photos Avant"
-                data-testid="uploader-quote-media"
-              />
-              {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
-                <p className="text-sm text-destructive mt-2">
-                  Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
-                </p>
-              )}
             </div>
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
