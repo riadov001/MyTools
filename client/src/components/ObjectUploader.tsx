@@ -1,26 +1,31 @@
 import { useState, useCallback, useRef, useId } from "react";
-import { Upload, X, FileImage, FileVideo } from "lucide-react";
+import { Upload, X, FileVideo, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 
 interface UploadedFile {
   key: string;
   type: string;
   name: string;
+  previewUrl?: string;
 }
 
 interface ObjectUploaderProps {
   onUploadComplete: (files: UploadedFile[]) => void;
   accept?: Record<string, string[]>;
   "data-testid"?: string;
+  label?: string;
+  showPreview?: boolean;
 }
 
 export function ObjectUploader({
   onUploadComplete,
   accept = { 'image/*': [], 'video/*': [] },
   "data-testid": testId,
+  label,
+  showPreview = true,
 }: ObjectUploaderProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -53,10 +58,16 @@ export function ObjectUploader({
         
         const result = await response.json();
 
+        let previewUrl: string | undefined;
+        if (file.type.startsWith('image/')) {
+          previewUrl = URL.createObjectURL(file);
+        }
+
         newFiles.push({
           key: result.objectPath,
           type: file.type,
           name: file.name,
+          previewUrl,
         });
       }
 
@@ -82,15 +93,28 @@ export function ObjectUploader({
   }, [uploadedFiles, onUploadComplete, toast]);
 
   const removeFile = (index: number) => {
+    const fileToRemove = uploadedFiles[index];
+    if (fileToRemove.previewUrl) {
+      URL.revokeObjectURL(fileToRemove.previewUrl);
+    }
     const newFiles = uploadedFiles.filter((_, i) => i !== index);
     setUploadedFiles(newFiles);
     onUploadComplete(newFiles);
   };
 
   const acceptString = Object.keys(accept).join(',');
+  const imageFiles = uploadedFiles.filter(f => f.type.startsWith('image/'));
+  const videoFiles = uploadedFiles.filter(f => f.type.startsWith('video/'));
 
   return (
     <div className="space-y-3">
+      {label && (
+        <Label className="flex items-center gap-2 text-base font-semibold">
+          <Image className="h-4 w-4" />
+          {label}
+        </Label>
+      )}
+      
       <div className="flex items-center gap-2">
         <Input
           ref={inputRef}
@@ -112,35 +136,82 @@ export function ObjectUploader({
           data-testid="button-select-files"
         >
           <Upload className="h-4 w-4 mr-2" />
-          {uploading ? "Téléchargement..." : "Sélectionner des fichiers"}
+          {uploading ? "Téléchargement..." : "Ajouter des photos"}
         </Button>
       </div>
 
       {uploadedFiles.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            {uploadedFiles.length} fichier(s) téléchargé(s)
+            {imageFiles.length} image(s){videoFiles.length > 0 && `, ${videoFiles.length} vidéo(s)`}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {uploadedFiles.map((file, index) => (
-              <Badge key={index} variant="secondary" className="flex items-center gap-1 pr-1">
-                {file.type.startsWith('image/') ? (
-                  <FileImage className="h-3 w-3" />
-                ) : (
-                  <FileVideo className="h-3 w-3" />
-                )}
-                <span className="max-w-[150px] truncate">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="ml-1 rounded-full p-0.5 hover-elevate active-elevate-2"
-                  data-testid={`button-remove-file-${index}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
+          
+          {showPreview && imageFiles.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {imageFiles.map((file, index) => {
+                const originalIndex = uploadedFiles.findIndex(f => f.key === file.key);
+                return (
+                  <div
+                    key={file.key}
+                    className="relative group aspect-square rounded-md overflow-hidden border border-border bg-muted"
+                  >
+                    {file.previewUrl ? (
+                      <img
+                        src={file.previewUrl}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={file.key.startsWith('/uploads/') ? file.key : `/uploads/${file.key}`}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(originalIndex)}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-testid={`button-remove-file-${originalIndex}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1 py-0.5 truncate">
+                      {file.name}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {videoFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {videoFiles.map((file) => {
+                const originalIndex = uploadedFiles.findIndex(f => f.key === file.key);
+                return (
+                  <div
+                    key={file.key}
+                    className="flex items-center gap-2 px-2 py-1 rounded-md border border-border bg-muted text-sm"
+                  >
+                    <FileVideo className="h-4 w-4 text-muted-foreground" />
+                    <span className="max-w-[150px] truncate">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(originalIndex)}
+                      className="p-0.5 rounded-full hover:bg-destructive hover:text-destructive-foreground"
+                      data-testid={`button-remove-video-${originalIndex}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

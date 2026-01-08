@@ -946,7 +946,6 @@ export default function AdminInvoices() {
             </div>
 
             <div>
-              <Label>Images et Vidéos</Label>
               <p className="text-sm text-muted-foreground mb-2">
                 Minimum 3 images requises. Vidéos optionnelles.
               </p>
@@ -956,6 +955,7 @@ export default function AdminInvoices() {
                   'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
                   'video/*': ['.mp4', '.webm', '.mov']
                 }}
+                label="Photos Après"
                 data-testid="uploader-direct-invoice-media"
               />
               {invoiceMediaFiles.length > 0 && invoiceMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
