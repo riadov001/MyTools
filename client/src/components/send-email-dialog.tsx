@@ -98,15 +98,15 @@ export function SendEmailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Envoyer un {type === "quote" ? "devis" : "facture"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1">
           <div className="space-y-2">
             <Label htmlFor="recipient">Destinataire</Label>
             <Input
@@ -214,7 +214,7 @@ export function SendEmailDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
