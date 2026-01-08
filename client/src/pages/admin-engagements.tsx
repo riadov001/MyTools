@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { FileText, DollarSign, Calendar, Trash2, ArrowRight } from "lucide-react";
+import { FileText, DollarSign, Calendar, Trash2, ArrowRight, Image } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -19,9 +19,24 @@ interface Engagement {
   updatedAt: Date;
 }
 
+interface MediaItem {
+  id: string;
+  fileType: string;
+  filePath: string;
+  fileName: string;
+}
+
+interface QuoteWithMedia extends Quote {
+  media: MediaItem[];
+}
+
+interface InvoiceWithMedia extends Invoice {
+  media: MediaItem[];
+}
+
 interface EngagementData {
-  quotes: Quote[];
-  invoices: Invoice[];
+  quotes: QuoteWithMedia[];
+  invoices: InvoiceWithMedia[];
   reservations: Reservation[];
 }
 
@@ -52,6 +67,9 @@ export default function AdminEngagements() {
   };
 
   const selectedClient = users.find((u) => u.id === selectedClientId);
+
+  const quotesWithMedia = engagementData?.quotes.filter(q => q.media && q.media.length > 0) || [];
+  const invoicesWithMedia = engagementData?.invoices.filter(i => i.media && i.media.length > 0) || [];
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
@@ -86,7 +104,6 @@ export default function AdminEngagements() {
       {selectedClient && engagementData && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Quotes Summary */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -102,7 +119,6 @@ export default function AdminEngagements() {
               </CardContent>
             </Card>
 
-            {/* Invoices Summary */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -118,7 +134,6 @@ export default function AdminEngagements() {
               </CardContent>
             </Card>
 
-            {/* Reservations Summary */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -135,7 +150,96 @@ export default function AdminEngagements() {
             </Card>
           </div>
 
-          {/* Quotes List */}
+          {quotesWithMedia.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Photos Avant (Devis)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {quotesWithMedia.map((quote) => (
+                  <div key={quote.id} className="space-y-3" data-testid={`card-quote-media-${quote.id}`}>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm">
+                        {quote.reference || `Devis #${quote.id.slice(0, 8).toUpperCase()}`}
+                      </h3>
+                      <Badge variant="secondary">
+                        {quote.media.filter(m => m.fileType === "image").length} photos
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {quote.media
+                        .filter(m => m.fileType === "image")
+                        .map((media) => (
+                          <div
+                            key={media.id}
+                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted"
+                            data-testid={`img-quote-${quote.id}-${media.id}`}
+                          >
+                            <img
+                              src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
+                              alt={media.fileName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                              }}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {invoicesWithMedia.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Photos Après (Factures)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {invoicesWithMedia.map((invoice) => (
+                  <div key={invoice.id} className="space-y-3" data-testid={`card-invoice-media-${invoice.id}`}>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm">
+                        {invoice.invoiceNumber}
+                      </h3>
+                      <Badge variant="secondary">
+                        {invoice.media.filter(m => m.fileType === "image").length} photos
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {invoice.media
+                        .filter(m => m.fileType === "image")
+                        .map((media) => (
+                          <div
+                            key={media.id}
+                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted"
+                            data-testid={`img-invoice-${invoice.id}-${media.id}`}
+                          >
+                            <img
+                              src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
+                              alt={media.fileName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                              }}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           {engagementData.quotes.length > 0 && (
             <Card>
               <CardHeader>
@@ -181,7 +285,6 @@ export default function AdminEngagements() {
             </Card>
           )}
 
-          {/* Invoices List */}
           {engagementData.invoices.length > 0 && (
             <Card>
               <CardHeader>
@@ -227,7 +330,6 @@ export default function AdminEngagements() {
             </Card>
           )}
 
-          {/* Reservations List */}
           {engagementData.reservations.length > 0 && (
             <Card>
               <CardHeader>
@@ -271,7 +373,6 @@ export default function AdminEngagements() {
         </>
       )}
 
-      {/* Engagements List */}
       <Card>
         <CardHeader>
           <CardTitle>Toutes les Prestations</CardTitle>

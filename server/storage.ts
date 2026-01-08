@@ -119,7 +119,11 @@ export interface IStorage {
   getEngagement(id: string): Promise<Engagement | undefined>;
   createEngagement(engagement: InsertEngagement): Promise<Engagement>;
   updateEngagement(id: string, engagement: Partial<InsertEngagement>): Promise<Engagement>;
-  getEngagementSummary(clientId: string): Promise<{ quotes: Quote[]; invoices: Invoice[]; reservations: Reservation[] }>;
+  getEngagementSummary(clientId: string): Promise<{ 
+    quotes: (Quote & { media: { id: string; fileType: string; filePath: string; fileName: string }[] })[]; 
+    invoices: (Invoice & { media: { id: string; fileType: string; filePath: string; fileName: string }[] })[]; 
+    reservations: Reservation[] 
+  }>;
   createWorkflow(workflowData: InsertWorkflow): Promise<Workflow>;
   getWorkflow(id: string): Promise<Workflow | undefined>;
   getWorkflows(): Promise<Workflow[]>;
@@ -588,13 +592,50 @@ export class DatabaseStorage implements IStorage {
     return engagement;
   }
 
-  async getEngagementSummary(clientId: string): Promise<{ quotes: Quote[]; invoices: Invoice[]; reservations: Reservation[] }> {
+  async getEngagementSummary(clientId: string): Promise<{ 
+    quotes: (Quote & { media: { id: string; fileType: string; filePath: string; fileName: string }[] })[]; 
+    invoices: (Invoice & { media: { id: string; fileType: string; filePath: string; fileName: string }[] })[]; 
+    reservations: Reservation[] 
+  }> {
     const [quotesList, invoicesList, reservationsList] = await Promise.all([
       db.select().from(quotes).where(eq(quotes.clientId, clientId)),
       db.select().from(invoices).where(eq(invoices.clientId, clientId)),
       db.select().from(reservations).where(eq(reservations.clientId, clientId)),
     ]);
-    return { quotes: quotesList, invoices: invoicesList, reservations: reservationsList };
+    
+    // Fetch media for each quote
+    const quotesWithMedia = await Promise.all(
+      quotesList.map(async (quote) => {
+        const media = await db.select().from(quoteMedia).where(eq(quoteMedia.quoteId, quote.id));
+        return {
+          ...quote,
+          media: media.map(m => ({
+            id: m.id,
+            fileType: m.fileType,
+            filePath: m.filePath,
+            fileName: m.fileName,
+          })),
+        };
+      })
+    );
+    
+    // Fetch media for each invoice
+    const invoicesWithMedia = await Promise.all(
+      invoicesList.map(async (invoice) => {
+        const media = await db.select().from(invoiceMedia).where(eq(invoiceMedia.invoiceId, invoice.id));
+        return {
+          ...invoice,
+          media: media.map(m => ({
+            id: m.id,
+            fileType: m.fileType,
+            filePath: m.filePath,
+            fileName: m.fileName,
+          })),
+        };
+      })
+    );
+    
+    return { quotes: quotesWithMedia, invoices: invoicesWithMedia, reservations: reservationsList };
   }
 
   async createWorkflow(workflowData: InsertWorkflow): Promise<Workflow> {
