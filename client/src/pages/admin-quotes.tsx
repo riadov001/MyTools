@@ -1095,26 +1095,7 @@ L'équipe MyJantes`;
                 </div>
               )}
               
-              <div className="border rounded-md p-3 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Minimum 3 images requises. Vidéos optionnelles.
-                </p>
-                <ObjectUploader
-                  onUploadComplete={(files) => setQuoteMediaFiles(files)}
-                  accept={{
-                    'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-                    'video/*': ['.mp4', '.webm', '.mov']
-                  }}
-                  label="Photos Avant"
-                  data-testid="uploader-quote-media"
-                />
-                {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
-                  <p className="text-sm text-destructive mt-2">
-                    Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
-                  </p>
-                )}
               </div>
-            </div>
             <div>
               <Label htmlFor="new-quote-payment-method">Moyen de paiement</Label>
               <Select value={newQuotePaymentMethod} onValueChange={(v) => setNewQuotePaymentMethod(v as "cash" | "wire_transfer" | "card")}>
@@ -1208,6 +1189,30 @@ L'équipe MyJantes`;
                 rows={3}
                 data-testid="textarea-new-quote-details"
               />
+            </div>
+            <div className="border-2 border-primary rounded-md p-4 space-y-3 bg-primary/5">
+              <p className="text-sm font-semibold text-primary">
+                Photos Avant (minimum 3 images requises)
+              </p>
+              <ObjectUploader
+                onUploadComplete={(files) => setQuoteMediaFiles(files)}
+                accept={{
+                  'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+                  'video/*': ['.mp4', '.webm', '.mov']
+                }}
+                label="Photos Avant"
+                data-testid="uploader-quote-media"
+              />
+              {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
+                <p className="text-sm text-destructive">
+                  Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
+                </p>
+              )}
+              {quoteMediaFiles.filter(f => f.type.startsWith('image/')).length >= 3 && (
+                <p className="text-sm text-green-600">
+                  {quoteMediaFiles.filter(f => f.type.startsWith('image/')).length} images téléchargées
+                </p>
+              )}
             </div>
             </div>
           <DialogFooter>
