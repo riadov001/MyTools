@@ -1092,28 +1092,28 @@ L'équipe MyJantes`;
                       </Button>
                     </div>
                   ))}
-                  
-                  <div className="pt-3 border-t border-border">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Minimum 3 images requises. Vidéos optionnelles.
-                    </p>
-                    <ObjectUploader
-                      onUploadComplete={(files) => setQuoteMediaFiles(files)}
-                      accept={{
-                        'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
-                        'video/*': ['.mp4', '.webm', '.mov']
-                      }}
-                      label="Photos Avant"
-                      data-testid="uploader-quote-media"
-                    />
-                    {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
-                      <p className="text-sm text-destructive mt-2">
-                        Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
+              
+              <div className="border rounded-md p-3 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Minimum 3 images requises. Vidéos optionnelles.
+                </p>
+                <ObjectUploader
+                  onUploadComplete={(files) => setQuoteMediaFiles(files)}
+                  accept={{
+                    'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+                    'video/*': ['.mp4', '.webm', '.mov']
+                  }}
+                  label="Photos Avant"
+                  data-testid="uploader-quote-media"
+                />
+                {quoteMediaFiles.length > 0 && quoteMediaFiles.filter(f => f.type.startsWith('image/')).length < 3 && (
+                  <p className="text-sm text-destructive mt-2">
+                    Au moins 3 images sont requises ({quoteMediaFiles.filter(f => f.type.startsWith('image/')).length}/3)
+                  </p>
+                )}
+              </div>
             </div>
             <div>
               <Label htmlFor="new-quote-payment-method">Moyen de paiement</Label>
