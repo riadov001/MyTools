@@ -23,6 +23,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
 import { CreateClientDialog } from "@/components/create-client-dialog";
 import { initiateClientCreationRedirect } from "@/lib/navigation";
+import { SendEmailDialog, type EmailParams } from "@/components/send-email-dialog";
 
 export default function AdminQuotes() {
   const [, setLocation] = useLocation();
@@ -43,6 +44,9 @@ export default function AdminQuotes() {
 
   const [labelsPreviewOpen, setLabelsPreviewOpen] = useState(false);
   const [selectedQuoteForLabels, setSelectedQuoteForLabels] = useState<Quote | null>(null);
+  
+  const [emailDialogQuote, setEmailDialogQuote] = useState<Quote | null>(null);
+  const [emailDialogClient, setEmailDialogClient] = useState<User | null>(null);
   
   const [createQuoteDialog, setCreateQuoteDialog] = useState(false);
   const [createClientDialog, setCreateClientDialog] = useState(false);
@@ -233,9 +237,15 @@ export default function AdminQuotes() {
   const [sendingEmailQuoteId, setSendingEmailQuoteId] = useState<string | null>(null);
 
   const sendQuoteEmailMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
+    mutationFn: async ({ quoteId, emailParams }: { quoteId: string; emailParams: EmailParams }) => {
       setSendingEmailQuoteId(quoteId);
-      return apiRequest("POST", `/api/admin/quotes/${quoteId}/send-email`, {});
+      return apiRequest("POST", `/api/admin/quotes/${quoteId}/send-email`, {
+        customRecipient: emailParams.recipient,
+        customSubject: emailParams.subject,
+        customMessage: emailParams.message,
+        additionalRecipients: emailParams.additionalRecipients,
+        sendCopy: emailParams.sendCopy,
+      });
     },
     onSuccess: () => {
       toast({
@@ -243,6 +253,8 @@ export default function AdminQuotes() {
         description: "Email envoyé avec succès",
       });
       setSendingEmailQuoteId(null);
+      setEmailDialogQuote(null);
+      setEmailDialogClient(null);
     },
     onError: (error: Error) => {
       toast({
@@ -253,6 +265,33 @@ export default function AdminQuotes() {
       setSendingEmailQuoteId(null);
     },
   });
+
+  const handleOpenEmailDialog = (quote: Quote) => {
+    const client = users.find(u => u.id === quote.clientId);
+    setEmailDialogQuote(quote);
+    setEmailDialogClient(client || null);
+  };
+
+  const handleSendQuoteEmail = (emailParams: EmailParams) => {
+    if (emailDialogQuote) {
+      sendQuoteEmailMutation.mutate({ quoteId: emailDialogQuote.id, emailParams });
+    }
+  };
+
+  const getDefaultEmailMessage = (quote: Quote, client: User | null) => {
+    const clientName = client ? `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email : "Client";
+    const quoteNumber = quote.id.slice(0, 8).toUpperCase();
+    const amount = quote.quoteAmount ? parseFloat(quote.quoteAmount).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "0,00 €";
+    
+    return `Bonjour ${clientName},
+
+Veuillez trouver ci-joint votre devis N°${quoteNumber} d'un montant de ${amount}.
+
+Une fois le devis validé, merci de nous recontacter pour fixer votre rendez-vous.
+
+Cordialement,
+L'équipe MyJantes`;
+  };
 
   const handleSaveQuote = () => {
     if (!selectedQuote) return;
@@ -687,7 +726,7 @@ export default function AdminQuotes() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => sendQuoteEmailMutation.mutate(quote.id)}
+                          onClick={() => handleOpenEmailDialog(quote)}
                           disabled={sendingEmailQuoteId === quote.id}
                           data-testid={`button-send-email-${quote.id}`}
                         >
@@ -1209,6 +1248,24 @@ export default function AdminQuotes() {
         open={createClientDialog}
         onOpenChange={setCreateClientDialog}
         onClientCreated={handleClientCreated}
+      />
+
+      <SendEmailDialog
+        open={!!emailDialogQuote}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEmailDialogQuote(null);
+            setEmailDialogClient(null);
+          }
+        }}
+        onSend={handleSendQuoteEmail}
+        isPending={sendQuoteEmailMutation.isPending}
+        defaultRecipient={emailDialogClient?.email || ""}
+        defaultSubject={emailDialogQuote ? `Devis N°${emailDialogQuote.id.slice(0, 8).toUpperCase()} - MY JANTES - ${emailDialogQuote.quoteAmount ? parseFloat(emailDialogQuote.quoteAmount).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "0,00 €"}` : ""}
+        defaultMessage={emailDialogQuote ? getDefaultEmailMessage(emailDialogQuote, emailDialogClient) : ""}
+        type="quote"
+        documentNumber={emailDialogQuote?.id.slice(0, 8).toUpperCase() || ""}
+        amount={emailDialogQuote?.quoteAmount ? parseFloat(emailDialogQuote.quoteAmount).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "0,00 €"}
       />
     </div>
   );

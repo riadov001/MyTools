@@ -688,6 +688,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/quotes/:id/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const { 
+        customRecipient, 
+        customSubject, 
+        customMessage, 
+        additionalRecipients = [], 
+        sendCopy = false 
+      } = req.body;
+      
       const quote = await storage.getQuote(id);
       if (!quote) {
         return res.status(404).json({ message: "Devis non trouvé" });
@@ -700,6 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const items = await storage.getQuoteItems(id);
       const settings = await storage.getApplicationSettings();
+      const adminUser = req.user;
 
       const { sendEmail, generateQuoteEmailHtml } = await import("./emailService");
       
@@ -709,19 +718,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return num.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
       };
 
-      const html = generateQuoteEmailHtml({
-        clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
-        quoteNumber: quote.id.slice(0, 8).toUpperCase(),
-        quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
-        amount: formatPrice(quote.quoteAmount),
-        companyName: settings?.companyName || "MyJantes",
-        items: items.map(item => ({
-          description: item.description,
-          quantity: parseFloat(item.quantity || "1"),
-          unitPrice: formatPrice(item.unitPriceExcludingTax),
-          total: formatPrice(item.totalIncludingTax),
-        })),
-      });
+      // Generate HTML with custom message if provided
+      let html: string;
+      if (customMessage) {
+        const companyName = settings?.companyName || "MyJantes";
+        html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Devis ${quote.id.slice(0, 8).toUpperCase()}</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">${companyName}</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+              <div style="white-space: pre-line; margin-bottom: 20px;">${customMessage}</div>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">
+                Cet email a été envoyé par ${companyName}
+              </p>
+            </div>
+          </body>
+          </html>
+        `;
+      } else {
+        html = generateQuoteEmailHtml({
+          clientName: `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email,
+          quoteNumber: quote.id.slice(0, 8).toUpperCase(),
+          quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR"),
+          amount: formatPrice(quote.quoteAmount),
+          companyName: settings?.companyName || "MyJantes",
+          items: items.map(item => ({
+            description: item.description,
+            quantity: parseFloat(item.quantity || "1"),
+            unitPrice: formatPrice(item.unitPriceExcludingTax),
+            total: formatPrice(item.totalIncludingTax),
+          })),
+        });
+      }
 
       const { generateQuotePDF } = await import("./emailService");
       const pdfBuffer = generateQuotePDF({
@@ -768,9 +804,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Use custom recipient or fall back to client email
+      const toEmail = customRecipient || client.email;
+      const emailSubject = customSubject || `Votre devis MyJantes - ${quote.id.slice(0, 8).toUpperCase()}`;
+      
+      // Build CC list
+      const ccList: string[] = [...additionalRecipients];
+      if (sendCopy && adminUser?.email && !ccList.includes(adminUser.email)) {
+        ccList.push(adminUser.email);
+      }
+
       const result = await sendEmail({
-        to: client.email,
-        subject: `Votre devis MyJantes - ${quote.id.slice(0, 8).toUpperCase()}`,
+        to: toEmail,
+        cc: ccList.length > 0 ? ccList : undefined,
+        subject: emailSubject,
         html,
         attachments: [
           {
@@ -791,8 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "quote",
         entityId: id,
         action: "updated",
-        summary: `Devis envoyé par email à ${client.email}`,
-        metadata: { emailTo: client.email, messageId: result.messageId },
+        summary: `Devis envoyé par email à ${toEmail}${ccList.length > 0 ? ` (CC: ${ccList.join(", ")})` : ""}`,
+        metadata: { emailTo: toEmail, cc: ccList, messageId: result.messageId },
       });
 
       res.json({ success: true, message: "Email envoyé avec succès" });

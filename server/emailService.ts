@@ -56,6 +56,7 @@ interface Attachment {
 
 interface EmailData {
   to: string;
+  cc?: string[];
   subject: string;
   html: string;
   text?: string;
@@ -73,6 +74,10 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; me
       html: data.html,
       text: data.text,
     };
+    
+    if (data.cc && data.cc.length > 0) {
+      emailPayload.cc = data.cc;
+    }
     
     if (data.attachments && data.attachments.length > 0) {
       emailPayload.attachments = data.attachments.map(att => ({
