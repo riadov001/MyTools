@@ -1951,12 +1951,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const updateSchema = z.object({
         role: z.enum(["client", "client_professionnel", "employe", "admin"]).optional(),
+        email: z.string().email().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
         postalCode: z.string().optional(),
         city: z.string().optional(),
+        companyName: z.string().optional(),
+        siret: z.string().optional(),
+        tvaNumber: z.string().optional(),
+        companyAddress: z.string().optional(),
       });
       const validatedData = updateSchema.parse(req.body);
       const user = await storage.updateUser(id, validatedData);

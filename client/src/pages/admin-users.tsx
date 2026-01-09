@@ -39,6 +39,7 @@ export default function AdminUsers() {
   const [newUserCity, setNewUserCity] = useState("");
   const [newUserRole, setNewUserRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
 
+  const [editEmail, setEditEmail] = useState("");
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -46,6 +47,10 @@ export default function AdminUsers() {
   const [editPostalCode, setEditPostalCode] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editRole, setEditRole] = useState<"client" | "client_professionnel" | "employe" | "admin">("client");
+  const [editCompanyName, setEditCompanyName] = useState("");
+  const [editSiret, setEditSiret] = useState("");
+  const [editTvaNumber, setEditTvaNumber] = useState("");
+  const [editCompanyAddress, setEditCompanyAddress] = useState("");
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -114,8 +119,9 @@ export default function AdminUsers() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (data: { id: string; firstName?: string; lastName?: string; phone?: string; address?: string; postalCode?: string; city?: string; role?: "client" | "client_professionnel" | "employe" | "admin" }) => {
+    mutationFn: async (data: { id: string; email?: string; firstName?: string; lastName?: string; phone?: string; address?: string; postalCode?: string; city?: string; role?: "client" | "client_professionnel" | "employe" | "admin"; companyName?: string; siret?: string; tvaNumber?: string; companyAddress?: string }) => {
       return apiRequest("PATCH", `/api/admin/users/${data.id}`, {
+        email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
@@ -123,6 +129,10 @@ export default function AdminUsers() {
         postalCode: data.postalCode,
         city: data.city,
         role: data.role,
+        companyName: data.companyName,
+        siret: data.siret,
+        tvaNumber: data.tvaNumber,
+        companyAddress: data.companyAddress,
       });
     },
     onSuccess: () => {
@@ -212,6 +222,7 @@ export default function AdminUsers() {
 
     updateUserMutation.mutate({
       id: editUserDialog.id,
+      email: editEmail || undefined,
       firstName: editFirstName || undefined,
       lastName: editLastName || undefined,
       phone: editPhone || undefined,
@@ -219,6 +230,10 @@ export default function AdminUsers() {
       postalCode: editPostalCode || undefined,
       city: editCity || undefined,
       role: editRole,
+      companyName: editCompanyName || undefined,
+      siret: editSiret || undefined,
+      tvaNumber: editTvaNumber || undefined,
+      companyAddress: editCompanyAddress || undefined,
     });
   };
 
@@ -323,6 +338,7 @@ export default function AdminUsers() {
                       variant="outline"
                       onClick={() => {
                         setEditUserDialog(user);
+                        setEditEmail(user.email || "");
                         setEditFirstName(user.firstName || "");
                         setEditLastName(user.lastName || "");
                         setEditPhone(user.phone || "");
@@ -330,6 +346,10 @@ export default function AdminUsers() {
                         setEditPostalCode(user.postalCode || "");
                         setEditCity(user.city || "");
                         setEditRole(user.role);
+                        setEditCompanyName(user.companyName || "");
+                        setEditSiret(user.siret || "");
+                        setEditTvaNumber(user.tvaNumber || "");
+                        setEditCompanyAddress(user.companyAddress || "");
                       }}
                       data-testid={`button-edit-${user.id}`}
                     >
@@ -506,37 +526,51 @@ export default function AdminUsers() {
       </Dialog>
 
       <Dialog open={!!editUserDialog} onOpenChange={(open) => !open && setEditUserDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Modifier l'Utilisateur</DialogTitle>
             <DialogDescription>
               Modifiez les informations de l'utilisateur.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
             <div>
-              <Label htmlFor="edit-user-first-name">Prénom</Label>
+              <Label htmlFor="edit-user-email">Email</Label>
               <Input
-                id="edit-user-first-name"
-                type="text"
-                placeholder="Jean"
-                value={editFirstName}
-                onChange={(e) => setEditFirstName(e.target.value)}
+                id="edit-user-email"
+                type="email"
+                placeholder="exemple@email.com"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
                 className="mt-2"
-                data-testid="input-edit-user-first-name"
+                data-testid="input-edit-user-email"
               />
             </div>
-            <div>
-              <Label htmlFor="edit-user-last-name">Nom</Label>
-              <Input
-                id="edit-user-last-name"
-                type="text"
-                placeholder="Dupont"
-                value={editLastName}
-                onChange={(e) => setEditLastName(e.target.value)}
-                className="mt-2"
-                data-testid="input-edit-user-last-name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-user-first-name">Prénom</Label>
+                <Input
+                  id="edit-user-first-name"
+                  type="text"
+                  placeholder="Jean"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-user-first-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-user-last-name">Nom</Label>
+                <Input
+                  id="edit-user-last-name"
+                  type="text"
+                  placeholder="Dupont"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-edit-user-last-name"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="edit-user-phone">Téléphone</Label>
@@ -562,7 +596,7 @@ export default function AdminUsers() {
                 data-testid="input-edit-user-address"
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-user-postal-code">Code postal</Label>
                 <Input
@@ -602,6 +636,62 @@ export default function AdminUsers() {
                 </SelectContent>
               </Select>
             </div>
+            {(editRole === "client_professionnel") && (
+              <div className="border-t pt-4 space-y-4">
+                <p className="text-sm font-medium text-muted-foreground">Informations professionnelles</p>
+                <div>
+                  <Label htmlFor="edit-user-company-name">Nom de l'entreprise</Label>
+                  <Input
+                    id="edit-user-company-name"
+                    type="text"
+                    placeholder="Ma Société SARL"
+                    value={editCompanyName}
+                    onChange={(e) => setEditCompanyName(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-edit-user-company-name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-user-siret">SIRET</Label>
+                    <Input
+                      id="edit-user-siret"
+                      type="text"
+                      placeholder="12345678901234"
+                      value={editSiret}
+                      onChange={(e) => setEditSiret(e.target.value)}
+                      className="mt-2"
+                      maxLength={14}
+                      data-testid="input-edit-user-siret"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-user-tva">N° TVA intracommunautaire</Label>
+                    <Input
+                      id="edit-user-tva"
+                      type="text"
+                      placeholder="FR12345678901"
+                      value={editTvaNumber}
+                      onChange={(e) => setEditTvaNumber(e.target.value)}
+                      className="mt-2"
+                      data-testid="input-edit-user-tva"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-user-company-address">Adresse de l'entreprise</Label>
+                  <Input
+                    id="edit-user-company-address"
+                    type="text"
+                    placeholder="456 avenue des Entreprises, 75002 Paris"
+                    value={editCompanyAddress}
+                    onChange={(e) => setEditCompanyAddress(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-edit-user-company-address"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
