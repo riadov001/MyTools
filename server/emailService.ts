@@ -497,41 +497,62 @@ export function generateQuotePDF(data: {
   const clientName = data.clientName || 'Client';
   doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  // Table - EXACT SAME AS CLIENT (7 columns)
+  // Table with professional styling
   const tableData = data.items.map(item => ({
     description: item.description,
-    date: billingDate,
     quantity: item.quantity.toString(),
-    unit: 'pce',
     unitPrice: item.unitPrice,
-    vat: '20 %',
+    vat: '20%',
     amount: item.total,
   }));
   
   autoTable(doc, {
     startY: 90,
-    head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
+    head: [['Description', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
     body: tableData.map(item => [
       item.description,
-      item.date,
       item.quantity,
-      item.unit,
       `${item.unitPrice} €`,
       item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { cellWidth: 70 }
+    headStyles: { 
+      fillColor: [220, 38, 38], 
+      textColor: [255, 255, 255], 
+      fontStyle: 'bold',
+      fontSize: 10,
+      cellPadding: 6,
+      halign: 'center',
+      valign: 'middle',
+      lineColor: [220, 38, 38],
+      lineWidth: 0.5,
     },
+    bodyStyles: { 
+      fontSize: 9, 
+      cellPadding: 6,
+      halign: 'center',
+      valign: 'middle',
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5,
+    },
+    alternateRowStyles: {
+      fillColor: [243, 244, 246],
+    },
+    columnStyles: {
+      0: { cellWidth: 85, halign: 'left' },
+      1: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 20, halign: 'center' },
+      4: { cellWidth: 30, halign: 'center' },
+    },
+    tableLineColor: [229, 231, 235],
+    tableLineWidth: 0.5,
   });
   
-  // Totals - EXACT SAME LOGIC AS CLIENT
+  // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   
-  // Parse amounts from formatted strings
   let totalHT = 0;
   let totalTTC = 0;
   data.items.forEach(item => {
@@ -541,50 +562,57 @@ export function generateQuotePDF(data: {
     totalTTC += totalValue;
   });
   const totalVAT = totalTTC - totalHT;
-  const vatRate = 20; // Default rate
+  const vatRate = 20;
+  
+  const totalsBoxX = 115;
   
   doc.setFontSize(10);
-  doc.text(`Total HT`, 120, finalY);
-  doc.text(`${totalHT.toFixed(2)} €`, 170, finalY, { align: 'right' });
-  
-  doc.text(`TVA ${vatRate.toFixed(2)} %`, 120, finalY + 6);
-  doc.text(`${totalVAT.toFixed(2)} €`, 170, finalY + 6, { align: 'right' });
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Total TTC`, 120, finalY + 12);
-  doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
-  
-  // Payment methods - EXACT SAME AS CLIENT
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 20);
-  
-  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
-  doc.text('30 jours', 20, finalY + 45);
+  doc.text('Total HT', totalsBoxX, finalY);
+  doc.text(`${totalHT.toFixed(2)} €`, pageWidth - 20, finalY, { align: 'right' });
   
-  // Payment conditions - EXACT SAME AS CLIENT
-  doc.setFontSize(10);
+  doc.setDrawColor(229, 231, 235);
+  doc.line(totalsBoxX, finalY + 3, pageWidth - 20, finalY + 3);
+  
+  doc.text(`TVA (${vatRate}%)`, totalsBoxX, finalY + 10);
+  doc.text(`${totalVAT.toFixed(2)} €`, pageWidth - 20, finalY + 10, { align: 'right' });
+  
+  doc.line(totalsBoxX, finalY + 13, pageWidth - 20, finalY + 13);
+  
+  // Total TTC with highlight
+  doc.setFillColor(220, 38, 38);
+  doc.roundedRect(totalsBoxX - 5, finalY + 16, 80, 12, 2, 2, 'F');
+  
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Conditions de paiement:', 20, finalY + 57);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Total TTC', totalsBoxX, finalY + 24);
+  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - 20, finalY + 24, { align: 'right' });
   
-  // Footer - EXACT SAME AS CLIENT
+  doc.setTextColor(0, 0, 0);
+  
+  // Footer
   const pageHeight = doc.internal.pageSize.height;
-  doc.setFontSize(9);
+  
+  doc.setDrawColor(229, 231, 235);
+  doc.line(20, pageHeight - 35, pageWidth - 20, pageHeight - 35);
+  
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+  doc.text('COORDONNÉES BANCAIRES', pageWidth / 2, pageHeight - 28, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
-  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.setTextColor(107, 114, 128);
+  doc.text(`${COMPANY_INFO.bankName}  |  IBAN: ${COMPANY_INFO.iban}  |  BIC: ${COMPANY_INFO.swift}`, pageWidth / 2, pageHeight - 22, { align: 'center' });
+  
+  doc.setFontSize(7);
+  doc.text(`SIRET: 913 678 199 00021  •  TVA: ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 16, { align: 'center' });
+  doc.text(`${COMPANY_INFO.address}, ${COMPANY_INFO.city}  •  ${COMPANY_INFO.phone}  •  ${COMPANY_INFO.website}`, pageWidth / 2, pageHeight - 11, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }
 
-// Exact same logic as client generateInvoicePDF
+// Invoice PDF generator
 export function generateInvoicePDF(data: {
   invoiceNumber: string;
   invoiceDate: string;
@@ -648,41 +676,62 @@ export function generateInvoicePDF(data: {
   const clientName = data.clientName || 'Client';
   doc.text(clientName.toUpperCase(), pageWidth - 20, 50, { align: 'right' });
   
-  // Table - EXACT SAME AS CLIENT (7 columns)
+  // Table with professional styling
   const tableData = data.items.map(item => ({
     description: item.description,
-    date: billingDate,
     quantity: item.quantity.toString(),
-    unit: 'pce',
     unitPrice: item.unitPrice,
-    vat: '20 %',
+    vat: '20%',
     amount: item.total,
   }));
   
   autoTable(doc, {
     startY: 90,
-    head: [['Description', 'Date', 'Qté', 'Unité', 'Prix unitaire', 'TVA', 'Montant']],
+    head: [['Description', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
     body: tableData.map(item => [
       item.description,
-      item.date,
       item.quantity,
-      item.unit,
       `${item.unitPrice} €`,
       item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-    styles: { fontSize: 9, cellPadding: 3 },
-    columnStyles: {
-      0: { cellWidth: 70 }
+    headStyles: { 
+      fillColor: [220, 38, 38], 
+      textColor: [255, 255, 255], 
+      fontStyle: 'bold',
+      fontSize: 10,
+      cellPadding: 6,
+      halign: 'center',
+      valign: 'middle',
+      lineColor: [220, 38, 38],
+      lineWidth: 0.5,
     },
+    bodyStyles: { 
+      fontSize: 9, 
+      cellPadding: 6,
+      halign: 'center',
+      valign: 'middle',
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5,
+    },
+    alternateRowStyles: {
+      fillColor: [243, 244, 246],
+    },
+    columnStyles: {
+      0: { cellWidth: 85, halign: 'left' },
+      1: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 20, halign: 'center' },
+      4: { cellWidth: 30, halign: 'center' },
+    },
+    tableLineColor: [229, 231, 235],
+    tableLineWidth: 0.5,
   });
   
-  // Totals - EXACT SAME LOGIC AS CLIENT
+  // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   
-  // Parse amounts from formatted strings
   let totalHT = 0;
   let totalTTC = 0;
   data.items.forEach(item => {
@@ -692,45 +741,52 @@ export function generateInvoicePDF(data: {
     totalTTC += totalValue;
   });
   const totalVAT = totalTTC - totalHT;
-  const vatRate = 20; // Default rate
+  const vatRate = 20;
+  
+  const totalsBoxX = 115;
   
   doc.setFontSize(10);
-  doc.text(`Total HT`, 120, finalY);
-  doc.text(`${totalHT.toFixed(2)} €`, 170, finalY, { align: 'right' });
-  
-  doc.text(`TVA ${vatRate.toFixed(2)} %`, 120, finalY + 6);
-  doc.text(`${totalVAT.toFixed(2)} €`, 170, finalY + 6, { align: 'right' });
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Total TTC`, 120, finalY + 12);
-  doc.text(`${totalTTC.toFixed(2)} €`, 170, finalY + 12, { align: 'right' });
-  
-  // Payment methods - EXACT SAME AS CLIENT
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Moyens de paiement:', 20, finalY + 20);
-  
-  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Banque: SOCIETE GENERALE', 20, finalY + 27);
-  doc.text(`SWIFT/BIC: ${COMPANY_INFO.swift}`, 20, finalY + 33);
-  doc.text(`IBAN: ${COMPANY_INFO.iban}`, 20, finalY + 39);
-  doc.text('30 jours', 20, finalY + 45);
+  doc.text('Total HT', totalsBoxX, finalY);
+  doc.text(`${totalHT.toFixed(2)} €`, pageWidth - 20, finalY, { align: 'right' });
   
-  // Payment conditions - EXACT SAME AS CLIENT
-  doc.setFontSize(10);
+  doc.setDrawColor(229, 231, 235);
+  doc.line(totalsBoxX, finalY + 3, pageWidth - 20, finalY + 3);
+  
+  doc.text(`TVA (${vatRate}%)`, totalsBoxX, finalY + 10);
+  doc.text(`${totalVAT.toFixed(2)} €`, pageWidth - 20, finalY + 10, { align: 'right' });
+  
+  doc.line(totalsBoxX, finalY + 13, pageWidth - 20, finalY + 13);
+  
+  // Total TTC with highlight
+  doc.setFillColor(220, 38, 38);
+  doc.roundedRect(totalsBoxX - 5, finalY + 16, 80, 12, 2, 2, 'F');
+  
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Conditions de paiement:', 20, finalY + 57);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Total TTC', totalsBoxX, finalY + 24);
+  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - 20, finalY + 24, { align: 'right' });
   
-  // Footer - EXACT SAME AS CLIENT
+  doc.setTextColor(0, 0, 0);
+  
+  // Footer
   const pageHeight = doc.internal.pageSize.height;
-  doc.setFontSize(9);
+  
+  doc.setDrawColor(229, 231, 235);
+  doc.line(20, pageHeight - 35, pageWidth - 20, pageHeight - 35);
+  
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${COMPANY_INFO.bankName}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+  doc.text('COORDONNÉES BANCAIRES', pageWidth / 2, pageHeight - 28, { align: 'center' });
   
   doc.setFont('helvetica', 'normal');
-  doc.text(`${COMPANY_INFO.address} ${COMPANY_INFO.city}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
-  doc.text(`Numéro de SIRET 913678199 00021 / Numéro de TVA ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.setTextColor(107, 114, 128);
+  doc.text(`${COMPANY_INFO.bankName}  |  IBAN: ${COMPANY_INFO.iban}  |  BIC: ${COMPANY_INFO.swift}`, pageWidth / 2, pageHeight - 22, { align: 'center' });
+  
+  doc.setFontSize(7);
+  doc.text(`SIRET: 913 678 199 00021  •  TVA: ${COMPANY_INFO.tva}`, pageWidth / 2, pageHeight - 16, { align: 'center' });
+  doc.text(`${COMPANY_INFO.address}, ${COMPANY_INFO.city}  •  ${COMPANY_INFO.phone}  •  ${COMPANY_INFO.website}`, pageWidth / 2, pageHeight - 11, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }
