@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Reservation, User, Service } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addHours } from "date-fns";
@@ -23,6 +24,7 @@ export default function AdminCalendar() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigningEmployee, setAssigningEmployee] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -51,6 +53,42 @@ export default function AdminCalendar() {
     queryKey: ["/api/services"],
     enabled: isAuthenticated,
   });
+
+  const assignEmployeeMutation = useMutation({
+    mutationFn: async ({ reservationId, employeeId }: { reservationId: string; employeeId: string | null }) => {
+      return apiRequest("PATCH", `/api/admin/reservations/${reservationId}`, {
+        assignedEmployeeId: employeeId,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Employé assigné avec succès",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reservations"] });
+      setAssigningEmployee(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Échec de l'assignation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAssignEmployee = (reservationId: string, employeeId: string) => {
+    const newEmployeeId = employeeId === "unassigned" ? null : employeeId;
+    assignEmployeeMutation.mutate({ reservationId, employeeId: newEmployeeId });
+    
+    // Update selected reservation locally for immediate UI feedback
+    if (selectedReservation && selectedReservation.id === reservationId) {
+      setSelectedReservation({
+        ...selectedReservation,
+        assignedEmployeeId: newEmployeeId,
+      });
+    }
+  };
 
   const employees = useMemo(() => 
     users.filter(u => u.role === "employe" || u.role === "admin"),
@@ -474,7 +512,24 @@ export default function AdminCalendar() {
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <UserIcon className="h-4 w-4 text-primary" />
-                        <span>Employé: <strong>{getEmployeeName(res.assignedEmployeeId)}</strong></span>
+                        <span className="shrink-0">Employé:</span>
+                        <Select
+                          value={res.assignedEmployeeId || "unassigned"}
+                          onValueChange={(value) => handleAssignEmployee(res.id, value)}
+                          disabled={assignEmployeeMutation.isPending}
+                        >
+                          <SelectTrigger className="h-7 w-[140px] text-xs" data-testid={`select-assign-employee-${res.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Non assigné</SelectItem>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>
+                                {`${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -547,9 +602,25 @@ export default function AdminCalendar() {
                   <span className="text-muted-foreground shrink-0">Client:</span>
                   <span className="font-medium break-words">{getClientName(selectedReservation.clientId)}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                   <span className="text-muted-foreground shrink-0">Employé:</span>
-                  <span className="font-medium break-words">{getEmployeeName(selectedReservation.assignedEmployeeId)}</span>
+                  <Select
+                    value={selectedReservation.assignedEmployeeId || "unassigned"}
+                    onValueChange={(value) => handleAssignEmployee(selectedReservation.id, value)}
+                    disabled={assignEmployeeMutation.isPending}
+                  >
+                    <SelectTrigger className="h-8 w-full sm:w-[180px]" data-testid="select-modal-assign-employee">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Non assigné</SelectItem>
+                      {employees.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {`${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {selectedReservation.productDetails && (
                   <div className="pt-2 border-t">
