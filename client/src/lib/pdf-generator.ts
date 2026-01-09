@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import type { Quote, Invoice, InvoiceItem, QuoteItem } from '@shared/schema';
-import logoImage from '@assets/logo-myjantes-n2iUZrkN_1759796960103.png';
+import logoImage from '@assets/cropped-Logo-2-1-768x543_(3)_1767977972324.png';
 
 interface PDFData {
   type: 'quote' | 'invoice';

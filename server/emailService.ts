@@ -426,7 +426,7 @@ const COMPANY_INFO = {
 // Load logo as base64 for server
 function getLogoBase64(): string {
   try {
-    const logoPath = path.join(process.cwd(), 'attached_assets', 'logo-myjantes-n2iUZrkN_1759796960103.png');
+    const logoPath = path.join(process.cwd(), 'attached_assets', 'cropped-Logo-2-1-768x543_(3)_1767977972324.png');
     const logoBuffer = fs.readFileSync(logoPath);
     return `data:image/png;base64,${logoBuffer.toString('base64')}`;
   } catch (error) {

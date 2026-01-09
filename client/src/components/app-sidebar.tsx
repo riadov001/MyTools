@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
-import logoMyJantes from "@assets/logo-myjantes-n2iUZrkN_1759796960103.png";
+import logoMyJantes from "@assets/cropped-Logo-2-1-768x543_(3)_1767977972324.png";
 
 const menuItems = [
   {
