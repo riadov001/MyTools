@@ -1789,9 +1789,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.patch("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const currentUser = req.user;
+      
+      // Get target user to check their current role
+      const targetUser = await storage.getUser(id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
       const updateSchema = z.object({
         role: z.enum(["client", "client_professionnel", "employe", "admin"]).optional(),
         email: z.string().email().optional(),
@@ -1807,6 +1815,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyAddress: z.string().optional(),
       });
       const validatedData = updateSchema.parse(req.body);
+      
+      // Employees cannot demote admin users
+      if (currentUser.role === "employe" && targetUser.role === "admin") {
+        if (validatedData.role && validatedData.role !== "admin") {
+          return res.status(403).json({ 
+            message: "Vous n'avez pas la permission de modifier le rôle d'un administrateur" 
+          });
+        }
+      }
+      
+      // Employees cannot promote non-admins to admin
+      if (currentUser.role === "employe" && validatedData.role === "admin" && targetUser.role !== "admin") {
+        return res.status(403).json({ 
+          message: "Vous n'avez pas la permission de promouvoir un utilisateur au rôle administrateur" 
+        });
+      }
+      
       const user = await storage.updateUser(id, validatedData);
       res.json(sanitizeUser(user));
     } catch (error: any) {
@@ -1819,6 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/users/:id/password", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const currentUser = req.user;
       const passwordSchema = z.object({
         newPassword: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
       });
@@ -1827,6 +1853,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(id);
       if (!user) {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      // Employees cannot change admin passwords
+      if (currentUser.role === "employe" && user.role === "admin") {
+        return res.status(403).json({ 
+          message: "Vous n'avez pas la permission de modifier le mot de passe d'un administrateur" 
+        });
       }
       
       const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -1949,9 +1982,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const currentUser = req.user;
+      
+      // Check if target user is an admin
+      const targetUser = await storage.getUser(id);
+      if (!targetUser) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      // Employees cannot delete admin users
+      if (currentUser.role === "employe" && targetUser.role === "admin") {
+        return res.status(403).json({ 
+          message: "Vous n'avez pas la permission de supprimer un administrateur" 
+        });
+      }
+      
       await storage.deleteUser(id);
       res.json({ success: true });
     } catch (error: any) {
