@@ -508,12 +508,11 @@ export function generateQuotePDF(data: {
   
   autoTable(doc, {
     startY: 90,
-    head: [['Description', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
+    head: [['Description', 'Qté', 'Prix unit. HT', 'Total HT']],
     body: tableData.map(item => [
       item.description,
       item.quantity,
       `${item.unitPrice} €`,
-      item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
@@ -540,11 +539,10 @@ export function generateQuotePDF(data: {
       fillColor: [243, 244, 246],
     },
     columnStyles: {
-      0: { cellWidth: 85, halign: 'left' },
+      0: { cellWidth: 105, halign: 'left' },
       1: { cellWidth: 20, halign: 'center' },
       2: { cellWidth: 30, halign: 'center' },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 25, halign: 'center' },
     },
     tableLineColor: [229, 231, 235],
     tableLineWidth: 0.5,
@@ -687,12 +685,11 @@ export function generateInvoicePDF(data: {
   
   autoTable(doc, {
     startY: 90,
-    head: [['Description', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
+    head: [['Description', 'Qté', 'Prix unit. HT', 'Total HT']],
     body: tableData.map(item => [
       item.description,
       item.quantity,
       `${item.unitPrice} €`,
-      item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
@@ -719,11 +716,10 @@ export function generateInvoicePDF(data: {
       fillColor: [243, 244, 246],
     },
     columnStyles: {
-      0: { cellWidth: 85, halign: 'left' },
+      0: { cellWidth: 105, halign: 'left' },
       1: { cellWidth: 20, halign: 'center' },
       2: { cellWidth: 30, halign: 'center' },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 25, halign: 'center' },
     },
     tableLineColor: [229, 231, 235],
     tableLineWidth: 0.5,

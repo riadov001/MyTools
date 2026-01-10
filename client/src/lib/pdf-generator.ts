@@ -274,12 +274,11 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   
   autoTable(doc, {
     startY: validityY + 8,
-    head: [['Désignation', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
+    head: [['Désignation', 'Qté', 'Prix unit. HT', 'Total HT']],
     body: tableData.map(item => [
       item.description,
       item.quantity,
       `${item.unitPrice} €`,
-      item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
@@ -307,11 +306,10 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
       fillColor: COLORS.lightGray,
     },
     columnStyles: {
-      0: { cellWidth: 95, halign: 'left' },
+      0: { cellWidth: 105, halign: 'left' },
       1: { cellWidth: 20, halign: 'center' },
       2: { cellWidth: 30, halign: 'center' },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 25, halign: 'center' },
     },
     tableLineColor: COLORS.border,
     tableLineWidth: 0.5,
@@ -538,12 +536,11 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   
   autoTable(doc, {
     startY: invoiceInfoY + 8,
-    head: [['Désignation', 'Qté', 'Prix unit. HT', 'TVA', 'Total HT']],
+    head: [['Désignation', 'Qté', 'Prix unit. HT', 'Total HT']],
     body: tableData.map(item => [
       item.description,
       item.quantity,
       `${item.unitPrice} €`,
-      item.vat,
       `${item.amount} €`,
     ]),
     theme: 'grid',
@@ -571,11 +568,10 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
       fillColor: COLORS.lightGray,
     },
     columnStyles: {
-      0: { cellWidth: 95, halign: 'left' },
+      0: { cellWidth: 105, halign: 'left' },
       1: { cellWidth: 20, halign: 'center' },
       2: { cellWidth: 30, halign: 'center' },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 25, halign: 'center' },
     },
     tableLineColor: COLORS.border,
     tableLineWidth: 0.5,
