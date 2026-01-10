@@ -227,13 +227,13 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     clientDetailY += 6;
   });
   
-  // Validity info
+  // Validity info - aligned with table edges
   const validityY = infoStartY + infoBoxHeight + 8;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.dark);
   doc.text(`Date d'émission: ${billingDate}`, margin, validityY);
-  doc.text(`Validité: ${dueDate}`, margin + 80, validityY);
+  doc.text(`Validité: ${dueDate}`, pageWidth - margin, validityY, { align: 'right' });
   
   // === TABLE SECTION ===
   let tableData: any[];
@@ -335,7 +335,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
     totalTTC = totalHT + totalVAT;
   }
   
-  const totalsBoxWidth = 80;
+  const totalsBoxWidth = 90;
   const totalsBoxX = pageWidth - margin - totalsBoxWidth;
   
   doc.setFontSize(10);
@@ -353,14 +353,14 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   
   doc.line(totalsBoxX, finalY + 13, pageWidth - margin, finalY + 13);
   
-  // Total TTC with highlight
+  // Total TTC with highlight - extended to right margin
   drawRoundedRect(doc, totalsBoxX - 5, finalY + 16, totalsBoxWidth + 5, 12, 2, COLORS.primary);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.white);
   doc.text('Total TTC', totalsBoxX, finalY + 24);
-  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin, finalY + 24, { align: 'right' });
+  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin - 3, finalY + 24, { align: 'right' });
   
   // === FOOTER ===
   const footerY = pageHeight - 35;
@@ -485,13 +485,13 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     clientDetailY += 6;
   });
   
-  // Invoice info
+  // Invoice info - aligned with table edges
   const invoiceInfoY = infoStartY + infoBoxHeight + 8;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...COLORS.dark);
   doc.text(`Date d'émission: ${billingDate}`, margin, invoiceInfoY);
-  doc.text(`Échéance: ${dueDate}`, margin + 80, invoiceInfoY);
+  doc.text(`Échéance: ${dueDate}`, pageWidth - margin, invoiceInfoY, { align: 'right' });
   
   // === TABLE SECTION ===
   let tableData: any[];
@@ -599,7 +599,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
     totalTTC = totalHT + totalVAT;
   }
   
-  const totalsBoxWidth = 80;
+  const totalsBoxWidth = 90;
   const totalsBoxX = pageWidth - margin - totalsBoxWidth;
   
   doc.setFontSize(10);
@@ -617,14 +617,14 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   
   doc.line(totalsBoxX, finalY + 13, pageWidth - margin, finalY + 13);
   
-  // Total TTC with highlight
+  // Total TTC with highlight - extended to right margin
   drawRoundedRect(doc, totalsBoxX - 5, finalY + 16, totalsBoxWidth + 5, 12, 2, COLORS.primary);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLORS.white);
   doc.text('Total TTC', totalsBoxX, finalY + 24);
-  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin, finalY + 24, { align: 'right' });
+  doc.text(`${totalTTC.toFixed(2)} €`, pageWidth - margin - 3, finalY + 24, { align: 'right' });
   
   // === FOOTER ===
   const footerY = pageHeight - 35;
