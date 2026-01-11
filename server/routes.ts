@@ -2556,7 +2556,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const audioFile = files.audio;
       const clientName = req.body.clientName || "Client";
-      const prestations = JSON.parse(req.body.prestations || "[]");
       const technicalDetails = req.body.technicalDetails || "";
       const attachments = JSON.parse(req.body.attachments || "[]");
       const documentType = req.body.documentType || "invoice";
@@ -2592,21 +2591,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Impossible de transcrire l'audio. Veuillez réessayer." });
       }
 
-      // Step 2: Generate professional email using the strict prompt
-      const prestationsList = prestations.length > 0 
-        ? prestations.map((p: string) => `- ${p}`).join("\n")
-        : "Aucune prestation spécifiée";
-
+      // Step 2: Generate professional email
       const attachmentsList = attachments.length > 0
         ? attachments.join(", ")
         : "Facture PDF";
 
       const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
 
-Données autorisées :
+Données fournies :
 - Texte dicté par l'utilisateur : "${transcription}"
-- Liste des prestations cochées (LISTE STRICTE) :
-${prestationsList}
 - Champs techniques fournis : ${technicalDetails || "Aucun"}
 - Nom du client : ${clientName}
 - Type de document : ${documentType === 'quote' ? 'Devis' : 'Facture'}
@@ -2614,20 +2607,20 @@ ${prestationsList}
 - Pièces jointes : ${attachmentsList}
 
 Règles impératives :
-- Tu ne dois JAMAIS mentionner une prestation non cochée dans la liste ci-dessus
-- Si une information n'est pas fournie, ne l'invente pas
-- Ton professionnel, clair, standardisé
-- Langue : français
+- Rédige l'email basé sur les informations dictées.
+- Si une information n'est pas fournie, ne l'invente pas.
+- Ton professionnel, clair, standardisé.
+- Langue : français.
+- Ne mentionne aucun prix.
 
 Objectif :
 Rédiger un mail client récapitulatif prêt à envoyer, structuré ainsi :
 1. Salutation professionnelle (Bonjour ${clientName},)
 2. Introduction courte basée sur la dictée
-3. Prestations réalisées (liste - uniquement celles de la LISTE STRICTE)
-4. Détails techniques si présents
-5. Mention des pièces jointes (${attachmentsList})
-6. Formule de politesse
-7. Signature MY JANTES
+3. Récapitulatif des travaux réalisés (basé sur la dictée et les champs techniques)
+4. Mention des pièces jointes (${attachmentsList})
+5. Formule de politesse
+6. Signature MY JANTES
 
 Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
 

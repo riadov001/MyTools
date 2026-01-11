@@ -278,21 +278,9 @@ export function VoiceDictationDialog({
               )}
             </div>
 
-            {/* Prestations list */}
-            {prestations.length > 0 && (
-              <div className="p-4 border rounded-lg">
-                <Label className="text-sm font-medium">Prestations autorisées</Label>
-                <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
-                  {prestations.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Generated email */}
-            {generatedEmail && (
-              <div className="space-y-4">
+          {/* Generated email */}
+          {generatedEmail && (
+            <div className="space-y-4">
                 <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-3">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
