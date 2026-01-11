@@ -2568,7 +2568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mimeType = audioFile.mimetype || 'audio/webm';
 
       const transcriptionResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: [
           {
             role: "user",
@@ -2636,7 +2636,7 @@ STRUCTURE DE L'EMAIL :
 Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
 
       const emailResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         contents: [
           {
             role: "user",
