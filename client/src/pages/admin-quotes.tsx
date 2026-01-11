@@ -39,7 +39,11 @@ export default function AdminQuotes() {
   const [invoiceMediaFiles, setInvoiceMediaFiles] = useState<Array<{key: string; type: string; name: string}>>([]);
   
   const [reservationDialog, setReservationDialog] = useState<Quote | null>(null);
-  const [reservationDate, setReservationDate] = useState("");
+  const [reservationStartDate, setReservationStartDate] = useState("");
+  const [reservationStartTime, setReservationStartTime] = useState("09:00");
+  const [reservationEndDate, setReservationEndDate] = useState("");
+  const [reservationEndTime, setReservationEndTime] = useState("17:00");
+  const [reservationAssignedEmployee, setReservationAssignedEmployee] = useState("");
   const [reservationNotes, setReservationNotes] = useState("");
 
   const [labelsPreviewOpen, setLabelsPreviewOpen] = useState(false);
@@ -345,12 +349,22 @@ L'équipe MyJantes`;
   });
 
   const createReservationMutation = useMutation({
-    mutationFn: async (data: { quoteId: string; clientId: string; serviceId: string; scheduledDate: string; notes?: string }) => {
+    mutationFn: async (data: { 
+      quoteId: string; 
+      clientId: string; 
+      serviceId: string; 
+      scheduledDate: string; 
+      estimatedEndDate?: string;
+      assignedEmployeeId?: string;
+      notes?: string;
+    }) => {
       return apiRequest("POST", "/api/admin/reservations", {
         quoteId: data.quoteId,
         clientId: data.clientId,
         serviceId: data.serviceId,
         scheduledDate: data.scheduledDate,
+        estimatedEndDate: data.estimatedEndDate,
+        assignedEmployeeId: data.assignedEmployeeId || null,
         status: "confirmed",
         notes: data.notes,
       });
@@ -361,7 +375,11 @@ L'équipe MyJantes`;
         description: "Réservation créée avec succès",
       });
       setReservationDialog(null);
-      setReservationDate("");
+      setReservationStartDate("");
+      setReservationStartTime("09:00");
+      setReservationEndDate("");
+      setReservationEndTime("17:00");
+      setReservationAssignedEmployee("");
       setReservationNotes("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/reservations"] });
     },
@@ -398,12 +416,22 @@ L'équipe MyJantes`;
   };
 
   const handleCreateReservation = () => {
-    if (!reservationDialog || !reservationDate) return;
+    if (!reservationDialog || !reservationStartDate) return;
+    
+    // Combine date and time for start
+    const startDateTime = `${reservationStartDate}T${reservationStartTime}:00`;
+    
+    // Combine date and time for end (use start date if end date not specified)
+    const endDate = reservationEndDate || reservationStartDate;
+    const endDateTime = `${endDate}T${reservationEndTime}:00`;
+    
     createReservationMutation.mutate({
       quoteId: reservationDialog.id,
       clientId: reservationDialog.clientId,
       serviceId: reservationDialog.serviceId,
-      scheduledDate: reservationDate,
+      scheduledDate: startDateTime,
+      estimatedEndDate: endDateTime,
+      assignedEmployeeId: reservationAssignedEmployee || undefined,
       notes: reservationNotes,
     });
   };
@@ -764,7 +792,12 @@ L'équipe MyJantes`;
                           variant="outline"
                           onClick={() => {
                             setReservationDialog(quote);
-                            setReservationDate(addDays(new Date(), 7).toISOString().split('T')[0]);
+                            const defaultDate = addDays(new Date(), 7).toISOString().split('T')[0];
+                            setReservationStartDate(defaultDate);
+                            setReservationStartTime("09:00");
+                            setReservationEndDate(defaultDate);
+                            setReservationEndTime("17:00");
+                            setReservationAssignedEmployee("");
                             setReservationNotes("");
                           }}
                           data-testid={`button-create-reservation-${quote.id}`}
@@ -927,7 +960,7 @@ L'équipe MyJantes`;
       </Dialog>
 
       <Dialog open={!!reservationDialog} onOpenChange={(open) => !open && setReservationDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Créer une Réservation</DialogTitle>
             <DialogDescription>
@@ -935,16 +968,77 @@ L'équipe MyJantes`;
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="reservation-start-date">Date de début *</Label>
+                <Input
+                  id="reservation-start-date"
+                  type="date"
+                  value={reservationStartDate}
+                  onChange={(e) => {
+                    const newStartDate = e.target.value;
+                    setReservationStartDate(newStartDate);
+                    // Update end date if empty or before new start date
+                    if (!reservationEndDate || reservationEndDate < newStartDate) {
+                      setReservationEndDate(newStartDate);
+                    }
+                  }}
+                  className="mt-2"
+                  data-testid="input-reservation-start-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservation-start-time">Heure de début</Label>
+                <Input
+                  id="reservation-start-time"
+                  type="time"
+                  value={reservationStartTime}
+                  onChange={(e) => setReservationStartTime(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-reservation-start-time"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="reservation-end-date">Date de fin</Label>
+                <Input
+                  id="reservation-end-date"
+                  type="date"
+                  value={reservationEndDate}
+                  onChange={(e) => setReservationEndDate(e.target.value)}
+                  min={reservationStartDate}
+                  className="mt-2"
+                  data-testid="input-reservation-end-date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="reservation-end-time">Heure de fin</Label>
+                <Input
+                  id="reservation-end-time"
+                  type="time"
+                  value={reservationEndTime}
+                  onChange={(e) => setReservationEndTime(e.target.value)}
+                  className="mt-2"
+                  data-testid="input-reservation-end-time"
+                />
+              </div>
+            </div>
             <div>
-              <Label htmlFor="reservation-date">Date de Réservation</Label>
-              <Input
-                id="reservation-date"
-                type="date"
-                value={reservationDate}
-                onChange={(e) => setReservationDate(e.target.value)}
-                className="mt-2"
-                data-testid="input-reservation-date"
-              />
+              <Label htmlFor="reservation-employee">Employé assigné</Label>
+              <Select value={reservationAssignedEmployee} onValueChange={setReservationAssignedEmployee}>
+                <SelectTrigger id="reservation-employee" className="mt-2" data-testid="select-reservation-employee">
+                  <SelectValue placeholder="Sélectionner un employé (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Aucun</SelectItem>
+                  {users.filter(u => u.role === "employe" || u.role === "admin").map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.firstName} {employee.lastName} ({employee.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="reservation-notes">Notes</Label>
@@ -969,7 +1063,7 @@ L'équipe MyJantes`;
             </Button>
             <Button
               onClick={handleCreateReservation}
-              disabled={createReservationMutation.isPending || !reservationDate}
+              disabled={createReservationMutation.isPending || !reservationStartDate}
               data-testid="button-save-reservation"
             >
               {createReservationMutation.isPending ? "Création..." : "Créer Réservation"}
