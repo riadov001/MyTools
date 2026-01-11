@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,8 @@ export default function InternalChat() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageContent, setMessageContent] = useState("");
@@ -51,6 +54,7 @@ export default function InternalChat() {
   const [newConversationTitle, setNewConversationTitle] = useState("");
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth < 768);
@@ -77,6 +81,24 @@ export default function InternalChat() {
     enabled: isAuthenticated,
     refetchInterval: 30000,
   });
+
+  // Auto-select conversation from URL query parameter
+  useEffect(() => {
+    if (hasAutoSelected || conversationsLoading || conversations.length === 0) return;
+    
+    const params = new URLSearchParams(searchString);
+    const conversationId = params.get("conversation");
+    
+    if (conversationId) {
+      const exists = conversations.some(c => c.id === conversationId);
+      if (exists) {
+        setSelectedConversation(conversationId);
+        setHasAutoSelected(true);
+        // Clear the URL parameter after selection
+        setLocation("/admin/chat", { replace: true });
+      }
+    }
+  }, [conversations, conversationsLoading, searchString, hasAutoSelected, setLocation]);
 
   const { data: chatUsers = [] } = useQuery<User[]>({
     queryKey: ["/api/chat/users"],

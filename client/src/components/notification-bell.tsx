@@ -40,27 +40,44 @@ export function NotificationBell() {
     }
 
     // Navigate to related page based on notification type and relatedId
-    if (notification.relatedId) {
-      switch (notification.type) {
-        case "quote":
-          // Navigate to specific quote edit page
+    switch (notification.type) {
+      case "quote":
+        if (notification.relatedId) {
           setLocation(`/admin/quotes/${notification.relatedId}/edit`);
-          break;
-        case "invoice":
-          // Navigate to specific invoice edit page
+        } else {
+          setLocation("/admin/quotes");
+        }
+        break;
+      case "invoice":
+        if (notification.relatedId) {
           setLocation(`/admin/invoices/${notification.relatedId}/edit`);
-          break;
-        case "reservation":
-          // Navigate to reservations list with highlight parameter
+        } else {
+          setLocation("/admin/invoices");
+        }
+        break;
+      case "reservation":
+        if (notification.relatedId) {
           setLocation(`/admin/reservations?highlight=${notification.relatedId}`);
-          break;
-        case "service":
-          // Navigate to services list with highlight parameter
+        } else {
+          setLocation("/admin/reservations");
+        }
+        break;
+      case "service":
+        if (notification.relatedId) {
           setLocation(`/admin/services?highlight=${notification.relatedId}`);
-          break;
-        default:
-          break;
-      }
+        } else {
+          setLocation("/admin/services");
+        }
+        break;
+      case "chat":
+        if (notification.relatedId) {
+          setLocation(`/admin/chat?conversation=${notification.relatedId}`);
+        } else {
+          setLocation("/admin/chat");
+        }
+        break;
+      default:
+        break;
     }
   };
 
