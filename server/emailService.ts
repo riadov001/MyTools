@@ -164,11 +164,6 @@ export function generateQuoteApprovedEmailHtml(data: {
         <p>N'hésitez pas à nous contacter pour toute question.</p>
         
         <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-        
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #78350f; font-weight: bold;">Votre avis compte pour nous !</p>
-          <a href="https://share.google/oULlumNyRfjmW9FEp" style="display: inline-block; padding: 12px 24px; background: white; color: #b45309; text-decoration: none; border-radius: 6px; font-weight: bold;">Laisser un avis Google</a>
-        </div>
       </div>
       
       <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
@@ -237,11 +232,6 @@ export function generateQuoteEmailHtml(data: {
         <p style="margin-top: 30px;">N'hésitez pas à nous contacter pour toute question ou demande de modification.</p>
         
         <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-        
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #78350f; font-weight: bold;">Votre avis compte pour nous !</p>
-          <a href="https://share.google/oULlumNyRfjmW9FEp" style="display: inline-block; padding: 12px 24px; background: white; color: #b45309; text-decoration: none; border-radius: 6px; font-weight: bold;">Laisser un avis Google</a>
-        </div>
       </div>
       
       <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
@@ -312,11 +302,6 @@ export function generateInvoiceEmailHtml(data: {
         <p style="margin-top: 30px;">Merci pour votre confiance. N'hésitez pas à nous contacter pour toute question.</p>
         
         <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-        
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #78350f; font-weight: bold;">Votre avis compte pour nous !</p>
-          <a href="https://share.google/oULlumNyRfjmW9FEp" style="display: inline-block; padding: 12px 24px; background: white; color: #b45309; text-decoration: none; border-radius: 6px; font-weight: bold;">Laisser un avis Google</a>
-        </div>
       </div>
       
       <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
@@ -364,11 +349,6 @@ export function generateInvoicePaidEmailHtml(data: {
         <p>Merci beaucoup pour votre confiance et votre rapidité.</p>
         
         <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-        
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #78350f; font-weight: bold;">Votre avis compte pour nous !</p>
-          <a href="https://share.google/oULlumNyRfjmW9FEp" style="display: inline-block; padding: 12px 24px; background: white; color: #b45309; text-decoration: none; border-radius: 6px; font-weight: bold;">Laisser un avis Google</a>
-        </div>
       </div>
       
       <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
@@ -419,11 +399,6 @@ export function generateReservationConfirmedEmailHtml(data: {
         <p>À bientôt pour votre service !</p>
         
         <p>Cordialement,<br><strong>L'équipe ${data.companyName}</strong></p>
-        
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px; text-align: center;">
-          <p style="margin: 0 0 10px 0; color: #78350f; font-weight: bold;">Votre avis compte pour nous !</p>
-          <a href="https://share.google/oULlumNyRfjmW9FEp" style="display: inline-block; padding: 12px 24px; background: white; color: #b45309; text-decoration: none; border-radius: 6px; font-weight: bold;">Laisser un avis Google</a>
-        </div>
       </div>
       
       <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
@@ -449,7 +424,7 @@ const COMPANY_INFO = {
 };
 
 // Load logo as base64 for server
-export function getLogoBase64(): string {
+function getLogoBase64(): string {
   try {
     const logoPath = path.join(process.cwd(), 'attached_assets', 'cropped-Logo-2-1-768x543_(3)_1767977972324.png');
     const logoBuffer = fs.readFileSync(logoPath);

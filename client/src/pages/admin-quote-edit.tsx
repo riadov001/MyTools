@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
-import { EmailWithDictationDialog } from "@/components/email-with-dictation-dialog";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2, Mic } from "lucide-react";
+import { VoiceDictationDialog } from "@/components/voice-dictation-dialog";
 import type { Quote, QuoteItem, User } from "@shared/schema";
 
 export default function AdminQuoteEdit() {
@@ -47,8 +47,8 @@ export default function AdminQuoteEdit() {
     return allUsers.find(u => u.id === quote.clientId) || null;
   }, [quote?.clientId, allUsers]);
 
-  // Email dialog state
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  // Voice dictation dialog state
+  const [showVoiceDictation, setShowVoiceDictation] = useState(false);
 
   // Local state for form
   const [formData, setFormData] = useState({
@@ -219,6 +219,26 @@ export default function AdminQuoteEdit() {
     });
   };
 
+  // Send email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/admin/quotes/${quoteId}/send-email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Succès",
+        description: "Devis envoyé par email au client",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -304,12 +324,25 @@ export default function AdminQuoteEdit() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => setShowEmailDialog(true)}
-              disabled={!client?.email}
+              onClick={() => sendEmailMutation.mutate()}
+              disabled={sendEmailMutation.isPending}
               data-testid="button-send-quote-email"
             >
-              <Mail className="mr-2 h-4 w-4" />
+              {sendEmailMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-4 w-4" />
+              )}
               Envoyer par email
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowVoiceDictation(true)}
+              disabled={!client?.email}
+              data-testid="button-voice-dictation"
+            >
+              <Mic className="mr-2 h-4 w-4" />
+              Dicter le récapitulatif
             </Button>
           </div>
         </CardContent>
@@ -435,16 +468,16 @@ export default function AdminQuoteEdit() {
         </CardContent>
       </Card>
 
-      <EmailWithDictationDialog
-        open={showEmailDialog}
-        onOpenChange={setShowEmailDialog}
-        documentType="quote"
-        documentId={quoteId}
-        documentNumber={quote?.id?.slice(0, 8).toUpperCase() || ""}
+      <VoiceDictationDialog
+        open={showVoiceDictation}
+        onOpenChange={setShowVoiceDictation}
         clientEmail={client?.email || ""}
         clientName={`${client?.firstName || ""} ${client?.lastName || ""}`.trim() || "Client"}
         prestations={localItems.filter(item => item.description).map(item => item.description || "")}
         technicalDetails={formData.notes || ""}
+        attachments={["Devis PDF"]}
+        documentType="quote"
+        documentNumber={quote?.id || ""}
       />
     </div>
   );

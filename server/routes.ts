@@ -2658,6 +2658,42 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
     }
   });
 
+  app.post("/api/voice-dictation/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { to, subject, body, documentType, documentNumber } = req.body;
+
+      if (!to || !subject || !body) {
+        return res.status(400).json({ message: "Destinataire, sujet et corps de l'email requis" });
+      }
+
+      const result = await sendEmail({
+        to,
+        subject,
+        html: `<div style="font-family: Arial, sans-serif; white-space: pre-wrap;">${body.replace(/\n/g, '<br>')}</div>`,
+        text: body,
+      });
+
+      if (result.success) {
+        // Log audit event
+        await logAuditEvent({
+          req,
+          entityType: documentType === 'quote' ? 'quote' : 'invoice',
+          entityId: documentNumber,
+          action: 'updated',
+          summary: `Email envoyé via dictée vocale à ${to}`,
+          metadata: { emailTo: to, emailSubject: subject },
+        });
+
+        res.json({ success: true, message: "Email envoyé avec succès" });
+      } else {
+        res.status(500).json({ message: result.error || "Erreur lors de l'envoi de l'email" });
+      }
+    } catch (error: any) {
+      console.error("Error sending voice dictation email:", error);
+      res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup (Reference: javascript_websocket blueprint)
