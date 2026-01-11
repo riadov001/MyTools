@@ -6,7 +6,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./localAuth";
 import { insertServiceSchema, insertQuoteSchema, insertInvoiceSchema, insertReservationSchema, type User, type InsertAuditLog } from "@shared/schema";
-import { sendEmail } from "./emailService";
+import { sendEmail, generateVoiceDictationEmailHtml } from "./emailService";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { ObjectStorageService } from "./objectStorage";
@@ -2660,17 +2660,124 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
 
   app.post("/api/voice-dictation/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const { to, subject, body, documentType, documentNumber } = req.body;
+      const { to, subject, body, documentType, documentNumber, documentId, clientName } = req.body;
 
       if (!to || !subject || !body) {
         return res.status(400).json({ message: "Destinataire, sujet et corps de l'email requis" });
       }
 
+      const fs = await import('fs');
+      const { generateQuotePDF, generateInvoicePDF } = await import("./emailService");
+      const attachments: { filename: string; content: Buffer }[] = [];
+      const attachmentNames: string[] = [];
+
+      // Generate and attach PDF document
+      if (documentId) {
+        try {
+          if (documentType === 'quote') {
+            const quote = await storage.getQuote(documentId);
+            if (quote) {
+              const items = await storage.getQuoteItems(documentId);
+              const settings = await storage.getApplicationSettings();
+              const formatPrice = (val: any) => `${parseFloat(val || "0").toFixed(2)} €`;
+              const pdfBuffer = generateQuotePDF({
+                quoteNumber: quote.reference || quote.id,
+                quoteDate: quote.createdAt ? new Date(quote.createdAt).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'),
+                clientName: clientName || 'Client',
+                status: quote.status,
+                items: items.map(i => ({
+                  description: i.description || '',
+                  quantity: Number(i.quantity) || 1,
+                  unitPrice: formatPrice(i.unitPriceExcludingTax),
+                  total: formatPrice(i.totalExcludingTax),
+                })),
+                amount: formatPrice(quote.quoteAmount),
+                companyName: settings?.companyName || 'MY JANTES',
+              });
+              const pdfFilename = `Devis-${quote.reference || quote.id}.pdf`;
+              attachments.push({ filename: pdfFilename, content: pdfBuffer });
+              attachmentNames.push(pdfFilename);
+            }
+          } else if (documentType === 'invoice') {
+            const invoice = await storage.getInvoice(documentId);
+            if (invoice) {
+              const items = await storage.getInvoiceItems(documentId);
+              const settings = await storage.getApplicationSettings();
+              const formatPrice = (val: any) => `${parseFloat(val || "0").toFixed(2)} €`;
+              const pdfBuffer = generateInvoicePDF({
+                invoiceNumber: invoice.invoiceNumber || invoice.id,
+                invoiceDate: invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR'),
+                dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : '',
+                clientName: clientName || 'Client',
+                status: invoice.status,
+                items: items.map(i => ({
+                  description: i.description || '',
+                  quantity: Number(i.quantity) || 1,
+                  unitPrice: formatPrice(i.unitPriceExcludingTax),
+                  total: formatPrice(i.totalExcludingTax),
+                })),
+                amount: formatPrice(invoice.amount),
+                companyName: settings?.companyName || 'MY JANTES',
+              });
+              const pdfFilename = `Facture-${invoice.invoiceNumber || invoice.id}.pdf`;
+              attachments.push({ filename: pdfFilename, content: pdfBuffer });
+              attachmentNames.push(pdfFilename);
+            }
+          }
+        } catch (err) {
+          console.error("Error generating PDF:", err);
+        }
+
+        // Fetch media attachments (photos/videos) from quote or invoice
+        try {
+          let media: any[] = [];
+          if (documentType === 'quote') {
+            media = await storage.getQuoteMedia(documentId);
+          } else if (documentType === 'invoice') {
+            media = await storage.getInvoiceMedia(documentId);
+          }
+
+          for (const item of media) {
+            try {
+              let data: Buffer | null = null;
+              const localPath = item.filePath.startsWith('/') ? `.${item.filePath}` : item.filePath;
+              if (fs.existsSync(localPath)) {
+                data = fs.readFileSync(localPath);
+              } else {
+                const result = await objectStorageService.getObject(item.filePath);
+                data = result.data;
+              }
+              if (data) {
+                const ext = item.fileType === 'image' ? 'jpg' : 'mp4';
+                const filename = item.fileName || `${item.fileType}-${item.id.slice(0, 4)}.${ext}`;
+                attachments.push({ filename, content: data });
+                attachmentNames.push(filename);
+              }
+            } catch (err) {
+              console.error("Error fetching attachment:", err);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching document media:", err);
+        }
+      }
+
+      // Generate HTML email with professional template
+      const htmlEmail = generateVoiceDictationEmailHtml({
+        clientName: clientName || 'Client',
+        documentNumber: documentNumber || '',
+        documentType: documentType === 'quote' ? 'quote' : 'invoice',
+        emailBody: body,
+        companyName: 'MY JANTES',
+        attachmentNames: attachmentNames.length > 0 ? attachmentNames : undefined,
+      });
+
       const result = await sendEmail({
         to,
         subject,
-        html: `<div style="font-family: Arial, sans-serif; white-space: pre-wrap;">${body.replace(/\n/g, '<br>')}</div>`,
+        html: htmlEmail,
         text: body,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
 
       if (result.success) {
@@ -2678,10 +2785,10 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
         await logAuditEvent({
           req,
           entityType: documentType === 'quote' ? 'quote' : 'invoice',
-          entityId: documentNumber,
+          entityId: documentId || documentNumber,
           action: 'updated',
           summary: `Email envoyé via dictée vocale à ${to}`,
-          metadata: { emailTo: to, emailSubject: subject },
+          metadata: { emailTo: to, emailSubject: subject, attachmentCount: attachments.length },
         });
 
         res.json({ success: true, message: "Email envoyé avec succès" });

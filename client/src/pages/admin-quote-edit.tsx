@@ -477,7 +477,8 @@ export default function AdminQuoteEdit() {
         technicalDetails={formData.notes || ""}
         attachments={["Devis PDF"]}
         documentType="quote"
-        documentNumber={quote?.id || ""}
+        documentNumber={quote?.reference || quote?.id || ""}
+        documentId={quote?.id || ""}
       />
     </div>
   );

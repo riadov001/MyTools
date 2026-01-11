@@ -28,6 +28,7 @@ interface VoiceDictationDialogProps {
   attachments?: string[];
   documentType: "quote" | "invoice";
   documentNumber: string;
+  documentId: string;
   onEmailSent?: () => void;
 }
 
@@ -41,6 +42,7 @@ export function VoiceDictationDialog({
   attachments = [],
   documentType,
   documentNumber,
+  documentId,
   onEmailSent,
 }: VoiceDictationDialogProps) {
   const { toast } = useToast();
@@ -155,6 +157,8 @@ export function VoiceDictationDialog({
         body: generatedEmail,
         documentType,
         documentNumber,
+        documentId,
+        clientName,
       });
     },
     onSuccess: () => {

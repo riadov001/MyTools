@@ -423,6 +423,60 @@ const COMPANY_INFO = {
   tva: 'FR73913678199',
 };
 
+// Template for voice dictation emails - same design as other emails
+export function generateVoiceDictationEmailHtml(data: {
+  clientName: string;
+  documentNumber: string;
+  documentType: 'quote' | 'invoice';
+  emailBody: string;
+  companyName: string;
+  attachmentNames?: string[];
+}): string {
+  const documentLabel = data.documentType === 'quote' ? 'Devis' : 'Facture';
+  const attachmentSection = data.attachmentNames && data.attachmentNames.length > 0
+    ? `<div style="background: white; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+        <p style="margin: 0; font-weight: bold; color: #333;">Pièces jointes :</p>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #666;">
+          ${data.attachmentNames.map(name => `<li>${name}</li>`).join('')}
+        </ul>
+      </div>`
+    : '';
+
+  // Convert newlines to <br> and preserve paragraph structure
+  const formattedBody = data.emailBody
+    .split('\n\n').map(paragraph => `<p style="margin: 0 0 15px 0;">${paragraph.replace(/\n/g, '<br>')}</p>`).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${documentLabel} ${data.documentNumber}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">${data.companyName}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes</p>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #dc2626; margin-top: 0;">${documentLabel} N° ${data.documentNumber}</h2>
+        
+        <div style="color: #333;">
+          ${formattedBody}
+        </div>
+        
+        ${attachmentSection}
+      </div>
+      
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        <p>Ce message a été envoyé depuis ${data.companyName}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 // Load logo as base64 for server
 function getLogoBase64(): string {
   try {

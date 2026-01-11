@@ -491,6 +491,7 @@ export default function AdminInvoiceEdit() {
         attachments={["Facture PDF"]}
         documentType="invoice"
         documentNumber={formData.invoiceNumber}
+        documentId={invoice?.id || ""}
       />
     </div>
   );
