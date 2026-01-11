@@ -2556,6 +2556,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const audioFile = files.audio;
       const clientName = req.body.clientName || "Client";
+      const prestationsRaw = req.body.prestations || "[]";
+      const prestations = JSON.parse(prestationsRaw);
       const technicalDetails = req.body.technicalDetails || "";
       const attachments = JSON.parse(req.body.attachments || "[]");
       const documentType = req.body.documentType || "invoice";

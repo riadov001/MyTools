@@ -207,7 +207,7 @@ export function VoiceDictationDialog({
 
         <ScrollArea className="flex-1 px-6">
           <div className="space-y-4 py-4">
-            {/* Services list (for context) */}
+            {/* Services list (for reference) */}
             {prestations.length > 0 && (
               <div className="p-4 border rounded-lg bg-muted/20">
                 <Label className="text-xs font-medium">Services disponibles (référence)</Label>
