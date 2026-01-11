@@ -2592,14 +2592,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Step 2: Generate professional email
+      const servicesList = prestations.length > 0 
+        ? prestations.map((p: string) => `- ${p}`).join("\n")
+        : "Aucun service spécifique";
+
       const attachmentsList = attachments.length > 0
         ? attachments.join(", ")
-        : "Facture PDF";
+        : "Document PDF";
 
       const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
 
 Données fournies :
 - Texte dicté par l'utilisateur : "${transcription}"
+- Liste des services officiels (POUR RÉFÉRENCE) :
+${servicesList}
 - Champs techniques fournis : ${technicalDetails || "Aucun"}
 - Nom du client : ${clientName}
 - Type de document : ${documentType === 'quote' ? 'Devis' : 'Facture'}
@@ -2608,6 +2614,7 @@ Données fournies :
 
 Règles impératives :
 - Rédige l'email basé sur les informations dictées.
+- Utilise la "Liste des services officiels" pour utiliser les termes exacts de l'atelier si la dictée y fait référence.
 - Si une information n'est pas fournie, ne l'invente pas.
 - Ton professionnel, clair, standardisé.
 - Langue : français.
@@ -2617,7 +2624,7 @@ Objectif :
 Rédiger un mail client récapitulatif prêt à envoyer, structuré ainsi :
 1. Salutation professionnelle (Bonjour ${clientName},)
 2. Introduction courte basée sur la dictée
-3. Récapitulatif des travaux réalisés (basé sur la dictée et les champs techniques)
+3. Récapitulatif des travaux réalisés (en utilisant les termes des services officiels si possible)
 4. Mention des pièces jointes (${attachmentsList})
 5. Formule de politesse
 6. Signature MY JANTES

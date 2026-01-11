@@ -207,6 +207,20 @@ export function VoiceDictationDialog({
 
         <ScrollArea className="flex-1 px-6">
           <div className="space-y-4 py-4">
+            {/* Services list (for context) */}
+            {prestations.length > 0 && (
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <Label className="text-xs font-medium">Services disponibles (référence)</Label>
+                <ScrollArea className="h-20 mt-1">
+                  <ul className="text-[10px] text-muted-foreground list-disc list-inside space-y-0.5">
+                    {prestations.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+            )}
+
             {/* Recording section */}
             <div className="flex flex-col items-center gap-4 p-4 sm:p-6 border rounded-lg bg-muted/30">
               {!audioBlob ? (
