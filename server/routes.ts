@@ -2645,6 +2645,64 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
         ],
       });
 
+      const transcription = transcriptionResponse.response.text() || "";
+      
+      if (!transcription.trim()) {
+        return res.status(400).json({ message: "Impossible de transcrire l'audio. Veuillez réessayer." });
+      }
+
+      // Step 2: Generate professional email
+      const servicesList = prestations.length > 0 
+        ? prestations.map((p: string) => `- ${p}`).join("\n")
+        : "Aucun service spécifique";
+
+      const attachmentsList = attachments.length > 0
+        ? attachments.join(", ")
+        : "Document PDF";
+
+      const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
+
+DONNÉES FOURNIES :
+- Texte dicté par l'utilisateur (TRANSCRIPTION) : "${transcription}"
+- Liste des services officiels (POUR RÉFÉRENCE) :
+${servicesList}
+- Champs techniques fournis : ${technicalDetails || "Aucun"}
+- Nom du client : ${clientName}
+- Type de document : ${documentType === 'quote' ? 'Devis' : 'Facture'}
+- Numéro du document : ${documentNumber}
+- Pièces jointes : ${attachmentsList}
+
+RÈGLES IMPÉRATIVES :
+1. ANALYSE la transcription : Identifie toutes les prestations et travaux mentionnés par l'utilisateur.
+2. UTILISE les termes des "services officiels" quand ils correspondent à ce qui a été dicté.
+3. INCLUS impérativement tous les travaux dictés dans le corps de l'email.
+4. Si une information n'est pas fournie, ne l'invente pas.
+5. Ton professionnel, clair, standardisé. Langue : français.
+6. Ne mentionne aucun prix.
+
+OBJECTIF :
+Rédiger un mail client récapitulatif complet et prêt à envoyer.
+
+STRUCTURE DE L'EMAIL :
+1. Salutation professionnelle (Bonjour ${clientName},)
+2. Introduction courte (ex: "Suite à notre intervention...")
+3. RÉCAPITULATIF DÉTAILLÉ des travaux réalisés (Sois précis et liste tout ce qui a été dicté)
+4. Mention des pièces jointes (${attachmentsList})
+5. Formule de politesse
+6. Signature MY JANTES
+
+Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
+
+      const emailResponse = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: emailPrompt }],
+          },
+        ],
+      });
+
       const generatedEmail = emailResponse.response.text() || "";
 
       res.json({
@@ -2743,6 +2801,7 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
       }
 
       // 3. Construct HTML using the professional template
+      const { getLogoBase64 } = await import("./emailService");
       const logoBase64 = getLogoBase64();
       const html = `
         <!DOCTYPE html>
