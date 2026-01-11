@@ -260,29 +260,30 @@ export function EmailWithDictationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base sm:text-lg">
             Envoyer {documentType === "quote" ? "le devis" : "la facture"} par email
           </DialogTitle>
-          <DialogDescription>
-            Le PDF et les photos seront automatiquement joints à l'email.
+          <DialogDescription className="text-xs sm:text-sm">
+            PDF et photos joints automatiquement.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "manual" | "ai")} className="flex-1">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="manual" className="flex items-center gap-2">
-              <Edit3 className="h-4 w-4" />
-              Manuel
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "manual" | "ai")} className="flex-1 min-h-0">
+          <TabsList className="grid w-full grid-cols-2 h-auto">
+            <TabsTrigger value="manual" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Edit3 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Manuel</span>
             </TabsTrigger>
-            <TabsTrigger value="ai" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Dictée vocale (IA)
+            <TabsTrigger value="ai" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Dictée</span>
+              <span className="xs:hidden">IA</span>
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 mt-4" style={{ maxHeight: "calc(90vh - 300px)" }}>
+          <ScrollArea className="flex-1 mt-3 sm:mt-4" style={{ maxHeight: "calc(95vh - 220px)" }}>
             <TabsContent value="manual" className="space-y-4 px-1">
               <div className="space-y-2">
                 <Label htmlFor="recipient">Destinataire</Label>
@@ -308,13 +309,14 @@ export function EmailWithDictationDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message personnalisé (optionnel)</Label>
+                <Label htmlFor="message" className="text-sm">Message personnalisé (optionnel)</Label>
                 <Textarea
                   id="message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Laissez vide pour utiliser le modèle par défaut avec le récapitulatif des prestations..."
-                  rows={6}
+                  placeholder="Laissez vide pour le modèle par défaut..."
+                  rows={4}
+                  className="text-sm"
                   data-testid="textarea-email-message"
                 />
               </div>
@@ -359,47 +361,51 @@ export function EmailWithDictationDialog({
               )}
 
               {!hasGeneratedContent ? (
-                <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-muted/30">
+                <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 border rounded-lg bg-muted/30">
                   {!audioBlob ? (
                     <>
-                      <div className="text-3xl font-mono">{formatTime(recordingTime)}</div>
+                      <div className="text-2xl sm:text-3xl font-mono">{formatTime(recordingTime)}</div>
                       <Button
                         size="lg"
                         variant={isRecording ? "destructive" : "default"}
                         onClick={isRecording ? stopRecording : startRecording}
-                        className="h-16 w-16 rounded-full"
+                        className="h-14 w-14 sm:h-16 sm:w-16 rounded-full"
                         data-testid="button-record"
                       >
                         {isRecording ? (
-                          <Square className="h-6 w-6" />
+                          <Square className="h-5 w-5 sm:h-6 sm:w-6" />
                         ) : (
-                          <Mic className="h-6 w-6" />
+                          <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
                         )}
                       </Button>
-                      <p className="text-sm text-muted-foreground text-center">
+                      <p className="text-xs sm:text-sm text-muted-foreground text-center px-2">
                         {isRecording
-                          ? "Cliquez pour arrêter l'enregistrement"
-                          : "Dictez le récapitulatif des travaux réalisés"}
+                          ? "Appuyez pour arrêter"
+                          : "Dictez le récapitulatif des travaux"}
                       </p>
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                         <MicOff className="h-4 w-4" />
-                        Enregistrement terminé ({formatTime(recordingTime)})
+                        Terminé ({formatTime(recordingTime)})
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button
                           variant="outline"
+                          size="sm"
                           onClick={resetRecording}
+                          className="w-full sm:w-auto"
                           data-testid="button-reset-recording"
                         >
                           <RefreshCw className="h-4 w-4 mr-2" />
                           Recommencer
                         </Button>
                         <Button
+                          size="sm"
                           onClick={generateEmailFromAudio}
                           disabled={isGenerating}
+                          className="w-full sm:w-auto"
                           data-testid="button-generate-email"
                         >
                           {isGenerating ? (
@@ -407,7 +413,7 @@ export function EmailWithDictationDialog({
                           ) : (
                             <Sparkles className="h-4 w-4 mr-2" />
                           )}
-                          Générer l'email
+                          Générer
                         </Button>
                       </div>
                     </>
@@ -469,8 +475,8 @@ export function EmailWithDictationDialog({
                       id="ai-message"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      rows={10}
-                      className="font-mono text-sm"
+                      rows={6}
+                      className="font-mono text-xs sm:text-sm"
                       data-testid="textarea-ai-email-message"
                     />
                   </div>
@@ -501,13 +507,18 @@ export function EmailWithDictationDialog({
           </ScrollArea>
         </Tabs>
 
-        <DialogFooter className="mt-4 gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="mt-3 sm:mt-4 flex-col-reverse sm:flex-row gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
             Annuler
           </Button>
           <Button
             onClick={handleSend}
             disabled={sendEmailMutation.isPending || !recipient || (mode === "ai" && !hasGeneratedContent)}
+            className="w-full sm:w-auto"
             data-testid="button-send-email"
           >
             {sendEmailMutation.isPending ? (
@@ -515,7 +526,7 @@ export function EmailWithDictationDialog({
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
-            {mode === "ai" && !hasGeneratedContent ? "Générez d'abord l'email" : "Envoyer"}
+            {mode === "ai" && !hasGeneratedContent ? "Générer d'abord" : "Envoyer"}
           </Button>
         </DialogFooter>
       </DialogContent>
