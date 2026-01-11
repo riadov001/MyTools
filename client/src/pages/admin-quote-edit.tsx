@@ -37,7 +37,14 @@ export default function AdminQuoteEdit() {
 
   // Fetch client data for voice dictation
   const { data: client } = useQuery<User>({
-    queryKey: [`/api/admin/users/${quote?.clientId}`],
+    queryKey: ['/api/admin/users', quote?.clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/users/${quote?.clientId}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch client');
+      return response.json();
+    },
     enabled: isAuthenticated && isAdmin && !!quote?.clientId,
   });
 
