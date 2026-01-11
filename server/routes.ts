@@ -2568,7 +2568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mimeType = audioFile.mimetype || 'audio/webm';
 
       const transcriptionResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash", // Reverting to stable version if available, or keeping the updated one if it was specified
+        model: "gemini-2.0-flash",
         contents: [
           {
             role: "user",
@@ -2587,7 +2587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
       });
 
-      const transcription = transcriptionResponse.response.text() || "";
+      const transcription = transcriptionResponse.text || "";
       
       if (!transcription.trim()) {
         return res.status(400).json({ message: "Impossible de transcrire l'audio. Veuillez réessayer." });
@@ -2645,65 +2645,7 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
         ],
       });
 
-      const transcription = transcriptionResponse.response.text() || "";
-      
-      if (!transcription.trim()) {
-        return res.status(400).json({ message: "Impossible de transcrire l'audio. Veuillez réessayer." });
-      }
-
-      // Step 2: Generate professional email
-      const servicesList = prestations.length > 0 
-        ? prestations.map((p: string) => `- ${p}`).join("\n")
-        : "Aucun service spécifique";
-
-      const attachmentsList = attachments.length > 0
-        ? attachments.join(", ")
-        : "Document PDF";
-
-      const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
-
-DONNÉES FOURNIES :
-- Texte dicté par l'utilisateur (TRANSCRIPTION) : "${transcription}"
-- Liste des services officiels (POUR RÉFÉRENCE) :
-${servicesList}
-- Champs techniques fournis : ${technicalDetails || "Aucun"}
-- Nom du client : ${clientName}
-- Type de document : ${documentType === 'quote' ? 'Devis' : 'Facture'}
-- Numéro du document : ${documentNumber}
-- Pièces jointes : ${attachmentsList}
-
-RÈGLES IMPÉRATIVES :
-1. ANALYSE la transcription : Identifie toutes les prestations et travaux mentionnés par l'utilisateur.
-2. UTILISE les termes des "services officiels" quand ils correspondent à ce qui a été dicté.
-3. INCLUS impérativement tous les travaux dictés dans le corps de l'email.
-4. Si une information n'est pas fournie, ne l'invente pas.
-5. Ton professionnel, clair, standardisé. Langue : français.
-6. Ne mentionne aucun prix.
-
-OBJECTIF :
-Rédiger un mail client récapitulatif complet et prêt à envoyer.
-
-STRUCTURE DE L'EMAIL :
-1. Salutation professionnelle (Bonjour ${clientName},)
-2. Introduction courte (ex: "Suite à notre intervention...")
-3. RÉCAPITULATIF DÉTAILLÉ des travaux réalisés (Sois précis et liste tout ce qui a été dicté)
-4. Mention des pièces jointes (${attachmentsList})
-5. Formule de politesse
-6. Signature MY JANTES
-
-Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
-
-      const emailResponse = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: emailPrompt }],
-          },
-        ],
-      });
-
-      const generatedEmail = emailResponse.response.text() || "";
+      const generatedEmail = emailResponse.text || "";
 
       res.json({
         transcription,
@@ -2713,147 +2655,6 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
     } catch (error: any) {
       console.error("Error in voice dictation:", error);
       res.status(500).json({ message: error.message || "Erreur lors de la génération de l'email" });
-    }
-  });
-
-  app.post("/api/voice-dictation/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
-    try {
-      const { to, subject, body, documentType, documentNumber } = req.body;
-
-      if (!to || !subject || !body) {
-        return res.status(400).json({ message: "Destinataire, sujet et corps de l'email requis" });
-      }
-
-      // 1. Fetch document and items for the PDF
-      let pdfBuffer: Buffer | null = null;
-      let filename = "document.pdf";
-
-      if (documentType === 'quote') {
-        const quote = await storage.getQuote(documentNumber);
-        if (quote) {
-          const items = await storage.getQuoteItems(documentNumber);
-          const user = await storage.getUser(quote.clientId);
-          
-          pdfBuffer = generateQuotePDF({
-            quoteNumber: quote.reference || quote.id,
-            quoteDate: new Date(quote.createdAt || Date.now()).toLocaleDateString('fr-FR'),
-            clientName: user ? `${user.firstName} ${user.lastName}` : 'Client',
-            items: items.map(item => ({
-              description: item.description || '',
-              quantity: parseFloat(item.quantity || "1"),
-              unitPrice: `${parseFloat(item.unitPriceExcludingTax || "0").toFixed(2)} €`,
-              total: `${parseFloat(item.totalIncludingTax || "0").toFixed(2)} €`
-            })),
-            amount: `${parseFloat(quote.totalIncludingTax || "0").toFixed(2)} €`,
-            companyName: "MY JANTES"
-          });
-          filename = `devis-${quote.reference || quote.id}.pdf`;
-        }
-      } else {
-        const invoice = await storage.getInvoice(documentNumber);
-        if (invoice) {
-          const items = await storage.getInvoiceItems(documentNumber);
-          const user = await storage.getUser(invoice.clientId);
-          
-          pdfBuffer = generateInvoicePDF({
-            invoiceNumber: invoice.invoiceNumber,
-            invoiceDate: new Date(invoice.createdAt || Date.now()).toLocaleDateString('fr-FR'),
-            dueDate: new Date(invoice.dueDate || Date.now()).toLocaleDateString('fr-FR'),
-            clientName: user ? `${user.firstName} ${user.lastName}` : 'Client',
-            items: items.map(item => ({
-              description: item.description || '',
-              quantity: parseFloat(item.quantity || "1"),
-              unitPrice: `${parseFloat(item.unitPriceExcludingTax || "0").toFixed(2)} €`,
-              total: `${parseFloat(item.totalIncludingTax || "0").toFixed(2)} €`
-            })),
-            amount: `${parseFloat(invoice.totalIncludingTax || "0").toFixed(2)} €`,
-            companyName: "MY JANTES"
-          });
-          filename = `facture-${invoice.invoiceNumber}.pdf`;
-        }
-      }
-
-      // 2. Fetch before photos if it's a quote
-      const attachments: any[] = [];
-      if (pdfBuffer) {
-        attachments.push({
-          filename,
-          content: pdfBuffer
-        });
-      }
-
-      // Add before photos for quotes
-      if (documentType === 'quote') {
-        const quote = await storage.getQuote(documentNumber);
-        if (quote && quote.beforePhotos && Array.isArray(quote.beforePhotos)) {
-          for (let i = 0; i < quote.beforePhotos.length; i++) {
-            const photoUrl = quote.beforePhotos[i];
-            const buffer = await getFileBuffer(photoUrl);
-            if (buffer) {
-              const ext = path.extname(photoUrl) || '.jpg';
-              attachments.push({
-                filename: `photo-avant-${i + 1}${ext}`,
-                content: buffer
-              });
-            }
-          }
-        }
-      }
-
-      // 3. Construct HTML using the professional template
-      const { getLogoBase64 } = await import("./emailService");
-      const logoBase64 = getLogoBase64();
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            ${logoBase64 ? `<img src="${logoBase64}" alt="MY JANTES" style="max-width: 150px; margin-bottom: 10px;">` : `<h1 style="color: white; margin: 0;">MY JANTES</h1>`}
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Votre spécialiste jantes et pneus</p>
-          </div>
-          
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <div style="white-space: pre-wrap;">${body}</div>
-            
-            <p style="margin-top: 30px;">Cordialement,<br><strong>L'équipe MY JANTES</strong></p>
-          </div>
-          
-          <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-            <p>Ce message vous a été envoyé par MY JANTES.</p>
-          </div>
-        </body>
-        </html>
-      `;
-
-      const result = await sendEmail({
-        to,
-        subject,
-        html,
-        text: body,
-        attachments
-      });
-
-      if (result.success) {
-        // Log audit event
-        await logAuditEvent({
-          req,
-          entityType: documentType === 'quote' ? 'quote' : 'invoice',
-          entityId: documentNumber,
-          action: 'updated',
-          summary: `Email envoyé via dictée vocale à ${to}`,
-          metadata: { emailTo: to, emailSubject: subject },
-        });
-
-        res.json({ success: true, message: "Email envoyé avec succès" });
-      } else {
-        res.status(500).json({ message: result.error || "Erreur lors de l'envoi de l'email" });
-      }
-    } catch (error: any) {
-      console.error("Error sending voice dictation email:", error);
-      res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
     }
   });
 

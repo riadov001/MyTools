@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2, Mic } from "lucide-react";
-import { VoiceDictationDialog } from "@/components/voice-dictation-dialog";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
+import { EmailWithDictationDialog } from "@/components/email-with-dictation-dialog";
 import type { Invoice, InvoiceItem, User } from "@shared/schema";
 
 export default function AdminInvoiceEdit() {
@@ -47,8 +47,8 @@ export default function AdminInvoiceEdit() {
     return allUsers.find(u => u.id === invoice.clientId) || null;
   }, [invoice?.clientId, allUsers]);
 
-  // Voice dictation dialog state
-  const [showVoiceDictation, setShowVoiceDictation] = useState(false);
+  // Email dialog state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   // Local state for form
   const [formData, setFormData] = useState({
@@ -221,26 +221,6 @@ export default function AdminInvoiceEdit() {
     });
   };
 
-  // Send email mutation
-  const sendEmailMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", `/api/admin/invoices/${invoiceId}/send-email`, {});
-    },
-    onSuccess: () => {
-      toast({
-        title: "Succès",
-        description: "Facture envoyée par email au client",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -335,26 +315,12 @@ export default function AdminInvoiceEdit() {
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => sendEmailMutation.mutate()}
-                disabled={sendEmailMutation.isPending}
+                onClick={() => setShowEmailDialog(true)}
+                disabled={!client?.email}
                 data-testid="button-send-invoice-email"
               >
-                {sendEmailMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Mail className="mr-2 h-4 w-4" />
-                )}
+                <Mail className="mr-2 h-4 w-4" />
                 Envoyer par email
-              </Button>
-              <Button 
-                variant="secondary" 
-                className="w-full"
-                onClick={() => setShowVoiceDictation(true)}
-                disabled={!client?.email}
-                data-testid="button-voice-dictation"
-              >
-                <Mic className="mr-2 h-4 w-4" />
-                Dicter le récapitulatif
               </Button>
             </div>
           </CardContent>
@@ -481,16 +447,16 @@ export default function AdminInvoiceEdit() {
         </CardContent>
       </Card>
 
-      <VoiceDictationDialog
-        open={showVoiceDictation}
-        onOpenChange={setShowVoiceDictation}
+      <EmailWithDictationDialog
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+        documentType="invoice"
+        documentId={invoiceId}
+        documentNumber={formData.invoiceNumber}
         clientEmail={client?.email || ""}
         clientName={`${client?.firstName || ""} ${client?.lastName || ""}`.trim() || "Client"}
         prestations={localItems.filter(item => item.description).map(item => item.description || "")}
         technicalDetails={formData.notes || ""}
-        attachments={["Facture PDF"]}
-        documentType="invoice"
-        documentNumber={formData.invoiceNumber}
       />
     </div>
   );
