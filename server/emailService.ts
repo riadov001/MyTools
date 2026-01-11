@@ -424,7 +424,7 @@ const COMPANY_INFO = {
 };
 
 // Load logo as base64 for server
-function getLogoBase64(): string {
+export function getLogoBase64(): string {
   try {
     const logoPath = path.join(process.cwd(), 'attached_assets', 'cropped-Logo-2-1-768x543_(3)_1767977972324.png');
     const logoBuffer = fs.readFileSync(logoPath);
