@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
-import type { Quote, QuoteItem } from "@shared/schema";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2, Mic } from "lucide-react";
+import { VoiceDictationDialog } from "@/components/voice-dictation-dialog";
+import type { Quote, QuoteItem, User } from "@shared/schema";
 
 export default function AdminQuoteEdit() {
   const [, params] = useRoute("/admin/quotes/:id/edit");
@@ -33,6 +34,15 @@ export default function AdminQuoteEdit() {
     queryKey: [`/api/admin/quotes/${quoteId}/items`],
     enabled: isAuthenticated && isAdmin && !!quoteId,
   });
+
+  // Fetch client data for voice dictation
+  const { data: client } = useQuery<User>({
+    queryKey: [`/api/admin/users/${quote?.clientId}`],
+    enabled: isAuthenticated && isAdmin && !!quote?.clientId,
+  });
+
+  // Voice dictation dialog state
+  const [showVoiceDictation, setShowVoiceDictation] = useState(false);
 
   // Local state for form
   const [formData, setFormData] = useState({
@@ -319,6 +329,15 @@ export default function AdminQuoteEdit() {
               )}
               Envoyer par email
             </Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowVoiceDictation(true)}
+              disabled={!client?.email}
+              data-testid="button-voice-dictation"
+            >
+              <Mic className="mr-2 h-4 w-4" />
+              Dicter le récapitulatif
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -442,6 +461,18 @@ export default function AdminQuoteEdit() {
           </div>
         </CardContent>
       </Card>
+
+      <VoiceDictationDialog
+        open={showVoiceDictation}
+        onOpenChange={setShowVoiceDictation}
+        clientEmail={client?.email || ""}
+        clientName={`${client?.firstName || ""} ${client?.lastName || ""}`.trim() || "Client"}
+        prestations={localItems.filter(item => item.description).map(item => item.description || "")}
+        technicalDetails={formData.notes || ""}
+        attachments={["Devis PDF"]}
+        documentType="quote"
+        documentNumber={quote?.id || ""}
+      />
     </div>
   );
 }

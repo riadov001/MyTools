@@ -2503,6 +2503,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Voice dictation routes for AI-powered email generation
+  app.post("/api/voice-dictation/generate-email", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { GoogleGenAI } = await import("@google/genai");
+      
+      // Initialize Gemini AI client
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
+      });
+
+      // Get form data from multipart request
+      const files = (req as any).files;
+      if (!files || !files.audio) {
+        return res.status(400).json({ message: "Fichier audio requis" });
+      }
+
+      const audioFile = files.audio;
+      const clientName = req.body.clientName || "Client";
+      const prestations = JSON.parse(req.body.prestations || "[]");
+      const technicalDetails = req.body.technicalDetails || "";
+      const attachments = JSON.parse(req.body.attachments || "[]");
+      const documentType = req.body.documentType || "invoice";
+      const documentNumber = req.body.documentNumber || "";
+
+      // Step 1: Transcribe audio using Gemini
+      const audioBase64 = audioFile.data.toString('base64');
+      const mimeType = audioFile.mimetype || 'audio/webm';
+
+      const transcriptionResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: audioBase64,
+                },
+              },
+              {
+                text: "Transcris cet enregistrement audio en français. Retourne uniquement le texte transcrit, sans commentaires ni formatage."
+              }
+            ],
+          },
+        ],
+      });
+
+      const transcription = transcriptionResponse.text || "";
+      
+      if (!transcription.trim()) {
+        return res.status(400).json({ message: "Impossible de transcrire l'audio. Veuillez réessayer." });
+      }
+
+      // Step 2: Generate professional email using the strict prompt
+      const prestationsList = prestations.length > 0 
+        ? prestations.map((p: string) => `- ${p}`).join("\n")
+        : "Aucune prestation spécifiée";
+
+      const attachmentsList = attachments.length > 0
+        ? attachments.join(", ")
+        : "Facture PDF";
+
+      const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
+
+Données autorisées :
+- Texte dicté par l'utilisateur : "${transcription}"
+- Liste des prestations cochées (LISTE STRICTE) :
+${prestationsList}
+- Champs techniques fournis : ${technicalDetails || "Aucun"}
+- Nom du client : ${clientName}
+- Type de document : ${documentType === 'quote' ? 'Devis' : 'Facture'}
+- Numéro du document : ${documentNumber}
+- Pièces jointes : ${attachmentsList}
+
+Règles impératives :
+- Tu ne dois JAMAIS mentionner une prestation non cochée dans la liste ci-dessus
+- Si une information n'est pas fournie, ne l'invente pas
+- Ton professionnel, clair, standardisé
+- Langue : français
+
+Objectif :
+Rédiger un mail client récapitulatif prêt à envoyer, structuré ainsi :
+1. Salutation professionnelle (Bonjour ${clientName},)
+2. Introduction courte basée sur la dictée
+3. Prestations réalisées (liste - uniquement celles de la LISTE STRICTE)
+4. Détails techniques si présents
+5. Mention des pièces jointes (${attachmentsList})
+6. Formule de politesse
+7. Signature MY JANTES
+
+Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
+
+      const emailResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: emailPrompt }],
+          },
+        ],
+      });
+
+      const generatedEmail = emailResponse.text || "";
+
+      res.json({
+        transcription,
+        email: generatedEmail,
+      });
+
+    } catch (error: any) {
+      console.error("Error in voice dictation:", error);
+      res.status(500).json({ message: error.message || "Erreur lors de la génération de l'email" });
+    }
+  });
+
+  app.post("/api/voice-dictation/send-email", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { to, subject, body, documentType, documentNumber } = req.body;
+
+      if (!to || !subject || !body) {
+        return res.status(400).json({ message: "Destinataire, sujet et corps de l'email requis" });
+      }
+
+      const result = await sendEmail({
+        to,
+        subject,
+        html: `<div style="font-family: Arial, sans-serif; white-space: pre-wrap;">${body.replace(/\n/g, '<br>')}</div>`,
+        text: body,
+      });
+
+      if (result.success) {
+        // Log audit event
+        await logAuditEvent({
+          req,
+          entityType: documentType === 'quote' ? 'quote' : 'invoice',
+          entityId: documentNumber,
+          action: 'updated',
+          summary: `Email envoyé via dictée vocale à ${to}`,
+          metadata: { emailTo: to, emailSubject: subject },
+        });
+
+        res.json({ success: true, message: "Email envoyé avec succès" });
+      } else {
+        res.status(500).json({ message: result.error || "Erreur lors de l'envoi de l'email" });
+      }
+    } catch (error: any) {
+      console.error("Error sending voice dictation email:", error);
+      res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup (Reference: javascript_websocket blueprint)

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Mic, Square, Loader2, Send, AlertTriangle, RefreshCw } from "lucide-react";
 
 interface VoiceDictationDialogProps {
@@ -46,6 +47,7 @@ export function VoiceDictationDialog({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [generatedEmail, setGeneratedEmail] = useState("");
   const [hasEdited, setHasEdited] = useState(false);
+  const [hasConfirmedReview, setHasConfirmedReview] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -175,6 +177,7 @@ export function VoiceDictationDialog({
     setAudioBlob(null);
     setGeneratedEmail("");
     setHasEdited(false);
+    setHasConfirmedReview(false);
     setRecordingTime(0);
     if (isRecording) {
       stopRecording();
@@ -312,6 +315,21 @@ export function VoiceDictationDialog({
               <div className="text-sm text-muted-foreground">
                 <strong>Destinataire :</strong> {clientEmail}
               </div>
+
+              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
+                <Checkbox
+                  id="confirm-review"
+                  checked={hasConfirmedReview}
+                  onCheckedChange={(checked) => setHasConfirmedReview(checked === true)}
+                  data-testid="checkbox-confirm-review"
+                />
+                <label
+                  htmlFor="confirm-review"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  J'ai vérifié le contenu de l'email et je confirme qu'il correspond aux prestations réalisées. Je comprends que cet email sera envoyé au client.
+                </label>
+              </div>
             </div>
           )}
         </div>
@@ -323,7 +341,7 @@ export function VoiceDictationDialog({
           {generatedEmail && (
             <Button
               onClick={() => sendEmailMutation.mutate()}
-              disabled={sendEmailMutation.isPending || !generatedEmail.trim()}
+              disabled={sendEmailMutation.isPending || !generatedEmail.trim() || !hasConfirmedReview}
               className="gap-2"
               data-testid="button-send-email"
             >

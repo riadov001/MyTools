@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2 } from "lucide-react";
-import type { Invoice, InvoiceItem } from "@shared/schema";
+import { ArrowLeft, Plus, Trash2, Save, Mail, Loader2, Mic } from "lucide-react";
+import { VoiceDictationDialog } from "@/components/voice-dictation-dialog";
+import type { Invoice, InvoiceItem, User } from "@shared/schema";
 
 export default function AdminInvoiceEdit() {
   const [, params] = useRoute("/admin/invoices/:id/edit");
@@ -33,6 +34,15 @@ export default function AdminInvoiceEdit() {
     queryKey: [`/api/admin/invoices/${invoiceId}/items`],
     enabled: isAuthenticated && isAdmin && !!invoiceId,
   });
+
+  // Fetch client data for voice dictation
+  const { data: client } = useQuery<User>({
+    queryKey: [`/api/admin/users/${invoice?.clientId}`],
+    enabled: isAuthenticated && isAdmin && !!invoice?.clientId,
+  });
+
+  // Voice dictation dialog state
+  const [showVoiceDictation, setShowVoiceDictation] = useState(false);
 
   // Local state for form
   const [formData, setFormData] = useState({
@@ -330,6 +340,16 @@ export default function AdminInvoiceEdit() {
                 )}
                 Envoyer par email
               </Button>
+              <Button 
+                variant="secondary" 
+                className="w-full"
+                onClick={() => setShowVoiceDictation(true)}
+                disabled={!client?.email}
+                data-testid="button-voice-dictation"
+              >
+                <Mic className="mr-2 h-4 w-4" />
+                Dicter le récapitulatif
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -454,6 +474,18 @@ export default function AdminInvoiceEdit() {
           </div>
         </CardContent>
       </Card>
+
+      <VoiceDictationDialog
+        open={showVoiceDictation}
+        onOpenChange={setShowVoiceDictation}
+        clientEmail={client?.email || ""}
+        clientName={`${client?.firstName || ""} ${client?.lastName || ""}`.trim() || "Client"}
+        prestations={localItems.filter(item => item.description).map(item => item.description || "")}
+        technicalDetails={formData.notes || ""}
+        attachments={["Facture PDF"]}
+        documentType="invoice"
+        documentNumber={formData.invoiceNumber}
+      />
     </div>
   );
 }
