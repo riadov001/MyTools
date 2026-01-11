@@ -1,0 +1,342 @@
+import { useState, useRef, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mic, Square, Loader2, Send, AlertTriangle, RefreshCw } from "lucide-react";
+
+interface VoiceDictationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clientEmail: string;
+  clientName: string;
+  prestations: string[];
+  technicalDetails?: string;
+  attachments?: string[];
+  documentType: "quote" | "invoice";
+  documentNumber: string;
+  onEmailSent?: () => void;
+}
+
+export function VoiceDictationDialog({
+  open,
+  onOpenChange,
+  clientEmail,
+  clientName,
+  prestations,
+  technicalDetails = "",
+  attachments = [],
+  documentType,
+  documentNumber,
+  onEmailSent,
+}: VoiceDictationDialogProps) {
+  const { toast } = useToast();
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [generatedEmail, setGeneratedEmail] = useState("");
+  const [hasEdited, setHasEdited] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+      
+      audioChunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accéder au microphone. Vérifiez les permissions.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [isRecording]);
+
+  const generateEmailMutation = useMutation({
+    mutationFn: async () => {
+      if (!audioBlob) throw new Error("Aucun enregistrement audio");
+
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('clientName', clientName);
+      formData.append('prestations', JSON.stringify(prestations));
+      formData.append('technicalDetails', technicalDetails);
+      formData.append('attachments', JSON.stringify(attachments));
+      formData.append('documentType', documentType);
+      formData.append('documentNumber', documentNumber);
+
+      const response = await fetch('/api/voice-dictation/generate-email', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la génération');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedEmail(data.email);
+      setHasEdited(false);
+      toast({
+        title: "Email généré",
+        description: "Veuillez vérifier et modifier le contenu avant envoi.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/voice-dictation/send-email", {
+        to: clientEmail,
+        subject: `MY JANTES - ${documentType === 'quote' ? 'Devis' : 'Facture'} ${documentNumber}`,
+        body: generatedEmail,
+        documentType,
+        documentNumber,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email envoyé",
+        description: `L'email a été envoyé à ${clientEmail}`,
+      });
+      onEmailSent?.();
+      handleClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur d'envoi",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleClose = () => {
+    setAudioBlob(null);
+    setGeneratedEmail("");
+    setHasEdited(false);
+    setRecordingTime(0);
+    if (isRecording) {
+      stopRecording();
+    }
+    onOpenChange(false);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-primary" />
+            Dictée vocale - Récapitulatif client
+          </DialogTitle>
+          <DialogDescription>
+            Dictez votre récapitulatif. L'IA générera un email professionnel basé uniquement sur les prestations cochées.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Recording section */}
+          <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-muted/30">
+            {!audioBlob ? (
+              <>
+                <div className="text-4xl font-mono">
+                  {formatTime(recordingTime)}
+                </div>
+                {isRecording ? (
+                  <Button
+                    variant="destructive"
+                    size="lg"
+                    onClick={stopRecording}
+                    className="gap-2"
+                    data-testid="button-stop-recording"
+                  >
+                    <Square className="h-4 w-4" />
+                    Arrêter l'enregistrement
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    onClick={startRecording}
+                    className="gap-2"
+                    data-testid="button-start-recording"
+                  >
+                    <Mic className="h-4 w-4" />
+                    Commencer l'enregistrement
+                  </Button>
+                )}
+                {isRecording && (
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    Enregistrement en cours... (20-40 secondes recommandées)
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-4 w-full">
+                <p className="text-sm text-muted-foreground">
+                  Enregistrement terminé ({formatTime(recordingTime)})
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setAudioBlob(null);
+                      setRecordingTime(0);
+                    }}
+                    className="gap-2"
+                    data-testid="button-new-recording"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Nouvel enregistrement
+                  </Button>
+                  <Button
+                    onClick={() => generateEmailMutation.mutate()}
+                    disabled={generateEmailMutation.isPending}
+                    className="gap-2"
+                    data-testid="button-generate-email"
+                  >
+                    {generateEmailMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                    Générer l'email
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Prestations list */}
+          {prestations.length > 0 && (
+            <div className="p-4 border rounded-lg">
+              <Label className="text-sm font-medium">Prestations autorisées (liste blanche)</Label>
+              <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside">
+                {prestations.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Generated email */}
+          {generatedEmail && (
+            <div className="space-y-3">
+              <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  Merci de vérifier le contenu avant envoi. L'email ne sera pas envoyé automatiquement.
+                </AlertDescription>
+              </Alert>
+
+              <div>
+                <Label htmlFor="email-content">Contenu de l'email (modifiable)</Label>
+                <Textarea
+                  id="email-content"
+                  value={generatedEmail}
+                  onChange={(e) => {
+                    setGeneratedEmail(e.target.value);
+                    setHasEdited(true);
+                  }}
+                  className="mt-2 min-h-[250px] font-mono text-sm"
+                  data-testid="textarea-email-content"
+                />
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                <strong>Destinataire :</strong> {clientEmail}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={handleClose} data-testid="button-cancel-dictation">
+            Annuler
+          </Button>
+          {generatedEmail && (
+            <Button
+              onClick={() => sendEmailMutation.mutate()}
+              disabled={sendEmailMutation.isPending || !generatedEmail.trim()}
+              className="gap-2"
+              data-testid="button-send-email"
+            >
+              {sendEmailMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Envoyer l'email
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
