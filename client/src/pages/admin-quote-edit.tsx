@@ -43,8 +43,12 @@ export default function AdminQuoteEdit() {
 
   // Find client from users list
   const client = useMemo(() => {
+    console.log('Debug voice dictation - quote?.clientId:', quote?.clientId);
+    console.log('Debug voice dictation - allUsers.length:', allUsers.length);
     if (!quote?.clientId || !allUsers.length) return null;
-    return allUsers.find(u => u.id === quote.clientId) || null;
+    const foundClient = allUsers.find(u => u.id === quote.clientId);
+    console.log('Debug voice dictation - foundClient:', foundClient);
+    return foundClient || null;
   }, [quote?.clientId, allUsers]);
 
   // Voice dictation dialog state
