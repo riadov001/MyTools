@@ -2604,8 +2604,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const emailPrompt = `Tu es un assistant professionnel pour un atelier automobile MY JANTES.
 
-Données fournies :
-- Texte dicté par l'utilisateur : "${transcription}"
+DONNÉES FOURNIES :
+- Texte dicté par l'utilisateur (TRANSCRIPTION) : "${transcription}"
 - Liste des services officiels (POUR RÉFÉRENCE) :
 ${servicesList}
 - Champs techniques fournis : ${technicalDetails || "Aucun"}
@@ -2614,19 +2614,21 @@ ${servicesList}
 - Numéro du document : ${documentNumber}
 - Pièces jointes : ${attachmentsList}
 
-Règles impératives :
-- Rédige l'email basé sur les informations dictées.
-- Utilise la "Liste des services officiels" pour utiliser les termes exacts de l'atelier si la dictée y fait référence.
-- Si une information n'est pas fournie, ne l'invente pas.
-- Ton professionnel, clair, standardisé.
-- Langue : français.
-- Ne mentionne aucun prix.
+RÈGLES IMPÉRATIVES :
+1. ANALYSE la transcription : Identifie toutes les prestations et travaux mentionnés par l'utilisateur.
+2. UTILISE les termes des "services officiels" quand ils correspondent à ce qui a été dicté.
+3. INCLUS impérativement tous les travaux dictés dans le corps de l'email.
+4. Si une information n'est pas fournie, ne l'invente pas.
+5. Ton professionnel, clair, standardisé. Langue : français.
+6. Ne mentionne aucun prix.
 
-Objectif :
-Rédiger un mail client récapitulatif prêt à envoyer, structuré ainsi :
+OBJECTIF :
+Rédiger un mail client récapitulatif complet et prêt à envoyer.
+
+STRUCTURE DE L'EMAIL :
 1. Salutation professionnelle (Bonjour ${clientName},)
-2. Introduction courte basée sur la dictée
-3. Récapitulatif des travaux réalisés (en utilisant les termes des services officiels si possible)
+2. Introduction courte (ex: "Suite à notre intervention...")
+3. RÉCAPITULATIF DÉTAILLÉ des travaux réalisés (Sois précis et liste tout ce qui a été dicté)
 4. Mention des pièces jointes (${attachmentsList})
 5. Formule de politesse
 6. Signature MY JANTES
