@@ -20,6 +20,10 @@ import {
   auditLogs,
   auditLogChanges,
   passwordResetTokens,
+  chatConversations,
+  chatParticipants,
+  chatMessages,
+  chatAttachments,
   type User,
   type PasswordResetToken,
   type InsertPasswordResetToken,
@@ -58,6 +62,14 @@ import {
   type InsertAuditLog,
   type AuditLogChange,
   type InsertAuditLogChange,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatParticipant,
+  type InsertChatParticipant,
+  type ChatMessage,
+  type InsertChatMessage,
+  type ChatAttachment,
+  type InsertChatAttachment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
@@ -159,6 +171,26 @@ export interface IStorage {
   createPasswordResetToken(data: { userId: string; token: string; expiresAt: Date }): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenUsed(token: string): Promise<void>;
+  
+  // Chat methods
+  createChatConversation(data: InsertChatConversation): Promise<ChatConversation>;
+  getChatConversation(id: string): Promise<ChatConversation | undefined>;
+  getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User } })[]>;
+  updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation>;
+  deleteChatConversation(id: string): Promise<void>;
+  
+  addChatParticipant(data: InsertChatParticipant): Promise<ChatParticipant>;
+  removeChatParticipant(conversationId: string, userId: string): Promise<void>;
+  getChatParticipants(conversationId: string): Promise<(ChatParticipant & { user: User })[]>;
+  updateLastRead(conversationId: string, userId: string): Promise<void>;
+  
+  createChatMessage(data: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessages(conversationId: string, limit?: number, offset?: number): Promise<(ChatMessage & { sender: User, attachments: ChatAttachment[] })[]>;
+  updateChatMessage(id: string, content: string): Promise<ChatMessage>;
+  deleteChatMessage(id: string): Promise<void>;
+  
+  createChatAttachment(data: InsertChatAttachment): Promise<ChatAttachment>;
+  getChatAttachments(messageId: string): Promise<ChatAttachment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -890,6 +922,149 @@ export class DatabaseStorage implements IStorage {
       .update(passwordResetTokens)
       .set({ used: true })
       .where(eq(passwordResetTokens.token, token));
+  }
+
+  // Chat methods
+  async createChatConversation(data: InsertChatConversation): Promise<ChatConversation> {
+    const [conversation] = await db.insert(chatConversations).values(data).returning();
+    return conversation;
+  }
+
+  async getChatConversation(id: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db.select().from(chatConversations).where(eq(chatConversations.id, id));
+    return conversation;
+  }
+
+  async getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User } })[]> {
+    const participantRecords = await db.select().from(chatParticipants).where(eq(chatParticipants.userId, userId));
+    const conversationIds = participantRecords.map(p => p.conversationId);
+    
+    if (conversationIds.length === 0) return [];
+    
+    const conversations = await db.select()
+      .from(chatConversations)
+      .where(inArray(chatConversations.id, conversationIds))
+      .orderBy(desc(chatConversations.lastMessageAt));
+    
+    return Promise.all(conversations.map(async (conv) => {
+      const participants = await this.getChatParticipants(conv.id);
+      
+      const userParticipant = participantRecords.find(p => p.conversationId === conv.id);
+      const lastReadAt = userParticipant?.lastReadAt;
+      
+      let unreadCount = 0;
+      if (lastReadAt) {
+        const unreadMessages = await db.select({ count: sql<number>`count(*)` })
+          .from(chatMessages)
+          .where(and(
+            eq(chatMessages.conversationId, conv.id),
+            sql`${chatMessages.createdAt} > ${lastReadAt}`
+          ));
+        unreadCount = Number(unreadMessages[0]?.count || 0);
+      } else {
+        const allMessages = await db.select({ count: sql<number>`count(*)` })
+          .from(chatMessages)
+          .where(eq(chatMessages.conversationId, conv.id));
+        unreadCount = Number(allMessages[0]?.count || 0);
+      }
+      
+      const [lastMessageRow] = await db.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, conv.id))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(1);
+      
+      let lastMessage: (ChatMessage & { sender: User }) | undefined;
+      if (lastMessageRow) {
+        const [sender] = await db.select().from(users).where(eq(users.id, lastMessageRow.senderId));
+        if (sender) {
+          lastMessage = { ...lastMessageRow, sender };
+        }
+      }
+      
+      return { ...conv, participants, unreadCount, lastMessage };
+    }));
+  }
+
+  async updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation> {
+    const [conversation] = await db.update(chatConversations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    return conversation;
+  }
+
+  async deleteChatConversation(id: string): Promise<void> {
+    await db.delete(chatConversations).where(eq(chatConversations.id, id));
+  }
+
+  async addChatParticipant(data: InsertChatParticipant): Promise<ChatParticipant> {
+    const [participant] = await db.insert(chatParticipants).values(data).returning();
+    return participant;
+  }
+
+  async removeChatParticipant(conversationId: string, odUserId: string): Promise<void> {
+    await db.delete(chatParticipants).where(
+      and(eq(chatParticipants.conversationId, conversationId), eq(chatParticipants.userId, odUserId))
+    );
+  }
+
+  async getChatParticipants(conversationId: string): Promise<(ChatParticipant & { user: User })[]> {
+    const participants = await db.select().from(chatParticipants).where(eq(chatParticipants.conversationId, conversationId));
+    return Promise.all(participants.map(async (p) => {
+      const [user] = await db.select().from(users).where(eq(users.id, p.userId));
+      return { ...p, user };
+    }));
+  }
+
+  async updateLastRead(conversationId: string, userId: string): Promise<void> {
+    await db.update(chatParticipants)
+      .set({ lastReadAt: new Date() })
+      .where(and(eq(chatParticipants.conversationId, conversationId), eq(chatParticipants.userId, userId)));
+  }
+
+  async createChatMessage(data: InsertChatMessage): Promise<ChatMessage> {
+    const [message] = await db.insert(chatMessages).values(data).returning();
+    await db.update(chatConversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(chatConversations.id, data.conversationId));
+    return message;
+  }
+
+  async getChatMessages(conversationId: string, limit = 50, offset = 0): Promise<(ChatMessage & { sender: User, attachments: ChatAttachment[] })[]> {
+    const messages = await db.select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return Promise.all(messages.reverse().map(async (msg) => {
+      const [sender] = await db.select().from(users).where(eq(users.id, msg.senderId));
+      const attachments = await db.select().from(chatAttachments).where(eq(chatAttachments.messageId, msg.id));
+      return { ...msg, sender, attachments };
+    }));
+  }
+
+  async updateChatMessage(id: string, content: string): Promise<ChatMessage> {
+    const [message] = await db.update(chatMessages)
+      .set({ content, isEdited: true, updatedAt: new Date() })
+      .where(eq(chatMessages.id, id))
+      .returning();
+    return message;
+  }
+
+  async deleteChatMessage(id: string): Promise<void> {
+    await db.delete(chatMessages).where(eq(chatMessages.id, id));
+  }
+
+  async createChatAttachment(data: InsertChatAttachment): Promise<ChatAttachment> {
+    const [attachment] = await db.insert(chatAttachments).values(data).returning();
+    return attachment;
+  }
+
+  async getChatAttachments(messageId: string): Promise<ChatAttachment[]> {
+    return await db.select().from(chatAttachments).where(eq(chatAttachments.messageId, messageId));
   }
 }
 

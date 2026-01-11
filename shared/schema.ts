@@ -188,11 +188,54 @@ export const reservationServices = pgTable("reservation_services", {
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  type: varchar("type", { enum: ["quote", "invoice", "reservation", "service"] }).notNull(),
+  type: varchar("type", { enum: ["quote", "invoice", "reservation", "service", "chat"] }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
-  relatedId: varchar("related_id"), // ID of related quote/invoice/reservation
+  relatedId: varchar("related_id"), // ID of related quote/invoice/reservation/conversation
   isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Chat Conversations (Discussion threads)
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title", { length: 255 }).notNull(),
+  createdById: varchar("created_by_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  isArchived: boolean("is_archived").notNull().default(false),
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat Participants (Who is part of which conversation)
+export const chatParticipants = pgTable("chat_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  lastReadAt: timestamp("last_read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Chat Messages
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  content: text("content").notNull(),
+  isEdited: boolean("is_edited").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Chat Attachments (Files attached to messages)
+export const chatAttachments = pgTable("chat_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull().references(() => chatMessages.id, { onDelete: 'cascade' }),
+  fileType: varchar("file_type", { enum: ["image", "video", "document"] }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSize: integer("file_size"),
+  mimeType: varchar("mime_type", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -493,6 +536,45 @@ export const auditLogChangesRelations = relations(auditLogChanges, ({ one }) => 
   }),
 }));
 
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [chatConversations.createdById],
+    references: [users.id],
+  }),
+  participants: many(chatParticipants),
+  messages: many(chatMessages),
+}));
+
+export const chatParticipantsRelations = relations(chatParticipants, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatParticipants.conversationId],
+    references: [chatConversations.id],
+  }),
+  user: one(users, {
+    fields: [chatParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one, many }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+  sender: one(users, {
+    fields: [chatMessages.senderId],
+    references: [users.id],
+  }),
+  attachments: many(chatAttachments),
+}));
+
+export const chatAttachmentsRelations = relations(chatAttachments, ({ one }) => ({
+  message: one(chatMessages, {
+    fields: [chatAttachments.messageId],
+    references: [chatMessages.id],
+  }),
+}));
+
 // Zod Schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const insertServiceSchema = createInsertSchema(services).omit({ id: true, createdAt: true, updatedAt: true });
@@ -550,6 +632,10 @@ export const insertServiceWorkflowSchema = createInsertSchema(serviceWorkflows).
 export const insertWorkshopTaskSchema = createInsertSchema(workshopTasks).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, occurredAt: true });
 export const insertAuditLogChangeSchema = createInsertSchema(auditLogChanges).omit({ id: true });
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({ id: true, createdAt: true, updatedAt: true, lastMessageAt: true });
+export const insertChatParticipantSchema = createInsertSchema(chatParticipants).omit({ id: true, createdAt: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true, updatedAt: true, isEdited: true });
+export const insertChatAttachmentSchema = createInsertSchema(chatAttachments).omit({ id: true, createdAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -592,3 +678,11 @@ export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLogChange = z.infer<typeof insertAuditLogChangeSchema>;
 export type AuditLogChange = typeof auditLogChanges.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
+export type ChatParticipant = typeof chatParticipants.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatAttachment = z.infer<typeof insertChatAttachmentSchema>;
+export type ChatAttachment = typeof chatAttachments.$inferSelect;

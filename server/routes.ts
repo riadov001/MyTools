@@ -2801,6 +2801,302 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
     }
   });
 
+  // ==================== CHAT API ROUTES ====================
+  
+  // Helper: Check if user is a staff member (employee or admin)
+  const isStaffUser = (user: any): boolean => {
+    return user.role === 'employe' || user.role === 'admin';
+  };
+  
+  // Helper: Check if user is a participant in a conversation
+  const isConversationParticipant = async (conversationId: string, userId: string): Promise<boolean> => {
+    const participants = await storage.getChatParticipants(conversationId);
+    return participants.some(p => p.userId === userId);
+  };
+
+  // Get all conversations for the current user
+  app.get("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      const conversations = await storage.getChatConversations(userId);
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create a new conversation
+  app.post("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { title, participantIds } = req.body;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      if (!title) {
+        return res.status(400).json({ message: "Le titre est requis" });
+      }
+      
+      if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+        return res.status(400).json({ message: "Au moins un participant est requis" });
+      }
+      
+      // Validate all participants exist and are staff members
+      const allUsers = await storage.getAllUsers();
+      const validParticipantIds: string[] = [];
+      
+      for (const participantId of participantIds) {
+        const participant = allUsers.find(u => u.id === participantId);
+        if (!participant) {
+          return res.status(400).json({ message: `Participant ${participantId} introuvable` });
+        }
+        if (participant.role !== 'employe' && participant.role !== 'admin') {
+          return res.status(400).json({ message: "Seuls les employés et administrateurs peuvent participer au chat" });
+        }
+        if (participantId !== userId) {
+          validParticipantIds.push(participantId);
+        }
+      }
+      
+      const conversation = await storage.createChatConversation({
+        title,
+        createdById: userId,
+      });
+      
+      // Always add creator as participant
+      await storage.addChatParticipant({ conversationId: conversation.id, userId });
+      
+      // Add validated participants
+      for (const participantId of validParticipantIds) {
+        await storage.addChatParticipant({ conversationId: conversation.id, userId: participantId });
+      }
+      
+      const fullConversation = await storage.getChatConversations(userId);
+      const created = fullConversation.find(c => c.id === conversation.id);
+      
+      res.json(created || conversation);
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get messages for a conversation
+  app.get("/api/chat/conversations/:conversationId/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      // Verify user is a participant
+      if (!await isConversationParticipant(conversationId, userId)) {
+        return res.status(403).json({ message: "Vous n'êtes pas membre de cette conversation" });
+      }
+      
+      const messages = await storage.getChatMessages(conversationId, limit, offset);
+      await storage.updateLastRead(conversationId, userId);
+      
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Send a message
+  app.post("/api/chat/conversations/:conversationId/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { content } = req.body;
+      const userId = req.user.id;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      // Verify user is a participant
+      if (!await isConversationParticipant(conversationId, userId)) {
+        return res.status(403).json({ message: "Vous n'êtes pas membre de cette conversation" });
+      }
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Le message ne peut pas être vide" });
+      }
+      
+      const message = await storage.createChatMessage({
+        conversationId,
+        senderId: userId,
+        content: content.trim(),
+      });
+      
+      const participants = await storage.getChatParticipants(conversationId);
+      const senderName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+      
+      for (const participant of participants) {
+        if (participant.userId !== userId) {
+          await storage.createNotification({
+            userId: participant.userId,
+            type: "chat",
+            title: `Nouveau message de ${senderName}`,
+            message: content.length > 50 ? content.substring(0, 50) + "..." : content,
+            relatedId: conversationId,
+          });
+          
+          const wsClient = wsClients.get(participant.userId);
+          if (wsClient && wsClient.readyState === WebSocket.OPEN) {
+            wsClient.send(JSON.stringify({
+              type: 'chat_message',
+              conversationId,
+              message: {
+                ...message,
+                sender: {
+                  id: req.user.id,
+                  firstName: req.user.firstName,
+                  lastName: req.user.lastName,
+                  email: req.user.email,
+                  profileImageUrl: req.user.profileImageUrl,
+                },
+                attachments: [],
+              },
+            }));
+          }
+        }
+      }
+      
+      const sender = await storage.getUser(userId);
+      res.json({ ...message, sender, attachments: [] });
+    } catch (error: any) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Upload attachment for a message (removed - handled differently)
+
+  // Get participants of a conversation
+  app.get("/api/chat/conversations/:conversationId/participants", isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      // Verify user is a participant
+      if (!await isConversationParticipant(conversationId, userId)) {
+        return res.status(403).json({ message: "Vous n'êtes pas membre de cette conversation" });
+      }
+      
+      const participants = await storage.getChatParticipants(conversationId);
+      res.json(participants);
+    } catch (error: any) {
+      console.error("Error fetching participants:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add participant to a conversation (admin only)
+  app.post("/api/chat/conversations/:conversationId/participants", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { userId } = req.body;
+      
+      // Validate the new participant is a staff member
+      const userToAdd = await storage.getUser(userId);
+      if (!userToAdd) {
+        return res.status(400).json({ message: "Utilisateur introuvable" });
+      }
+      if (userToAdd.role !== 'employe' && userToAdd.role !== 'admin') {
+        return res.status(400).json({ message: "Seuls les employés et administrateurs peuvent être ajoutés" });
+      }
+      
+      const participant = await storage.addChatParticipant({ conversationId, userId });
+      res.json(participant);
+    } catch (error: any) {
+      console.error("Error adding participant:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get eligible users for chat (employees and admins only)
+  app.get("/api/chat/users", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      const allUsers = await storage.getAllUsers();
+      const chatUsers = allUsers.filter(u => u.role === 'employe' || u.role === 'admin');
+      res.json(sanitizeUsers(chatUsers));
+    } catch (error: any) {
+      console.error("Error fetching chat users:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Mark conversation as read
+  app.post("/api/chat/conversations/:conversationId/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.id;
+      
+      if (!isStaffUser(req.user)) {
+        return res.status(403).json({ message: "Accès réservé aux employés et administrateurs" });
+      }
+      
+      // Verify user is a participant
+      if (!await isConversationParticipant(conversationId, userId)) {
+        return res.status(403).json({ message: "Vous n'êtes pas membre de cette conversation" });
+      }
+      
+      await storage.updateLastRead(conversationId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error marking conversation as read:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // WebSocket authentication tokens (short-lived, single-use)
+  const wsAuthTokens = new Map<string, { userId: string; expiresAt: number }>();
+  
+  // Generate a WebSocket auth token for the current user
+  app.post("/api/ws/auth-token", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = Date.now() + 30000; // 30 seconds validity
+      
+      wsAuthTokens.set(token, { userId, expiresAt });
+      
+      // Cleanup expired tokens
+      Array.from(wsAuthTokens.entries()).forEach(([t, data]) => {
+        if (data.expiresAt < Date.now()) {
+          wsAuthTokens.delete(t);
+        }
+      });
+      
+      res.json({ token });
+    } catch (error: any) {
+      console.error("Error generating WS auth token:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup (Reference: javascript_websocket blueprint)
@@ -2808,14 +3104,26 @@ Génère uniquement le corps de l'email, sans objet ni en-têtes.`;
 
   wss.on('connection', (ws: WebSocket, req: any) => {
     console.log('WebSocket client connected');
+    let authenticatedUserId: string | null = null;
 
     ws.on('message', (message: string) => {
       try {
         const data = JSON.parse(message.toString());
         
-        if (data.type === 'authenticate' && data.userId) {
-          wsClients.set(data.userId, ws);
-          console.log(`User ${data.userId} authenticated via WebSocket`);
+        // Secure authentication with server-issued token
+        if (data.type === 'authenticate' && data.token) {
+          const tokenData = wsAuthTokens.get(data.token);
+          
+          if (tokenData && tokenData.expiresAt > Date.now()) {
+            authenticatedUserId = tokenData.userId;
+            wsClients.set(tokenData.userId, ws);
+            wsAuthTokens.delete(data.token); // Single-use token
+            console.log(`User ${tokenData.userId} authenticated via WebSocket`);
+            ws.send(JSON.stringify({ type: 'authenticated', success: true }));
+          } else {
+            console.log('WebSocket authentication failed: invalid or expired token');
+            ws.send(JSON.stringify({ type: 'authenticated', success: false, error: 'Invalid token' }));
+          }
         }
       } catch (error) {
         console.error('WebSocket message error:', error);

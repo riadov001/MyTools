@@ -1,4 +1,4 @@
-import { Home, FileText, DollarSign, Calendar, CalendarCheck, Settings, Package, Users, Briefcase, Wrench, ClipboardList, GitBranch, History } from "lucide-react";
+import { Home, FileText, DollarSign, Calendar, CalendarCheck, Settings, Package, Users, Briefcase, Wrench, ClipboardList, GitBranch, History, MessageCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +67,11 @@ const menuItems = [
     title: "Utilisateurs",
     url: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Chat Interne",
+    url: "/admin/chat",
+    icon: MessageCircle,
   },
   {
     title: "Historique",

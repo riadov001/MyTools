@@ -1,7 +1,7 @@
 // Reference: javascript_websocket blueprint
 import { useEffect, useRef } from "react";
 import { useAuth } from "./useAuth";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 export function useWebSocket() {
   const { user, isAuthenticated } = useAuth();
@@ -10,52 +10,78 @@ export function useWebSocket() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-      // Authenticate with user ID
-      ws.send(JSON.stringify({
-        type: "authenticate",
-        userId: user.id,
-      }));
-    };
-
-    ws.onmessage = (event) => {
+    const connectWebSocket = async () => {
       try {
-        const data = JSON.parse(event.data);
+        // Get authentication token from server
+        const tokenResponse = await apiRequest("POST", "/api/ws/auth-token") as { token: string };
         
-        // Invalidate relevant queries based on notification type
-        if (data.type === "quote_updated") {
-          queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-        } else if (data.type === "invoice_created") {
-          queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-        } else if (data.type === "reservation_confirmed") {
-          queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-        }
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log("WebSocket connected");
+          // Authenticate with server-issued token
+          ws.send(JSON.stringify({
+            type: "authenticate",
+            token: tokenResponse.token,
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Handle authentication response
+            if (data.type === "authenticated") {
+              if (data.success) {
+                console.log("WebSocket authenticated successfully");
+              } else {
+                console.error("WebSocket authentication failed:", data.error);
+              }
+              return;
+            }
+            
+            // Invalidate relevant queries based on notification type
+            if (data.type === "quote_updated") {
+              queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+            } else if (data.type === "invoice_created") {
+              queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+            } else if (data.type === "reservation_confirmed") {
+              queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+            } else if (data.type === "chat_message") {
+              // Real-time chat message received
+              queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", data.conversationId, "messages"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+            }
+          } catch (error) {
+            console.error("WebSocket message error:", error);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket disconnected");
+        };
       } catch (error) {
-        console.error("WebSocket message error:", error);
+        console.error("Failed to connect WebSocket:", error);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
+    connectWebSocket();
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
       }
     };
   }, [isAuthenticated, user]);

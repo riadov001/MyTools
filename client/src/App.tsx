@@ -36,6 +36,7 @@ import WorkshopManagement from "@/pages/workshop-management";
 import EmployeeServices from "@/pages/employee-services";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import InternalChat from "@/pages/internal-chat";
 
 function Router() {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -105,6 +106,7 @@ function Router() {
                 <Route path="/admin/users" component={AdminUsers} />
                 <Route path="/admin/audit-logs" component={AdminAuditLogs} />
                 <Route path="/admin/settings" component={AdminSettings} />
+                <Route path="/admin/chat" component={InternalChat} />
                 <Route path="/login">
                   <Redirect to="/admin" />
                 </Route>
