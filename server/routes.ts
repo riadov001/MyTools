@@ -1789,6 +1789,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single user by ID
+  app.get("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      // Sanitize - remove password
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération de l'utilisateur" });
+    }
+  });
+
   app.patch("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
