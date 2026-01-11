@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -193,8 +194,8 @@ export function VoiceDictationDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl w-[95vw] p-0 gap-0 overflow-hidden flex flex-col h-[90vh] sm:h-auto max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-primary" />
             Dictée vocale - Récapitulatif client
@@ -204,145 +205,148 @@ export function VoiceDictationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Recording section */}
-          <div className="flex flex-col items-center gap-4 p-6 border rounded-lg bg-muted/30">
-            {!audioBlob ? (
-              <>
-                <div className="text-4xl font-mono">
-                  {formatTime(recordingTime)}
-                </div>
-                {isRecording ? (
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    onClick={stopRecording}
-                    className="gap-2"
-                    data-testid="button-stop-recording"
-                  >
-                    <Square className="h-4 w-4" />
-                    Arrêter l'enregistrement
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={startRecording}
-                    className="gap-2"
-                    data-testid="button-start-recording"
-                  >
-                    <Mic className="h-4 w-4" />
-                    Commencer l'enregistrement
-                  </Button>
-                )}
-                {isRecording && (
-                  <p className="text-sm text-muted-foreground animate-pulse">
-                    Enregistrement en cours... (20-40 secondes recommandées)
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-4 w-full">
-                <p className="text-sm text-muted-foreground">
-                  Enregistrement terminé ({formatTime(recordingTime)})
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setAudioBlob(null);
-                      setRecordingTime(0);
-                    }}
-                    className="gap-2"
-                    data-testid="button-new-recording"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Nouvel enregistrement
-                  </Button>
-                  <Button
-                    onClick={() => generateEmailMutation.mutate()}
-                    disabled={generateEmailMutation.isPending}
-                    className="gap-2"
-                    data-testid="button-generate-email"
-                  >
-                    {generateEmailMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
+        <ScrollArea className="flex-1 px-6">
+          <div className="space-y-4 py-4">
+            {/* Recording section */}
+            <div className="flex flex-col items-center gap-4 p-4 sm:p-6 border rounded-lg bg-muted/30">
+              {!audioBlob ? (
+                <>
+                  <div className="text-3xl sm:text-4xl font-mono">
+                    {formatTime(recordingTime)}
+                  </div>
+                  {isRecording ? (
+                    <Button
+                      variant="destructive"
+                      size="lg"
+                      onClick={stopRecording}
+                      className="gap-2 w-full sm:w-auto"
+                      data-testid="button-stop-recording"
+                    >
+                      <Square className="h-4 w-4" />
+                      Arrêter
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={startRecording}
+                      className="gap-2 w-full sm:w-auto"
+                      data-testid="button-start-recording"
+                    >
                       <Mic className="h-4 w-4" />
-                    )}
-                    Générer l'email
-                  </Button>
+                      Commencer
+                    </Button>
+                  )}
+                  {isRecording && (
+                    <p className="text-xs sm:text-sm text-muted-foreground animate-pulse text-center">
+                      Enregistrement en cours... (20-40s recommandés)
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-4 w-full">
+                  <p className="text-sm text-muted-foreground">
+                    Enregistrement terminé ({formatTime(recordingTime)})
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAudioBlob(null);
+                        setRecordingTime(0);
+                      }}
+                      className="gap-2 w-full sm:w-auto"
+                      data-testid="button-new-recording"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Recommencer
+                    </Button>
+                    <Button
+                      onClick={() => generateEmailMutation.mutate()}
+                      disabled={generateEmailMutation.isPending}
+                      className="gap-2 w-full sm:w-auto"
+                      data-testid="button-generate-email"
+                    >
+                      {generateEmailMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mic className="h-4 w-4" />
+                      )}
+                      Générer l'email
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Prestations list */}
+            {prestations.length > 0 && (
+              <div className="p-4 border rounded-lg">
+                <Label className="text-sm font-medium">Prestations autorisées</Label>
+                <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
+                  {prestations.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Generated email */}
+            {generatedEmail && (
+              <div className="space-y-4">
+                <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
+                    Vérifiez le contenu avant envoi. Pas d'envoi automatique.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email-content" className="text-sm">Contenu de l'email (modifiable)</Label>
+                  <Textarea
+                    id="email-content"
+                    value={generatedEmail}
+                    onChange={(e) => {
+                      setGeneratedEmail(e.target.value);
+                      setHasEdited(true);
+                    }}
+                    className="min-h-[200px] sm:min-h-[250px] font-mono text-sm resize-none"
+                    data-testid="textarea-email-content"
+                  />
+                </div>
+
+                <div className="text-sm bg-muted/50 p-3 rounded-md break-all">
+                  <strong className="text-muted-foreground">Destinataire :</strong> {clientEmail}
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30 mb-2">
+                  <Checkbox
+                    id="confirm-review"
+                    checked={hasConfirmedReview}
+                    onCheckedChange={(checked) => setHasConfirmedReview(checked === true)}
+                    className="mt-1"
+                    data-testid="checkbox-confirm-review"
+                  />
+                  <label
+                    htmlFor="confirm-review"
+                    className="text-sm font-medium leading-tight cursor-pointer"
+                  >
+                    J'ai vérifié le contenu de l'email et je confirme qu'il correspond aux prestations réalisées.
+                  </label>
                 </div>
               </div>
             )}
           </div>
+        </ScrollArea>
 
-          {/* Prestations list */}
-          {prestations.length > 0 && (
-            <div className="p-4 border rounded-lg">
-              <Label className="text-sm font-medium">Prestations autorisées (liste blanche)</Label>
-              <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside">
-                {prestations.map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Generated email */}
-          {generatedEmail && (
-            <div className="space-y-3">
-              <Alert variant="default" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  Merci de vérifier le contenu avant envoi. L'email ne sera pas envoyé automatiquement.
-                </AlertDescription>
-              </Alert>
-
-              <div>
-                <Label htmlFor="email-content">Contenu de l'email (modifiable)</Label>
-                <Textarea
-                  id="email-content"
-                  value={generatedEmail}
-                  onChange={(e) => {
-                    setGeneratedEmail(e.target.value);
-                    setHasEdited(true);
-                  }}
-                  className="mt-2 min-h-[250px] font-mono text-sm"
-                  data-testid="textarea-email-content"
-                />
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                <strong>Destinataire :</strong> {clientEmail}
-              </div>
-
-              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-muted/30">
-                <Checkbox
-                  id="confirm-review"
-                  checked={hasConfirmedReview}
-                  onCheckedChange={(checked) => setHasConfirmedReview(checked === true)}
-                  data-testid="checkbox-confirm-review"
-                />
-                <label
-                  htmlFor="confirm-review"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  J'ai vérifié le contenu de l'email et je confirme qu'il correspond aux prestations réalisées. Je comprends que cet email sera envoyé au client.
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose} data-testid="button-cancel-dictation">
+        <DialogFooter className="p-6 pt-2 flex flex-col sm:flex-row gap-2 border-t mt-auto">
+          <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto" data-testid="button-cancel-dictation">
             Annuler
           </Button>
           {generatedEmail && (
             <Button
               onClick={() => sendEmailMutation.mutate()}
               disabled={sendEmailMutation.isPending || !generatedEmail.trim() || !hasConfirmedReview}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
               data-testid="button-send-email"
             >
               {sendEmailMutation.isPending ? (
