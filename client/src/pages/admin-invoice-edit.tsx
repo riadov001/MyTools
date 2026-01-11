@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -35,18 +35,17 @@ export default function AdminInvoiceEdit() {
     enabled: isAuthenticated && isAdmin && !!invoiceId,
   });
 
-  // Fetch client data for voice dictation
-  const { data: client } = useQuery<User>({
-    queryKey: ['/api/admin/users', invoice?.clientId],
-    queryFn: async () => {
-      const response = await fetch(`/api/admin/users/${invoice?.clientId}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to fetch client');
-      return response.json();
-    },
-    enabled: isAuthenticated && isAdmin && !!invoice?.clientId,
+  // Fetch all users to find client for voice dictation
+  const { data: allUsers = [] } = useQuery<User[]>({
+    queryKey: ['/api/admin/users'],
+    enabled: isAuthenticated && isAdmin,
   });
+
+  // Find client from users list
+  const client = useMemo(() => {
+    if (!invoice?.clientId || !allUsers.length) return null;
+    return allUsers.find(u => u.id === invoice.clientId) || null;
+  }, [invoice?.clientId, allUsers]);
 
   // Voice dictation dialog state
   const [showVoiceDictation, setShowVoiceDictation] = useState(false);
