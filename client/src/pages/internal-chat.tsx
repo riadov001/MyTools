@@ -31,7 +31,7 @@ import type { User, ChatConversation, ChatMessage, ChatParticipant, ChatAttachme
 type ConversationWithDetails = ChatConversation & {
   participants: (ChatParticipant & { user: User })[];
   unreadCount: number;
-  lastMessage?: ChatMessage & { sender: User };
+  lastMessage?: ChatMessage & { sender: User; attachmentCount: number };
 };
 
 type MessageWithDetails = ChatMessage & {
@@ -309,8 +309,11 @@ export default function InternalChat() {
                       )}
                     </div>
                     {conv.lastMessage && (
-                      <p className="text-sm text-muted-foreground truncate">
-                        {conv.lastMessage.sender.firstName || conv.lastMessage.sender.email}: {conv.lastMessage.content}
+                      <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                        {conv.lastMessage.attachmentCount > 0 && <Paperclip className="h-3 w-3 shrink-0" />}
+                        <span className="truncate">
+                          {conv.lastMessage.sender.firstName || conv.lastMessage.sender.email}: {conv.lastMessage.content || (conv.lastMessage.attachmentCount > 0 ? "Pièce jointe" : "")}
+                        </span>
                       </p>
                     )}
                     <div className="flex items-center gap-1 mt-1">

@@ -175,7 +175,7 @@ export interface IStorage {
   // Chat methods
   createChatConversation(data: InsertChatConversation): Promise<ChatConversation>;
   getChatConversation(id: string): Promise<ChatConversation | undefined>;
-  getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User } })[]>;
+  getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User; attachmentCount: number } })[]>;
   updateChatConversation(id: string, data: Partial<InsertChatConversation>): Promise<ChatConversation>;
   deleteChatConversation(id: string): Promise<void>;
   
@@ -935,7 +935,7 @@ export class DatabaseStorage implements IStorage {
     return conversation;
   }
 
-  async getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User } })[]> {
+  async getChatConversations(userId: string): Promise<(ChatConversation & { participants: (ChatParticipant & { user: User })[], unreadCount: number, lastMessage?: ChatMessage & { sender: User; attachmentCount: number } })[]> {
     const participantRecords = await db.select().from(chatParticipants).where(eq(chatParticipants.userId, userId));
     const conversationIds = participantRecords.map(p => p.conversationId);
     
@@ -974,11 +974,15 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(chatMessages.createdAt))
         .limit(1);
       
-      let lastMessage: (ChatMessage & { sender: User }) | undefined;
+      let lastMessage: (ChatMessage & { sender: User; attachmentCount: number }) | undefined;
       if (lastMessageRow) {
         const [sender] = await db.select().from(users).where(eq(users.id, lastMessageRow.senderId));
         if (sender) {
-          lastMessage = { ...lastMessageRow, sender };
+          const attachments = await db.select({ count: sql<number>`count(*)` })
+            .from(chatAttachments)
+            .where(eq(chatAttachments.messageId, lastMessageRow.id));
+          const attachmentCount = Number(attachments[0]?.count || 0);
+          lastMessage = { ...lastMessageRow, sender, attachmentCount };
         }
       }
       
