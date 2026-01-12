@@ -1026,12 +1026,12 @@ L'équipe MyJantes`;
             </div>
             <div>
               <Label htmlFor="reservation-employee">Employé assigné</Label>
-              <Select value={reservationAssignedEmployee} onValueChange={setReservationAssignedEmployee}>
+              <Select value={reservationAssignedEmployee} onValueChange={(val) => setReservationAssignedEmployee(val === "none" ? "" : val)}>
                 <SelectTrigger id="reservation-employee" className="mt-2" data-testid="select-reservation-employee">
                   <SelectValue placeholder="Sélectionner un employé (optionnel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {users.filter(u => u.role === "employe" || u.role === "admin").map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
                       {employee.firstName} {employee.lastName} ({employee.email})
