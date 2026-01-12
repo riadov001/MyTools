@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, ArrowLeft, Key } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Key, Eye, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getRedirectionContext, performReturnRedirect } from "@/lib/navigation";
@@ -28,6 +28,7 @@ export default function AdminUsers() {
   const [changePasswordDialog, setChangePasswordDialog] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [viewUserDialog, setViewUserDialog] = useState<User | null>(null);
   const [redirectionContext, setRedirectionContext] = useState(getRedirectionContext());
   
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -330,9 +331,24 @@ export default function AdminUsers() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
+                    {user.phone && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                        <Phone className="h-3 w-3" />
+                        <span data-testid={`text-phone-${user.id}`}>{user.phone}</span>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground truncate mt-1">ID: {user.id}</p>
                   </div>
                   <div className="flex flex-row items-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setViewUserDialog(user)}
+                      data-testid={`button-view-${user.id}`}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Voir
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -782,6 +798,86 @@ export default function AdminUsers() {
               data-testid="button-save-change-password"
             >
               {changePasswordMutation.isPending ? "Modification..." : "Modifier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewUserDialog} onOpenChange={(open) => !open && setViewUserDialog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Informations de l'utilisateur</DialogTitle>
+          </DialogHeader>
+          {viewUserDialog && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Prénom</p>
+                  <p className="font-medium" data-testid="view-user-firstname">{viewUserDialog.firstName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Nom</p>
+                  <p className="font-medium" data-testid="view-user-lastname">{viewUserDialog.lastName || "-"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Email</p>
+                <p className="font-medium" data-testid="view-user-email">{viewUserDialog.email || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Téléphone</p>
+                <p className="font-medium flex items-center gap-2" data-testid="view-user-phone">
+                  {viewUserDialog.phone ? (
+                    <>
+                      <Phone className="h-4 w-4" />
+                      {viewUserDialog.phone}
+                    </>
+                  ) : (
+                    "-"
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Adresse</p>
+                <p className="font-medium" data-testid="view-user-address">
+                  {viewUserDialog.address || "-"}
+                  {viewUserDialog.postalCode && `, ${viewUserDialog.postalCode}`}
+                  {viewUserDialog.city && ` ${viewUserDialog.city}`}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Rôle</p>
+                <Badge variant={viewUserDialog.role === "admin" ? "default" : "secondary"}>
+                  {viewUserDialog.role === "admin" ? "Admin" : viewUserDialog.role === "employe" ? "Employé" : viewUserDialog.role === "client_professionnel" ? "Client Pro" : "Client"}
+                </Badge>
+              </div>
+              {viewUserDialog.role === "client_professionnel" && (
+                <>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Entreprise</p>
+                    <p className="font-medium">{viewUserDialog.companyName || "-"}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">SIRET</p>
+                      <p className="font-medium">{viewUserDialog.siret || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">TVA</p>
+                      <p className="font-medium">{viewUserDialog.tvaNumber || "-"}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">ID</p>
+                <p className="font-mono text-xs text-muted-foreground" data-testid="view-user-id">{viewUserDialog.id}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewUserDialog(null)}>
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>

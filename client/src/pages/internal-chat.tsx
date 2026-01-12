@@ -6,7 +6,6 @@ import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -404,22 +403,23 @@ export default function InternalChat() {
             )}
           </ScrollArea>
           <div className="p-4 border-t">
-            <div className="flex gap-2">
-              <Textarea
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-2"
+            >
+              <Input
                 value={messageContent}
                 onChange={(e) => setMessageContent(e.target.value)}
                 placeholder="Écrivez votre message..."
-                className="resize-none min-h-[44px] max-h-32"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
+                className="flex-1"
+                autoComplete="off"
                 data-testid="input-message"
               />
               <Button 
-                onClick={handleSendMessage} 
+                type="submit"
                 disabled={!messageContent.trim() || sendMessageMutation.isPending}
                 size="icon"
                 className="shrink-0"
@@ -427,7 +427,7 @@ export default function InternalChat() {
               >
                 <Send className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
           </div>
         </>
       ) : (
@@ -452,20 +452,20 @@ export default function InternalChat() {
         <div className="flex h-full">
           {isMobileView ? (
             selectedConversation ? (
-              <div className="w-full">
+              <div className="w-full h-full flex flex-col">
                 <MessageThread />
               </div>
             ) : (
-              <div className="w-full">
+              <div className="w-full h-full flex flex-col">
                 <ConversationList />
               </div>
             )
           ) : (
             <>
-              <div className="w-80 border-r shrink-0">
+              <div className="w-80 border-r shrink-0 h-full flex flex-col">
                 <ConversationList />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 h-full flex flex-col min-w-0">
                 <MessageThread />
               </div>
             </>

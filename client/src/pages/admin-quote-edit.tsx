@@ -215,7 +215,7 @@ export default function AdminQuoteEdit() {
   const handleSaveQuote = async () => {
     await updateQuoteMutation.mutateAsync({
       ...formData,
-      validUntil: formData.validUntil ? new Date(formData.validUntil) : null,
+      validUntil: formData.validUntil ? formData.validUntil : null,
     });
   };
 
@@ -318,9 +318,17 @@ export default function AdminQuoteEdit() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handleSaveQuote} data-testid="button-save-quote">
-              <Save className="mr-2 h-4 w-4" />
-              Enregistrer le devis
+            <Button 
+              onClick={handleSaveQuote} 
+              disabled={updateQuoteMutation.isPending}
+              data-testid="button-save-quote"
+            >
+              {updateQuoteMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {updateQuoteMutation.isPending ? "Enregistrement..." : "Enregistrer le devis"}
             </Button>
             <Button 
               variant="outline" 
