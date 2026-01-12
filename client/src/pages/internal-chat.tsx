@@ -182,7 +182,7 @@ export default function InternalChat() {
     );
   }
 
-  const ConversationList = () => (
+  const conversationListContent = (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -328,7 +328,7 @@ export default function InternalChat() {
     </div>
   );
 
-  const MessageThread = () => (
+  const messageThreadContent = (
     <div className="flex flex-col h-full">
       {currentConversation ? (
         <>
@@ -457,20 +457,20 @@ export default function InternalChat() {
           {isMobileView ? (
             selectedConversation ? (
               <div className="w-full h-full flex flex-col">
-                <MessageThread />
+                {messageThreadContent}
               </div>
             ) : (
               <div className="w-full h-full flex flex-col">
-                <ConversationList />
+                {conversationListContent}
               </div>
             )
           ) : (
             <>
               <div className="w-80 border-r shrink-0 h-full flex flex-col">
-                <ConversationList />
+                {conversationListContent}
               </div>
               <div className="flex-1 h-full flex flex-col min-w-0">
-                <MessageThread />
+                {messageThreadContent}
               </div>
             </>
           )}
