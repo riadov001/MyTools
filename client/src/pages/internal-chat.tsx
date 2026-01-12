@@ -46,8 +46,8 @@ export default function InternalChat() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [draftMessages, setDraftMessages] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [newConversationOpen, setNewConversationOpen] = useState(false);
   const [newConversationTitle, setNewConversationTitle] = useState("");
@@ -131,21 +131,16 @@ export default function InternalChat() {
     },
   });
 
-  const currentDraft = selectedConversation ? (draftMessages[selectedConversation] || "") : "";
-  
-  const setCurrentDraft = (value: string) => {
-    if (!selectedConversation) return;
-    setDraftMessages(prev => ({ ...prev, [selectedConversation]: value }));
-  };
-
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { conversationId: string; content: string }) => {
       return apiRequest("POST", `/api/chat/conversations/${data.conversationId}/messages`, { content: data.content });
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", selectedConversation, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
-      setDraftMessages(prev => ({ ...prev, [variables.conversationId]: "" }));
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     },
     onError: () => {
       toast({ title: "Erreur", description: "Impossible d'envoyer le message.", variant: "destructive" });
@@ -153,8 +148,9 @@ export default function InternalChat() {
   });
 
   const handleSendMessage = () => {
-    if (!selectedConversation || !currentDraft.trim()) return;
-    sendMessageMutation.mutate({ conversationId: selectedConversation, content: currentDraft.trim() });
+    const content = inputRef.current?.value?.trim();
+    if (!selectedConversation || !content) return;
+    sendMessageMutation.mutate({ conversationId: selectedConversation, content });
   };
 
   const handleCreateConversation = () => {
@@ -418,8 +414,7 @@ export default function InternalChat() {
               className="flex gap-2"
             >
               <Input
-                value={currentDraft}
-                onChange={(e) => setCurrentDraft(e.target.value)}
+                ref={inputRef}
                 placeholder="Écrivez votre message..."
                 className="flex-1"
                 autoComplete="off"
@@ -427,7 +422,7 @@ export default function InternalChat() {
               />
               <Button 
                 type="submit"
-                disabled={!currentDraft.trim() || sendMessageMutation.isPending}
+                disabled={sendMessageMutation.isPending}
                 size="icon"
                 className="shrink-0"
                 data-testid="button-send-message"
