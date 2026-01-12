@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Invoice, Quote } from "@shared/schema";
+import type { Invoice, Quote, ApplicationSettings } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -102,6 +102,11 @@ export default function AdminInvoices() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  const { data: settings } = useQuery<ApplicationSettings>({
+    queryKey: ["/api/admin/settings"],
+    enabled: isAuthenticated && isAdmin,
+  });
+
   // Pré-sélectionner le dernier client créé quand on ouvre le dialog
   useEffect(() => {
     if ((isDialogOpen || createDirectInvoiceDialog) && users.length > 0 && !selectedClientId) {
@@ -180,7 +185,7 @@ export default function AdminInvoices() {
       const itemsRes = await fetch(`/api/admin/invoices/${invoice.id}/items`, { credentials: 'include' });
       const invoiceItems = itemsRes.ok ? await itemsRes.json() : [];
       
-      await generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems);
+      await generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems, settings);
     } catch (error) {
       toast({
         title: "Erreur",

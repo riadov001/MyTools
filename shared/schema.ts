@@ -278,11 +278,17 @@ export const applicationSettings = pgTable("application_settings", {
   wheelCountOptions: varchar("wheel_count_options").notNull().default("1,2,3,4"), // Available options (comma-separated)
   diameterOptions: text("diameter_options").notNull().default("14,15,16,17,18,19,20,21,22"), // Available diameters (comma-separated)
   companyName: varchar("company_name", { length: 255 }).notNull().default("MyJantes"),
+  companyTagline: varchar("company_tagline", { length: 255 }),
   companyAddress: text("company_address"),
+  companyCity: varchar("company_city", { length: 255 }),
   companyPhone: varchar("company_phone", { length: 50 }),
   companyEmail: varchar("company_email", { length: 255 }),
-  companySiret: varchar("company_siret", { length: 14 }),
-  companyTvaNumber: varchar("company_tva_number", { length: 20 }),
+  companyWebsite: varchar("company_website", { length: 255 }),
+  companySiret: varchar("company_siret", { length: 20 }),
+  companyTvaNumber: varchar("company_tva_number", { length: 30 }),
+  companyIban: varchar("company_iban", { length: 50 }),
+  companySwift: varchar("company_swift", { length: 20 }),
+  companyLogo: text("company_logo"), // Base64 encoded logo or Object Storage URL
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

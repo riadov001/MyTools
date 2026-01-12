@@ -1,8 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
-import type { Quote, Invoice, InvoiceItem, QuoteItem } from '@shared/schema';
-import logoImage from '@assets/cropped-Logo-2-1-768x543_(3)_1767977972324.png';
+import type { Quote, Invoice, InvoiceItem, QuoteItem, ApplicationSettings } from '@shared/schema';
+import defaultLogoImage from '@assets/cropped-Logo-2-1-768x543_(3)_1767977972324.png';
 
 interface PDFData {
   type: 'quote' | 'invoice';
@@ -30,7 +30,23 @@ interface PDFData {
   notes?: string;
 }
 
-const COMPANY_INFO = {
+interface CompanyInfo {
+  name: string;
+  tagline: string;
+  address: string;
+  city: string;
+  phone: string;
+  email: string;
+  website: string;
+  bankName: string;
+  iban: string;
+  swift: string;
+  siret: string;
+  tva: string;
+  logo?: string;
+}
+
+const DEFAULT_COMPANY_INFO: CompanyInfo = {
   name: 'MY JANTES',
   tagline: 'SPÉCIALISTE JANTES ET PNEUS',
   address: '46 rue de la convention',
@@ -45,6 +61,27 @@ const COMPANY_INFO = {
   tva: 'FR73 913 678 199',
 };
 
+function getCompanyInfoFromSettings(settings?: ApplicationSettings | null): CompanyInfo {
+  if (!settings) {
+    return DEFAULT_COMPANY_INFO;
+  }
+  return {
+    name: settings.companyName || DEFAULT_COMPANY_INFO.name,
+    tagline: settings.companyTagline || DEFAULT_COMPANY_INFO.tagline,
+    address: settings.companyAddress || DEFAULT_COMPANY_INFO.address,
+    city: settings.companyCity || DEFAULT_COMPANY_INFO.city,
+    phone: settings.companyPhone || DEFAULT_COMPANY_INFO.phone,
+    email: settings.companyEmail || DEFAULT_COMPANY_INFO.email,
+    website: settings.companyWebsite || DEFAULT_COMPANY_INFO.website,
+    bankName: `${settings.companyName || DEFAULT_COMPANY_INFO.name} - SASU`,
+    iban: settings.companyIban || DEFAULT_COMPANY_INFO.iban,
+    swift: settings.companySwift || DEFAULT_COMPANY_INFO.swift,
+    siret: settings.companySiret || DEFAULT_COMPANY_INFO.siret,
+    tva: settings.companyTvaNumber || DEFAULT_COMPANY_INFO.tva,
+    logo: settings.companyLogo || undefined,
+  };
+}
+
 const COLORS = {
   primary: [220, 38, 38] as [number, number, number],
   primaryLight: [254, 242, 242] as [number, number, number],
@@ -55,9 +92,27 @@ const COLORS = {
   border: [229, 231, 235] as [number, number, number],
 };
 
-async function getLogoBase64(): Promise<string> {
+async function getLogoBase64(customLogo?: string): Promise<string> {
+  if (customLogo) {
+    if (customLogo.startsWith('data:image')) {
+      return customLogo;
+    }
+    try {
+      const response = await fetch(customLogo);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Failed to fetch custom logo:', error);
+    }
+  }
+  
   try {
-    const response = await fetch(logoImage);
+    const response = await fetch(defaultLogoImage);
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -66,7 +121,7 @@ async function getLogoBase64(): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('Failed to fetch logo:', error);
+    console.error('Failed to fetch default logo:', error);
     throw error;
   }
 }
@@ -126,7 +181,8 @@ function formatClientInfo(clientInfo: any): { name: string; details: string[] } 
   return { name, details };
 }
 
-export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[]) {
+export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[], settings?: ApplicationSettings | null) {
+  const COMPANY_INFO = getCompanyInfoFromSettings(settings);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
@@ -140,7 +196,7 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   // === HEADER SECTION ===
   // Logo
   try {
-    const logoBase64 = await getLogoBase64();
+    const logoBase64 = await getLogoBase64(COMPANY_INFO.logo);
     doc.addImage(logoBase64, 'PNG', margin, 12, 50, 25);
   } catch (error) {
     doc.setFontSize(20);
@@ -383,7 +439,8 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.save(`devis-${quoteNumber}.pdf`);
 }
 
-export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[]) {
+export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[], settings?: ApplicationSettings | null) {
+  const COMPANY_INFO = getCompanyInfoFromSettings(settings);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
@@ -396,7 +453,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   // === HEADER SECTION ===
   // Logo
   try {
-    const logoBase64 = await getLogoBase64();
+    const logoBase64 = await getLogoBase64(COMPANY_INFO.logo);
     doc.addImage(logoBase64, 'PNG', margin, 12, 50, 25);
   } catch (error) {
     doc.setFontSize(20);

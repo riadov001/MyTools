@@ -41,7 +41,7 @@ export default function ClientInvoices() {
     },
     onSuccess: async (data: any) => {
       try {
-        await generateInvoicePDF(data.invoice, data.client, data.quote, data.items);
+        await generateInvoicePDF(data.invoice, data.client, data.quote, data.service, data.items, data.settings);
         toast({
           title: "Succès",
           description: "La facture a été téléchargée",

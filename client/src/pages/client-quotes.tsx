@@ -41,7 +41,7 @@ export default function ClientQuotes() {
     },
     onSuccess: async (data: any) => {
       try {
-        await generateQuotePDF(data.quote, data.client, data.service, data.items);
+        await generateQuotePDF(data.quote, data.client, data.service, data.items, data.settings);
         toast({
           title: "Succès",
           description: "Le devis a été téléchargé",

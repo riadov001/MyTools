@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Quote, User } from "@shared/schema";
+import type { Quote, User, ApplicationSettings } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -115,6 +115,11 @@ export default function AdminQuotes() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  const { data: settings } = useQuery<ApplicationSettings>({
+    queryKey: ["/api/admin/settings"],
+    enabled: isAuthenticated && isAdmin,
+  });
+
   // Pré-sélectionner le dernier client créé quand le dialog s'ouvre
   useEffect(() => {
     if (createQuoteDialog && users.length > 0 && !newQuoteClientId) {
@@ -181,7 +186,7 @@ export default function AdminQuotes() {
         siret: '',
         role: 'client'
       };
-      await generateQuotePDF(quote, clientInfo, service, quoteItems);
+      await generateQuotePDF(quote, clientInfo, service, quoteItems, settings);
     } catch (error) {
       toast({
         title: "Erreur",
