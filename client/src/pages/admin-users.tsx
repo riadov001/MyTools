@@ -869,10 +869,6 @@ export default function AdminUsers() {
                   </div>
                 </>
               )}
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">ID</p>
-                <p className="font-mono text-xs text-muted-foreground" data-testid="view-user-id">{viewUserDialog.id}</p>
-              </div>
             </div>
           )}
           <DialogFooter>
