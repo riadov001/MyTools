@@ -46,7 +46,7 @@ export default function InternalChat() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [messageInput, setMessageInput] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [newConversationOpen, setNewConversationOpen] = useState(false);
@@ -138,9 +138,7 @@ export default function InternalChat() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations", selectedConversation, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
+      setMessageInput("");
     },
     onError: () => {
       toast({ title: "Erreur", description: "Impossible d'envoyer le message.", variant: "destructive" });
@@ -148,7 +146,7 @@ export default function InternalChat() {
   });
 
   const handleSendMessage = () => {
-    const content = inputRef.current?.value?.trim();
+    const content = messageInput.trim();
     if (!selectedConversation || !content) return;
     sendMessageMutation.mutate({ conversationId: selectedConversation, content });
   };
@@ -417,7 +415,8 @@ export default function InternalChat() {
               className="flex gap-2"
             >
               <Input
-                ref={inputRef}
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
                 placeholder="Écrivez votre message..."
                 className="flex-1"
                 autoComplete="off"
