@@ -7,7 +7,7 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="bg-white rounded-lg p-2 border border-border">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg p-2 border border-border">
             <img 
               src={logoMyJantes} 
               alt="MyJantes Logo" 
