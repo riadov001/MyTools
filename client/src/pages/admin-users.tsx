@@ -301,8 +301,38 @@ export default function AdminUsers() {
       )}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Tous les Utilisateurs</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const csvData = [
+                  ["ID", "Nom", "Prénom", "Email", "Rôle", "Téléphone", "Entreprise"],
+                  ...users.map(u => [
+                    u.id, 
+                    u.lastName || "", 
+                    u.firstName || "", 
+                    u.email, 
+                    u.role, 
+                    u.phone || "", 
+                    u.companyName || ""
+                  ])
+                ].map(row => row.join(",")).join("\n");
+                const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute("download", `utilisateurs_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              data-testid="button-export-users-csv"
+            >
+              Exporter CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {usersLoading ? (
@@ -316,89 +346,182 @@ export default function AdminUsers() {
               <p>Aucun utilisateur pour le moment</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex flex-col md:flex-row gap-4 p-4 border border-border rounded-md hover-elevate"
-                  data-testid={`admin-user-item-${user.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <p className="font-semibold">{user.firstName} {user.lastName}</p>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"} data-testid={`badge-role-${user.id}`}>
-                        {user.role === "admin" ? "Admin" : user.role === "employe" ? "Employé" : user.role === "client_professionnel" ? "Client Pro" : "Client"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                    {user.phone && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <Phone className="h-3 w-3" />
-                        <span data-testid={`text-phone-${user.id}`}>{user.phone}</span>
+            <div className="space-y-6">
+              {/* Section Clients */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Badge variant="outline">Clients</Badge>
+                </h3>
+                {users.filter(u => u.role === "client" || u.role === "client_professionnel").map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex flex-col md:flex-row gap-4 p-4 border border-border rounded-md hover-elevate"
+                    data-testid={`admin-user-item-${user.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <p className="font-semibold">{user.firstName} {user.lastName}</p>
+                        <Badge variant={user.role === "client_professionnel" ? "default" : "secondary"} data-testid={`badge-role-${user.id}`}>
+                          {user.role === "client_professionnel" ? "Client Pro" : "Client"}
+                        </Badge>
+                        {user.companyName && <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded-full">{user.companyName}</span>}
                       </div>
-                    )}
-                    <p className="text-xs text-muted-foreground truncate mt-1">ID: {user.id}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      {user.phone && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                          <Phone className="h-3 w-3" />
+                          <span data-testid={`text-phone-${user.id}`}>{user.phone}</span>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground truncate mt-1">ID: {user.id}</p>
+                    </div>
+                    <div className="flex flex-row items-center gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setViewUserDialog(user)}
+                        data-testid={`button-view-${user.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Voir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditUserDialog(user);
+                          setEditEmail(user.email || "");
+                          setEditFirstName(user.firstName || "");
+                          setEditLastName(user.lastName || "");
+                          setEditPhone(user.phone || "");
+                          setEditAddress(user.address || "");
+                          setEditPostalCode(user.postalCode || "");
+                          setEditCity(user.city || "");
+                          setEditRole(user.role);
+                          setEditCompanyName(user.companyName || "");
+                          setEditSiret(user.siret || "");
+                          setEditTvaNumber(user.tvaNumber || "");
+                          setEditCompanyAddress(user.companyAddress || "");
+                        }}
+                        data-testid={`button-edit-${user.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Modifier
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setChangePasswordDialog(user);
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        }}
+                        data-testid={`button-change-password-${user.id}`}
+                      >
+                        <Key className="h-4 w-4 mr-2" />
+                        Mot de passe
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDeleteUserDialog(user)}
+                        data-testid={`button-delete-${user.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-row items-center gap-2 flex-wrap">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setViewUserDialog(user)}
-                      data-testid={`button-view-${user.id}`}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Voir
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditUserDialog(user);
-                        setEditEmail(user.email || "");
-                        setEditFirstName(user.firstName || "");
-                        setEditLastName(user.lastName || "");
-                        setEditPhone(user.phone || "");
-                        setEditAddress(user.address || "");
-                        setEditPostalCode(user.postalCode || "");
-                        setEditCity(user.city || "");
-                        setEditRole(user.role);
-                        setEditCompanyName(user.companyName || "");
-                        setEditSiret(user.siret || "");
-                        setEditTvaNumber(user.tvaNumber || "");
-                        setEditCompanyAddress(user.companyAddress || "");
-                      }}
-                      data-testid={`button-edit-${user.id}`}
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Modifier
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setChangePasswordDialog(user);
-                        setNewPassword("");
-                        setConfirmPassword("");
-                      }}
-                      data-testid={`button-change-password-${user.id}`}
-                    >
-                      <Key className="h-4 w-4 mr-2" />
-                      Mot de passe
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setDeleteUserDialog(user)}
-                      data-testid={`button-delete-${user.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Supprimer
-                    </Button>
+                ))}
+              </div>
+
+              {/* Section Staff */}
+              <div className="space-y-4 pt-6 border-t">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Badge variant="outline">Personnel & Admin</Badge>
+                </h3>
+                {users.filter(u => u.role === "admin" || u.role === "employe").map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex flex-col md:flex-row gap-4 p-4 border border-border rounded-md hover-elevate bg-muted/30"
+                    data-testid={`admin-user-item-${user.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <p className="font-semibold">{user.firstName} {user.lastName}</p>
+                        <Badge variant={user.role === "admin" ? "destructive" : "default"} data-testid={`badge-role-${user.id}`}>
+                          {user.role === "admin" ? "Admin" : "Employé"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      {user.phone && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                          <Phone className="h-3 w-3" />
+                          <span data-testid={`text-phone-${user.id}`}>{user.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-row items-center gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setViewUserDialog(user)}
+                        data-testid={`button-view-${user.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Voir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditUserDialog(user);
+                          setEditEmail(user.email || "");
+                          setEditFirstName(user.firstName || "");
+                          setEditLastName(user.lastName || "");
+                          setEditPhone(user.phone || "");
+                          setEditAddress(user.address || "");
+                          setEditPostalCode(user.postalCode || "");
+                          setEditCity(user.city || "");
+                          setEditRole(user.role);
+                          setEditCompanyName(user.companyName || "");
+                          setEditSiret(user.siret || "");
+                          setEditTvaNumber(user.tvaNumber || "");
+                          setEditCompanyAddress(user.companyAddress || "");
+                        }}
+                        data-testid={`button-edit-${user.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Modifier
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setChangePasswordDialog(user);
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        }}
+                        data-testid={`button-change-password-${user.id}`}
+                      >
+                        <Key className="h-4 w-4 mr-2" />
+                        Mot de passe
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDeleteUserDialog(user)}
+                        data-testid={`button-delete-${user.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
