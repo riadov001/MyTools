@@ -181,7 +181,7 @@ function formatClientInfo(clientInfo: any): { name: string; details: string[] } 
   return { name, details };
 }
 
-export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[], settings?: ApplicationSettings | null) {
+export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInfo: any, quoteItems?: QuoteItem[], settings?: ApplicationSettings | null, returnDoc = false) {
   const COMPANY_INFO = getCompanyInfoFromSettings(settings);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -436,10 +436,11 @@ export async function generateQuotePDF(quote: Quote, clientInfo: any, serviceInf
   doc.text(`SIRET: ${COMPANY_INFO.siret}  •  TVA Intracommunautaire: ${COMPANY_INFO.tva}`, pageWidth / 2, footerY + 19, { align: 'center' });
   doc.text(`${COMPANY_INFO.address}, ${COMPANY_INFO.city}  •  ${COMPANY_INFO.phone}  •  ${COMPANY_INFO.website}`, pageWidth / 2, footerY + 24, { align: 'center' });
   
+  if (returnDoc) return doc;
   doc.save(`devis-${quoteNumber}.pdf`);
 }
 
-export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[], settings?: ApplicationSettings | null) {
+export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quoteInfo: any, serviceInfo: any, invoiceItems?: InvoiceItem[], settings?: ApplicationSettings | null, returnDoc = false) {
   const COMPANY_INFO = getCompanyInfoFromSettings(settings);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -699,6 +700,7 @@ export async function generateInvoicePDF(invoice: Invoice, clientInfo: any, quot
   doc.text(`SIRET: ${COMPANY_INFO.siret}  •  TVA Intracommunautaire: ${COMPANY_INFO.tva}`, pageWidth / 2, footerY + 19, { align: 'center' });
   doc.text(`${COMPANY_INFO.address}, ${COMPANY_INFO.city}  •  ${COMPANY_INFO.phone}  •  ${COMPANY_INFO.website}`, pageWidth / 2, footerY + 24, { align: 'center' });
   
+  if (returnDoc) return doc;
   doc.save(`facture-${invoice.invoiceNumber}.pdf`);
 }
 

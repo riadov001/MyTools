@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search, Mail, Loader2 } from "lucide-react";
+import { Check, X, FileText, Calendar, Download, Plus, Pencil, Tags, Search, Mail, Loader2, Eye } from "lucide-react";
 import { generateQuotePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { LabelsPreview } from "@/components/labels-preview";
@@ -191,6 +191,39 @@ export default function AdminQuotes() {
       toast({
         title: "Erreur",
         description: "Échec de la génération du PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviewPDF = async (quote: Quote) => {
+    try {
+      const response = await fetch(`/api/admin/quotes/${quote.id}/items`);
+      const quoteItems = response.ok ? await response.json() : [];
+      
+      const service = services.find(s => s.id === quote.serviceId);
+      const client = users.find(u => u.id === quote.clientId);
+      const clientInfo = client || { 
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        companyName: '',
+        siret: '',
+        role: 'client'
+      };
+      const doc = await generateQuotePDF(quote, clientInfo, service, quoteItems, settings, true);
+      if (doc) {
+        const url = doc.output('bloburl');
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Échec de la prévisualisation du PDF",
         variant: "destructive",
       });
     }
@@ -781,11 +814,20 @@ L'équipe MyJantes`;
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handlePreviewPDF(quote)}
+                          data-testid={`button-preview-quote-pdf-${quote.id}`}
+                        >
+                          <Eye className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Voir PDF</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleDownloadPDF(quote)}
                           data-testid={`button-download-pdf-${quote.id}`}
                         >
                           <Download className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">PDF</span>
+                          <span className="hidden sm:inline">Télécharger PDF</span>
                         </Button>
                         <Button
                           size="sm"

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Download, Tags, Pencil, X, Search, Mail, Loader2 } from "lucide-react";
+import { Plus, Download, Tags, Pencil, X, Search, Mail, Loader2, Eye } from "lucide-react";
 import { generateInvoicePDF, generateLabelsPDF } from "@/lib/pdf-generator";
 import { LabelsPreview } from "@/components/labels-preview";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -190,6 +190,41 @@ export default function AdminInvoices() {
       toast({
         title: "Erreur",
         description: "Impossible de générer le PDF de la facture.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviewPDF = async (invoice: Invoice) => {
+    try {
+      const quote = quotes.find(q => q.id === invoice.quoteId);
+      const service = services.find(s => s.id === quote?.serviceId);
+      const client = users.find(u => u.id === invoice.clientId);
+      const clientInfo = client || { 
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        postalCode: '',
+        city: '',
+        companyName: '',
+        siret: '',
+        role: 'client'
+      };
+      
+      const itemsRes = await fetch(`/api/admin/invoices/${invoice.id}/items`, { credentials: 'include' });
+      const invoiceItems = itemsRes.ok ? await itemsRes.json() : [];
+      
+      const doc = await generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems, settings, true);
+      if (doc) {
+        const url = doc.output('bloburl');
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de prévisualiser le PDF de la facture.",
         variant: "destructive",
       });
     }
@@ -607,11 +642,20 @@ export default function AdminInvoices() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handlePreviewPDF(invoice)}
+                          data-testid={`button-preview-invoice-pdf-${invoice.id}`}
+                        >
+                          <Eye className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Voir PDF</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleDownloadPDF(invoice)}
                           data-testid={`button-download-invoice-pdf-${invoice.id}`}
                         >
                           <Download className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">PDF</span>
+                          <span className="hidden sm:inline">Télécharger PDF</span>
                         </Button>
                         <Button
                           size="sm"
