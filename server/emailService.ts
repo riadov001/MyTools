@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { storage } from './storage';
 
-const FROM_EMAIL = 'MyJantes <contact@myjantes.com>';
+const FROM_EMAIL = 'MY JANTES <contact@pointdepart.com>';
 
 async function getFileBuffer(filePath: string): Promise<Buffer | null> {
   try {
@@ -68,9 +68,9 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; me
     const { client, fromEmail } = await getResendClient();
     
     const emailPayload: any = {
-      from: fromEmail || 'MyJantes <contact@myjantes.com>',
+      from: fromEmail || 'MY JANTES <contact@pointdepart.com>',
       to: data.to,
-      bcc: 'contact@myjantes.com',
+      bcc: 'contact@pointdepart.com',
       subject: data.subject,
       html: data.html,
       text: data.text,
