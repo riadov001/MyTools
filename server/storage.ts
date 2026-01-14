@@ -630,9 +630,9 @@ export class DatabaseStorage implements IStorage {
     reservations: Reservation[] 
   }> {
     const [quotesList, invoicesList, reservationsList] = await Promise.all([
-      db.select().from(quotes).where(eq(quotes.clientId, clientId)),
-      db.select().from(invoices).where(eq(invoices.clientId, clientId)),
-      db.select().from(reservations).where(eq(reservations.clientId, clientId)),
+      db.select().from(quotes).where(eq(quotes.clientId, clientId)).orderBy(desc(quotes.createdAt)),
+      db.select().from(invoices).where(eq(invoices.clientId, clientId)).orderBy(desc(invoices.createdAt)),
+      db.select().from(reservations).where(eq(reservations.clientId, clientId)).orderBy(desc(reservations.createdAt)),
     ]);
     
     // Fetch media for each quote
