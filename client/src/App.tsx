@@ -56,13 +56,10 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/landing" component={Landing} />
+        <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password/:token" component={ResetPassword} />
-        <Route path="/">
-          <Redirect to="/login" />
-        </Route>
         <Route>
           <Redirect to="/login" />
         </Route>
