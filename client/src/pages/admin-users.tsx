@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, ArrowLeft, Key, Eye, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Key, Eye, Phone, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getRedirectionContext, performReturnRedirect } from "@/lib/navigation";
@@ -330,6 +330,7 @@ export default function AdminUsers() {
               }}
               data-testid="button-export-users-csv"
             >
+              <Download className="h-4 w-4 mr-2" />
               Exporter CSV
             </Button>
           </div>
@@ -521,7 +522,7 @@ export default function AdminUsers() {
                 ))}
               </div>
             </div>
-          ) : null}
+          )}
         </CardContent>
       </Card>
 
@@ -622,230 +623,222 @@ export default function AdminUsers() {
             </div>
             <div>
               <Label htmlFor="new-user-role">Rôle</Label>
-              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as "client" | "client_professionnel" | "employe" | "admin")}>
+              <Select value={newUserRole} onValueChange={(v: any) => setNewUserRole(v)}>
                 <SelectTrigger className="mt-2" data-testid="select-new-user-role">
-                  <SelectValue />
+                  <SelectValue placeholder="Sélectionner un rôle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="client">Client Particulier</SelectItem>
                   <SelectItem value="client_professionnel">Client Professionnel</SelectItem>
                   <SelectItem value="employe">Employé</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="admin">Administrateur</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCreateUserDialog(false);
-                setNewUserEmail("");
-                setNewUserFirstName("");
-                setNewUserLastName("");
-                setNewUserPhone("");
-                setNewUserAddress("");
-                setNewUserPostalCode("");
-                setNewUserCity("");
-                setNewUserRole("client");
-              }}
-              data-testid="button-cancel-create-user"
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleCreateUser}
-              disabled={createUserMutation.isPending || !newUserEmail}
-              data-testid="button-save-new-user"
-            >
-              {createUserMutation.isPending ? "Création..." : "Créer"}
+            <Button variant="outline" onClick={() => setCreateUserDialog(false)} data-testid="button-cancel-create-user">Annuler</Button>
+            <Button onClick={handleCreateUser} disabled={createUserMutation.isPending} data-testid="button-confirm-create-user">
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editUserDialog} onOpenChange={(open) => !open && setEditUserDialog(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier l'Utilisateur</DialogTitle>
-            <DialogDescription>
-              Modifiez les informations de l'utilisateur.
-            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="edit-user-email">Email</Label>
+              <Label htmlFor="edit-email">Email</Label>
               <Input
-                id="edit-user-email"
+                id="edit-email"
                 type="email"
-                placeholder="exemple@email.com"
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 className="mt-2"
-                data-testid="input-edit-user-email"
+                data-testid="input-edit-email"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="edit-user-first-name">Prénom</Label>
+                <Label htmlFor="edit-first-name">Prénom</Label>
                 <Input
-                  id="edit-user-first-name"
+                  id="edit-first-name"
                   type="text"
-                  placeholder="Jean"
                   value={editFirstName}
                   onChange={(e) => setEditFirstName(e.target.value)}
                   className="mt-2"
-                  data-testid="input-edit-user-first-name"
+                  data-testid="input-edit-first-name"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-user-last-name">Nom</Label>
+                <Label htmlFor="edit-last-name">Nom</Label>
                 <Input
-                  id="edit-user-last-name"
+                  id="edit-last-name"
                   type="text"
-                  placeholder="Dupont"
                   value={editLastName}
                   onChange={(e) => setEditLastName(e.target.value)}
                   className="mt-2"
-                  data-testid="input-edit-user-last-name"
+                  data-testid="input-edit-last-name"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="edit-user-phone">Téléphone</Label>
+              <Label htmlFor="edit-phone">Téléphone</Label>
               <Input
-                id="edit-user-phone"
+                id="edit-phone"
                 type="tel"
-                placeholder="+33 6 12 34 56 78"
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
                 className="mt-2"
-                data-testid="input-edit-user-phone"
+                data-testid="input-edit-phone"
               />
             </div>
             <div>
-              <Label htmlFor="edit-user-address">Adresse</Label>
+              <Label htmlFor="edit-address">Adresse</Label>
               <Input
-                id="edit-user-address"
+                id="edit-address"
                 type="text"
-                placeholder="123 rue de la Paix"
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
                 className="mt-2"
-                data-testid="input-edit-user-address"
+                data-testid="input-edit-address"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label htmlFor="edit-user-postal-code">Code postal</Label>
+                <Label htmlFor="edit-postal-code">Code postal</Label>
                 <Input
-                  id="edit-user-postal-code"
+                  id="edit-postal-code"
                   type="text"
-                  placeholder="75001"
                   value={editPostalCode}
                   onChange={(e) => setEditPostalCode(e.target.value)}
                   className="mt-2"
-                  data-testid="input-edit-user-postal-code"
+                  data-testid="input-edit-postal-code"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-user-city">Ville</Label>
+                <Label htmlFor="edit-city">Ville</Label>
                 <Input
-                  id="edit-user-city"
+                  id="edit-city"
                   type="text"
-                  placeholder="Paris"
                   value={editCity}
                   onChange={(e) => setEditCity(e.target.value)}
                   className="mt-2"
-                  data-testid="input-edit-user-city"
+                  data-testid="input-edit-city"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="edit-user-role">Rôle</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as "client" | "client_professionnel" | "employe" | "admin")}>
-                <SelectTrigger className="mt-2" data-testid="select-edit-user-role">
-                  <SelectValue />
+              <Label htmlFor="edit-role">Rôle</Label>
+              <Select value={editRole} onValueChange={(v: any) => setEditRole(v)}>
+                <SelectTrigger className="mt-2" data-testid="select-edit-role">
+                  <SelectValue placeholder="Sélectionner un rôle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="client">Client Particulier</SelectItem>
                   <SelectItem value="client_professionnel">Client Professionnel</SelectItem>
                   <SelectItem value="employe">Employé</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="admin">Administrateur</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Champs entreprise pour clients professionnels */}
             {(editRole === "client_professionnel") && (
-              <div className="border-t pt-4 space-y-4">
-                <p className="text-sm font-medium text-muted-foreground">Informations professionnelles</p>
+              <div className="space-y-4 pt-4 border-t">
+                <h4 className="font-medium text-sm">Informations Entreprise</h4>
                 <div>
-                  <Label htmlFor="edit-user-company-name">Nom de l'entreprise</Label>
+                  <Label htmlFor="edit-company-name">Nom de l'entreprise</Label>
                   <Input
-                    id="edit-user-company-name"
-                    type="text"
-                    placeholder="Ma Société SARL"
+                    id="edit-company-name"
                     value={editCompanyName}
                     onChange={(e) => setEditCompanyName(e.target.value)}
                     className="mt-2"
-                    data-testid="input-edit-user-company-name"
+                    data-testid="input-edit-company-name"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="edit-user-siret">SIRET</Label>
-                    <Input
-                      id="edit-user-siret"
-                      type="text"
-                      placeholder="12345678901234"
-                      value={editSiret}
-                      onChange={(e) => setEditSiret(e.target.value)}
-                      className="mt-2"
-                      maxLength={14}
-                      data-testid="input-edit-user-siret"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-user-tva">N° TVA intracommunautaire</Label>
-                    <Input
-                      id="edit-user-tva"
-                      type="text"
-                      placeholder="FR12345678901"
-                      value={editTvaNumber}
-                      onChange={(e) => setEditTvaNumber(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-edit-user-tva"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="edit-siret">SIRET</Label>
+                  <Input
+                    id="edit-siret"
+                    value={editSiret}
+                    onChange={(e) => setEditSiret(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-edit-siret"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="edit-user-company-address">Adresse de l'entreprise</Label>
+                  <Label htmlFor="edit-tva">N° TVA</Label>
                   <Input
-                    id="edit-user-company-address"
-                    type="text"
-                    placeholder="456 avenue des Entreprises, 75002 Paris"
+                    id="edit-tva"
+                    value={editTvaNumber}
+                    onChange={(e) => setEditTvaNumber(e.target.value)}
+                    className="mt-2"
+                    data-testid="input-edit-tva"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-company-address">Adresse de l'entreprise</Label>
+                  <Input
+                    id="edit-company-address"
                     value={editCompanyAddress}
                     onChange={(e) => setEditCompanyAddress(e.target.value)}
                     className="mt-2"
-                    data-testid="input-edit-user-company-address"
+                    data-testid="input-edit-company-address"
                   />
                 </div>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditUserDialog(null)}
-              data-testid="button-cancel-edit-user"
-            >
-              Annuler
+            <Button variant="outline" onClick={() => setEditUserDialog(null)} data-testid="button-cancel-edit-user">Annuler</Button>
+            <Button onClick={handleUpdateUser} disabled={updateUserMutation.isPending} data-testid="button-confirm-edit-user">
+              Enregistrer
             </Button>
-            <Button
-              onClick={handleUpdateUser}
-              disabled={updateUserMutation.isPending}
-              data-testid="button-save-edit-user"
-            >
-              {updateUserMutation.isPending ? "Modification..." : "Modifier"}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!changePasswordDialog} onOpenChange={(open) => !open && setChangePasswordDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Changer le mot de passe</DialogTitle>
+            <DialogDescription>
+              Modifier le mot de passe pour {changePasswordDialog?.firstName} {changePasswordDialog?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="new-password">Nouveau mot de passe</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-confirm-password"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePasswordDialog(null)} data-testid="button-cancel-change-password">Annuler</Button>
+            <Button onClick={handleChangePassword} disabled={changePasswordMutation.isPending} data-testid="button-confirm-change-password">
+              Changer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -856,148 +849,80 @@ export default function AdminUsers() {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. L'utilisateur {deleteUserDialog?.firstName} {deleteUserDialog?.lastName} ({deleteUserDialog?.email}) sera définitivement supprimé.
+              Cette action est irréversible. L'utilisateur <b>{deleteUserDialog?.firstName} {deleteUserDialog?.lastName}</b> sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete-user">Annuler</AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-cancel-delete">Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteUser}
-              disabled={deleteUserMutation.isPending}
-              data-testid="button-confirm-delete-user"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
             >
-              {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={!!changePasswordDialog} onOpenChange={(open) => !open && setChangePasswordDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modifier le mot de passe</DialogTitle>
-            <DialogDescription>
-              Modifier le mot de passe de {changePasswordDialog?.firstName} {changePasswordDialog?.lastName} ({changePasswordDialog?.email})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="new-password">Nouveau mot de passe *</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Minimum 6 caractères"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-2"
-                data-testid="input-new-password"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirm-password">Confirmer le mot de passe *</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="Répétez le mot de passe"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-2"
-                data-testid="input-confirm-password"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setChangePasswordDialog(null)}
-              data-testid="button-cancel-change-password"
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleChangePassword}
-              disabled={changePasswordMutation.isPending}
-              data-testid="button-save-change-password"
-            >
-              {changePasswordMutation.isPending ? "Modification..." : "Modifier"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!viewUserDialog} onOpenChange={(open) => !open && setViewUserDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Informations de l'utilisateur</DialogTitle>
+            <DialogTitle>Détails de l'Utilisateur</DialogTitle>
           </DialogHeader>
           {viewUserDialog && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Prénom</p>
-                  <p className="font-medium" data-testid="view-user-firstname">{viewUserDialog.firstName || "-"}</p>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-sm font-medium text-muted-foreground">Nom complet:</div>
+                <div className="text-sm col-span-2">{viewUserDialog.firstName} {viewUserDialog.lastName}</div>
+                
+                <div className="text-sm font-medium text-muted-foreground">Email:</div>
+                <div className="text-sm col-span-2">{viewUserDialog.email}</div>
+                
+                <div className="text-sm font-medium text-muted-foreground">Rôle:</div>
+                <div className="text-sm col-span-2">
+                  <Badge variant={viewUserDialog.role === "admin" ? "destructive" : viewUserDialog.role === "client_professionnel" ? "default" : "secondary"}>
+                    {viewUserDialog.role === "admin" ? "Administrateur" : 
+                     viewUserDialog.role === "employe" ? "Employé" : 
+                     viewUserDialog.role === "client_professionnel" ? "Client Pro" : "Client"}
+                  </Badge>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Nom</p>
-                  <p className="font-medium" data-testid="view-user-lastname">{viewUserDialog.lastName || "-"}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p className="font-medium" data-testid="view-user-email">{viewUserDialog.email || "-"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Téléphone</p>
-                <p className="font-medium flex items-center gap-2" data-testid="view-user-phone">
-                  {viewUserDialog.phone ? (
-                    <>
-                      <Phone className="h-4 w-4" />
-                      {viewUserDialog.phone}
-                    </>
-                  ) : (
-                    "-"
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Adresse</p>
-                <p className="font-medium" data-testid="view-user-address">
-                  {viewUserDialog.address || "-"}
-                  {viewUserDialog.postalCode && `, ${viewUserDialog.postalCode}`}
-                  {viewUserDialog.city && ` ${viewUserDialog.city}`}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Rôle</p>
-                <Badge variant={viewUserDialog.role === "admin" ? "default" : "secondary"}>
-                  {viewUserDialog.role === "admin" ? "Admin" : viewUserDialog.role === "employe" ? "Employé" : viewUserDialog.role === "client_professionnel" ? "Client Pro" : "Client"}
-                </Badge>
-              </div>
-              {viewUserDialog.role === "client_professionnel" && (
-                <>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Entreprise</p>
-                    <p className="font-medium">{viewUserDialog.companyName || "-"}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">SIRET</p>
-                      <p className="font-medium">{viewUserDialog.siret || "-"}</p>
+                
+                {viewUserDialog.phone && (
+                  <>
+                    <div className="text-sm font-medium text-muted-foreground">Téléphone:</div>
+                    <div className="text-sm col-span-2">{viewUserDialog.phone}</div>
+                  </>
+                )}
+                
+                {(viewUserDialog.address || viewUserDialog.city) && (
+                  <>
+                    <div className="text-sm font-medium text-muted-foreground">Adresse:</div>
+                    <div className="text-sm col-span-2">
+                      {viewUserDialog.address}<br />
+                      {viewUserDialog.postalCode} {viewUserDialog.city}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">TVA</p>
-                      <p className="font-medium">{viewUserDialog.tvaNumber || "-"}</p>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+
+                {viewUserDialog.role === "client_professionnel" && (
+                  <>
+                    <div className="col-span-3 border-t pt-2 mt-2 font-semibold text-sm">Entreprise</div>
+                    <div className="text-sm font-medium text-muted-foreground">Nom:</div>
+                    <div className="text-sm col-span-2">{viewUserDialog.companyName || "N/A"}</div>
+                    <div className="text-sm font-medium text-muted-foreground">SIRET:</div>
+                    <div className="text-sm col-span-2">{viewUserDialog.siret || "N/A"}</div>
+                    <div className="text-sm font-medium text-muted-foreground">N° TVA:</div>
+                    <div className="text-sm col-span-2">{viewUserDialog.tvaNumber || "N/A"}</div>
+                    <div className="text-sm font-medium text-muted-foreground">Adresse:</div>
+                    <div className="text-sm col-span-2">{viewUserDialog.companyAddress || "N/A"}</div>
+                  </>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewUserDialog(null)}>
-              Fermer
-            </Button>
+            <Button variant="outline" onClick={() => setViewUserDialog(null)} data-testid="button-close-view">Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
