@@ -472,8 +472,39 @@ export default function AdminInvoices() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Toutes les Factures</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const csvData = [
+                  ["ID", "N° Facture", "Client", "Montant", "Statut", "Échéance", "Date"],
+                  ...filteredInvoices.map(i => [
+                    i.id, 
+                    i.invoiceNumber || "", 
+                    getClientName(i.clientId), 
+                    i.amount || "0", 
+                    i.status, 
+                    i.dueDate ? new Date(i.dueDate).toLocaleDateString() : "",
+                    i.createdAt ? new Date(i.createdAt).toLocaleDateString() : ""
+                  ])
+                ].map(row => row.join(",")).join("\n");
+                const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute("download", `factures_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              data-testid="button-export-invoices-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exporter CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">

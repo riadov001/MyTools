@@ -628,8 +628,39 @@ L'équipe MyJantes`;
 
       {/* Barre de recherche et filtres */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Tous les Devis</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                const csvData = [
+                  ["ID", "Référence", "Client", "Service", "Montant", "Statut", "Date"],
+                  ...filteredQuotes.map(q => [
+                    q.id, 
+                    q.reference || "", 
+                    getClientName(q.clientId), 
+                    getServiceName(q.serviceId), 
+                    q.quoteAmount || "0", 
+                    q.status, 
+                    q.createdAt ? new Date(q.createdAt).toLocaleDateString() : ""
+                  ])
+                ].map(row => row.join(",")).join("\n");
+                const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute("download", `devis_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              data-testid="button-export-quotes-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exporter CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
