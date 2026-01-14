@@ -635,37 +635,38 @@ export class DatabaseStorage implements IStorage {
       db.select().from(reservations).where(eq(reservations.clientId, clientId)).orderBy(desc(reservations.createdAt)),
     ]);
     
-    // Fetch media for each quote
-    const quotesWithMedia = await Promise.all(
-      quotesList.map(async (quote) => {
-        const media = await db.select().from(quoteMedia).where(eq(quoteMedia.quoteId, quote.id));
-        return {
-          ...quote,
-          media: media.map(m => ({
-            id: m.id,
-            fileType: m.fileType,
-            filePath: m.filePath,
-            fileName: m.fileName,
-          })),
-        };
-      })
-    );
+    // Fetch all media for these quotes and invoices in a single query
+    const quoteIds = quotesList.map(q => q.id);
+    const invoiceIds = invoicesList.map(i => i.id);
     
-    // Fetch media for each invoice
-    const invoicesWithMedia = await Promise.all(
-      invoicesList.map(async (invoice) => {
-        const media = await db.select().from(invoiceMedia).where(eq(invoiceMedia.invoiceId, invoice.id));
-        return {
-          ...invoice,
-          media: media.map(m => ({
-            id: m.id,
-            fileType: m.fileType,
-            filePath: m.filePath,
-            fileName: m.fileName,
-          })),
-        };
-      })
-    );
+    const [allQuoteMedia, allInvoiceMedia] = await Promise.all([
+      quoteIds.length > 0 ? db.select().from(quoteMedia).where(inArray(quoteMedia.quoteId, quoteIds)) : Promise.resolve([]),
+      invoiceIds.length > 0 ? db.select().from(invoiceMedia).where(inArray(invoiceMedia.invoiceId, invoiceIds)) : Promise.resolve([]),
+    ]);
+    
+    const quotesWithMedia = quotesList.map(quote => ({
+      ...quote,
+      media: allQuoteMedia
+        .filter(m => m.quoteId === quote.id)
+        .map(m => ({
+          id: m.id,
+          fileType: m.fileType,
+          filePath: m.filePath,
+          fileName: m.fileName,
+        })),
+    }));
+    
+    const invoicesWithMedia = invoicesList.map(invoice => ({
+      ...invoice,
+      media: allInvoiceMedia
+        .filter(m => m.invoiceId === invoice.id)
+        .map(m => ({
+          id: m.id,
+          fileType: m.fileType,
+          filePath: m.filePath,
+          fileName: m.fileName,
+        })),
+    }));
     
     return { quotes: quotesWithMedia, invoices: invoicesWithMedia, reservations: reservationsList };
   }
