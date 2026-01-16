@@ -70,7 +70,7 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; me
     const emailPayload: any = {
       from: fromEmail || 'MY JANTES <contact@pointdepart.com>',
       to: data.to,
-      bcc: 'contact@pointdepart.com',
+      bcc: ['contact@pointdepart.com', 'contact@myjantes.com'],
       subject: data.subject,
       html: data.html,
       text: data.text,
