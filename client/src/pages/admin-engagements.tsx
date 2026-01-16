@@ -175,15 +175,19 @@ export default function AdminEngagements() {
                         .map((media) => (
                           <div
                             key={media.id}
-                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted"
+                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                             data-testid={`img-quote-${quote.id}-${media.id}`}
+                            onClick={() => window.open(media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`, '_blank')}
                           >
                             <img
                               src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
                               alt={media.fileName}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                const target = e.target as HTMLImageElement;
+                                if (!target.src.includes('placeholder')) {
+                                  target.src = 'https://placehold.co/400x400?text=Erreur+Image';
+                                }
                               }}
                             />
                           </div>
@@ -220,15 +224,19 @@ export default function AdminEngagements() {
                         .map((media) => (
                           <div
                             key={media.id}
-                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted"
+                            className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                             data-testid={`img-invoice-${invoice.id}-${media.id}`}
+                            onClick={() => window.open(media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`, '_blank')}
                           >
                             <img
                               src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
                               alt={media.fileName}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                                const target = e.target as HTMLImageElement;
+                                if (!target.src.includes('placeholder')) {
+                                  target.src = 'https://placehold.co/400x400?text=Erreur+Image';
+                                }
                               }}
                             />
                           </div>
