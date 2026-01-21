@@ -896,16 +896,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate invoice number: FACT-DD-MM-XXX
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const allInvoices = await storage.getInvoices();
-      const count = allInvoices.filter(i => {
+      const nowInvoiceNew = new Date();
+      const ddInvoiceNew = String(nowInvoiceNew.getDate()).padStart(2, '0');
+      const mmInvoiceNew = String(nowInvoiceNew.getMonth() + 1).padStart(2, '0');
+      const startOfDayInvoiceNew = new Date(nowInvoiceNew.getFullYear(), nowInvoiceNew.getMonth(), nowInvoiceNew.getDate());
+      const allInvoicesInvoiceNew = await storage.getInvoices();
+      const countInvoiceNew = allInvoicesInvoiceNew.filter(i => {
         const iDate = new Date(i.createdAt || '');
-        return iDate >= startOfDay;
+        return iDate >= startOfDayInvoiceNew;
       }).length + 1;
-      const invoiceNumber = `FACT-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      const invoiceNumberVal = `FACT-${ddInvoiceNew}-${mmInvoiceNew}-${String(countInvoiceNew).padStart(3, '0')}`;
       
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       
@@ -938,16 +938,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Atomically get next invoice number (handles initialization and increment)
       const counter = await storage.incrementInvoiceCounter(paymentType);
       
-      // Generate invoice number: MY-INV-ESP00000001, MY-INV-VIR00000001, or MY-INV-CBL00000001
-      let prefix = "MY-INV-";
-      if (paymentType === "cash") prefix += "ESP";
-      else if (paymentType === "wire_transfer") prefix += "VIR";
-      else if (paymentType === "card") prefix += "CBL";
-      else prefix += "OTH";
-      
-      const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
-      const invoiceNumber = `${prefix}${paddedNumber}`;
-      
       // Create invoice with generated number
       const invoice = await storage.createInvoice({
         quoteId: validatedData.quoteId || null,
@@ -957,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: validatedData.status || "pending",
         notes: validatedData.notes,
         dueDate: validatedData.dueDate,
-        invoiceNumber,
+        invoiceNumber: invoiceNumberVal,
         wheelCount,
         diameter,
         priceExcludingTax,
@@ -1139,32 +1129,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate invoice number: FACT-DD-MM-XXX
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const allInvoices = await storage.getInvoices();
-      const count = allInvoices.filter(i => {
+      const nowInvoiceDirect = new Date();
+      const ddInvoiceDirect = String(nowInvoiceDirect.getDate()).padStart(2, '0');
+      const mmInvoiceDirect = String(nowInvoiceDirect.getMonth() + 1).padStart(2, '0');
+      const startOfDayInvoiceDirect = new Date(nowInvoiceDirect.getFullYear(), nowInvoiceDirect.getMonth(), nowInvoiceDirect.getDate());
+      const allInvoicesInvoiceDirect = await storage.getInvoices();
+      const countInvoiceDirect = allInvoicesInvoiceDirect.filter(i => {
         const iDate = new Date(i.createdAt || '');
-        return iDate >= startOfDay;
+        return iDate >= startOfDayInvoiceDirect;
       }).length + 1;
-      const invoiceNumber = `FACT-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      const invoiceNumberGenerated = `FACT-${ddInvoiceDirect}-${mmInvoiceDirect}-${String(countInvoiceDirect).padStart(3, '0')}`;
       
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       
-      // Atomically get next invoice number (handles initialization and increment)
-      const paymentType = validatedData.paymentMethod;
+      // Check if this is a quote-based invoice or direct invoice
+      let quote = null;
+      let paymentType = validatedData.paymentMethod;
       const counter = await storage.incrementInvoiceCounter(paymentType);
-      
-      // Generate invoice number: MY-INV-ESP00000001, MY-INV-VIR00000001, or MY-INV-CBL00000001
-      let prefix = "MY-INV-";
-      if (paymentType === "cash") prefix += "ESP";
-      else if (paymentType === "wire_transfer") prefix += "VIR";
-      else if (paymentType === "card") prefix += "CBL";
-      else prefix += "OTH";
-      
-      const paddedNumber = counter.currentNumber.toString().padStart(8, "0");
-      const invoiceNumber = `${prefix}${paddedNumber}`;
       
       // Create invoice with generated number
       const invoice = await storage.createInvoice({
@@ -1180,7 +1161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taxRate: validatedData.taxRate,
         taxAmount: validatedData.taxAmount,
         productDetails: validatedData.productDetails,
-        invoiceNumber,
+        invoiceNumber: invoiceNumberGenerated,
       } as any);
       
       // Create invoice items
