@@ -405,8 +405,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quotes", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      // Generate reference: DEV-DD-MM-XXX
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const allQuotes = await storage.getQuotes();
+      const count = allQuotes.filter(q => {
+        const qDate = new Date(q.createdAt || '');
+        return qDate >= startOfDay;
+      }).length + 1;
+      const reference = `DEV-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      
       const validatedData = insertQuoteSchema.parse({
         ...req.body,
+        reference,
         clientId: userId,
         status: "pending",
       });
@@ -468,9 +481,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Au moins 3 images sont requises (${imageCount}/3 fournis)` 
         });
       }
+
+      // Generate reference: DEV-DD-MM-XXX
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const allQuotes = await storage.getQuotes();
+      const count = allQuotes.filter(q => {
+        const qDate = new Date(q.createdAt || '');
+        return qDate >= startOfDay;
+      }).length + 1;
+      const reference = `DEV-${dd}-${mm}-${String(count).padStart(3, '0')}`;
       
       const validatedData = insertQuoteSchema.parse({
         ...quoteData,
+        reference,
         wheelCount: wheelCount ? parseInt(wheelCount) : null,
         diameter,
         priceExcludingTax,
@@ -869,6 +895,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Generate invoice number: FACT-DD-MM-XXX
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const allInvoices = await storage.getInvoices();
+      const count = allInvoices.filter(i => {
+        const iDate = new Date(i.createdAt || '');
+        return iDate >= startOfDay;
+      }).length + 1;
+      const invoiceNumber = `FACT-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       
       // Check if this is a quote-based invoice or direct invoice
@@ -1099,6 +1137,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!invoiceItems || !Array.isArray(invoiceItems) || invoiceItems.length === 0) {
         return res.status(400).json({ message: "Invoice items are required" });
       }
+      
+      // Generate invoice number: FACT-DD-MM-XXX
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const allInvoices = await storage.getInvoices();
+      const count = allInvoices.filter(i => {
+        const iDate = new Date(i.createdAt || '');
+        return iDate >= startOfDay;
+      }).length + 1;
+      const invoiceNumber = `FACT-${dd}-${mm}-${String(count).padStart(3, '0')}`;
       
       const validatedData = insertInvoiceSchema.parse(invoiceData);
       

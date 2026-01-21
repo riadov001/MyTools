@@ -177,10 +177,10 @@ export default function AdminEngagements() {
                             key={media.id}
                             className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                             data-testid={`img-quote-${quote.id}-${media.id}`}
-                            onClick={() => window.open(media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`, '_blank')}
+                            onClick={() => window.open(media.filePath.startsWith('http') ? media.filePath : media.filePath.startsWith('/') ? media.filePath : `/uploads/${media.filePath}`, '_blank')}
                           >
                             <img
-                              src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
+                              src={media.filePath.startsWith('http') ? media.filePath : media.filePath.startsWith('/') ? media.filePath : `/uploads/${media.filePath}`}
                               alt={media.fileName}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -226,10 +226,10 @@ export default function AdminEngagements() {
                             key={media.id}
                             className="relative aspect-square rounded-md overflow-hidden border border-border bg-muted cursor-pointer hover:opacity-80 transition-opacity"
                             data-testid={`img-invoice-${invoice.id}-${media.id}`}
-                            onClick={() => window.open(media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`, '_blank')}
+                            onClick={() => window.open(media.filePath.startsWith('http') ? media.filePath : media.filePath.startsWith('/') ? media.filePath : `/uploads/${media.filePath}`, '_blank')}
                           >
                             <img
-                              src={media.filePath.startsWith('/') ? media.filePath : `/${media.filePath}`}
+                              src={media.filePath.startsWith('http') ? media.filePath : media.filePath.startsWith('/') ? media.filePath : `/uploads/${media.filePath}`}
                               alt={media.fileName}
                               className="w-full h-full object-cover"
                               onError={(e) => {
