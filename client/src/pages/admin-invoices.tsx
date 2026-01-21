@@ -218,8 +218,25 @@ export default function AdminInvoices() {
       
       const doc = await generateInvoicePDF(invoice, clientInfo, quote, service, invoiceItems, settings, true);
       if (doc) {
-        const url = doc.output('bloburl');
-        window.open(url, '_blank');
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Facture-${invoice.invoiceNumber || invoice.id.slice(0, 8)}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 100);
+        } else {
+          const newWindow = window.open(url, '_blank');
+          if (newWindow) {
+            newWindow.addEventListener('beforeunload', () => URL.revokeObjectURL(url));
+          } else {
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+          }
+        }
       }
     } catch (error) {
       toast({

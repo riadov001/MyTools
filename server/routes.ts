@@ -405,6 +405,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quotes", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const { mediaFiles, ...quoteData } = req.body;
+      
+      // Validate minimum 3 images requirement
+      if (!mediaFiles || !Array.isArray(mediaFiles)) {
+        return res.status(400).json({ message: "Les photos sont requises" });
+      }
+      
+      const imageCount = mediaFiles.filter((f: any) => f.type.startsWith('image/')).length;
+      if (imageCount < 3) {
+        return res.status(400).json({ 
+          message: `Au moins 3 photos sont requises (${imageCount}/3 fournis)` 
+        });
+      }
+      
       // Generate reference: DEV-DD-MM-XXX
       const now = new Date();
       const dd = String(now.getDate()).padStart(2, '0');
@@ -418,12 +432,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reference = `DEV-${dd}-${mm}-${String(count).padStart(3, '0')}`;
       
       const validatedData = insertQuoteSchema.parse({
-        ...req.body,
+        ...quoteData,
         reference,
         clientId: userId,
         status: "pending",
       });
       const quote = await storage.createQuote(validatedData);
+      
+      // Create media entries
+      for (const file of mediaFiles) {
+        await storage.createQuoteMedia({
+          quoteId: quote.id,
+          filePath: file.key,
+          fileType: file.type.startsWith('image/') ? 'image' : 'video',
+          fileName: file.name,
+        });
+      }
       
       // Log audit event
       await logAuditEvent({
