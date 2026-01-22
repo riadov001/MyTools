@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toDatetimeLocalValue } from "@/lib/dateUtils";
 import { Calendar, Plus, Edit, Trash2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -482,8 +483,8 @@ export default function AdminReservations() {
 
   const openEditDialog = async (reservation: Reservation) => {
     setSelectedReservation(reservation);
-    setScheduledDate(reservation.scheduledDate ? new Date(reservation.scheduledDate).toISOString().slice(0, 16) : "");
-    setEstimatedEndDate(reservation.estimatedEndDate ? new Date(reservation.estimatedEndDate).toISOString().slice(0, 16) : "");
+    setScheduledDate(toDatetimeLocalValue(reservation.scheduledDate));
+    setEstimatedEndDate(toDatetimeLocalValue(reservation.estimatedEndDate));
     setWheelCount(reservation.wheelCount?.toString() || "1");
     setDiameter(reservation.diameter || "");
     setPriceHT(reservation.priceExcludingTax || "");

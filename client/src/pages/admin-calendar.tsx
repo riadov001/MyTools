@@ -10,7 +10,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Reservation, User, Service } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, addHours } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
+import { formatLocalTime, formatLocalDateTime, parseWithoutTimezoneShift } from "@/lib/dateUtils";
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Download, Calendar as CalendarIcon, User as UserIcon, Wrench, ExternalLink, Clock, Filter } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -156,7 +157,7 @@ export default function AdminCalendar() {
 
   const getReservationsForDay = (date: Date) => {
     return filteredReservations.filter(r => {
-      const scheduledDate = new Date(r.scheduledDate);
+      const scheduledDate = parseWithoutTimezoneShift(r.scheduledDate);
       return isSameDay(scheduledDate, date);
     });
   };
@@ -441,7 +442,7 @@ export default function AdminCalendar() {
                         `}
                         title={`${getServiceName(res.serviceId)} - ${getClientName(res.clientId)}`}
                       >
-                        <span className="hidden sm:inline">{format(new Date(res.scheduledDate), 'HH:mm')} </span>
+                        <span className="hidden sm:inline">{formatLocalTime(res.scheduledDate)} </span>
                         {getClientName(res.clientId).split(' ')[0]}
                       </div>
                     ))}
@@ -492,13 +493,13 @@ export default function AdminCalendar() {
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">
-                          {format(new Date(res.scheduledDate), 'HH:mm')}
+                          {formatLocalTime(res.scheduledDate)}
                         </span>
                         <span className="text-muted-foreground">-</span>
                         <span>
                           {res.estimatedEndDate 
-                            ? format(new Date(res.estimatedEndDate), 'HH:mm')
-                            : format(new Date(new Date(res.scheduledDate).getTime() + getServiceDuration(res.serviceId) * 60000), 'HH:mm')
+                            ? formatLocalTime(res.estimatedEndDate)
+                            : formatLocalTime(new Date(parseWithoutTimezoneShift(res.scheduledDate).getTime() + getServiceDuration(res.serviceId) * 60000))
                           }
                         </span>
                       </div>
@@ -582,15 +583,15 @@ export default function AdminCalendar() {
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
                   <span className="text-muted-foreground shrink-0">Début:</span>
                   <span className="font-medium break-words">
-                    {format(new Date(selectedReservation.scheduledDate), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                    {formatLocalDateTime(selectedReservation.scheduledDate)}
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
                   <span className="text-muted-foreground shrink-0">Fin:</span>
                   <span className="font-medium break-words">
                     {selectedReservation.estimatedEndDate 
-                      ? format(new Date(selectedReservation.estimatedEndDate), 'dd/MM/yyyy HH:mm', { locale: fr })
-                      : format(new Date(new Date(selectedReservation.scheduledDate).getTime() + getServiceDuration(selectedReservation.serviceId) * 60000), 'dd/MM/yyyy HH:mm', { locale: fr })
+                      ? formatLocalDateTime(selectedReservation.estimatedEndDate)
+                      : formatLocalDateTime(new Date(parseWithoutTimezoneShift(selectedReservation.scheduledDate).getTime() + getServiceDuration(selectedReservation.serviceId) * 60000))
                     }
                   </span>
                 </div>
