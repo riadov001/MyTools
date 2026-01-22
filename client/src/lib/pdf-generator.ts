@@ -55,8 +55,8 @@ const DEFAULT_COMPANY_INFO: CompanyInfo = {
   email: 'contact@myjantes.com',
   website: 'www.myjantes.fr',
   bankName: 'MY JANTES - SASU',
-  iban: 'FR76 3000 3029 5800 0201 0936 525',
-  swift: 'BNPAFRPPXXX',
+  iban: 'FR76 3000 3029 5800 0201 6936 525',
+  swift: 'SOGEFRPP',
   siret: '913 678 199 00021',
   tva: 'FR73 913 678 199',
 };

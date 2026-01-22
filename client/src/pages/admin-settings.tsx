@@ -670,7 +670,7 @@ export default function AdminSettings() {
                         <FormItem>
                           <FormLabel>IBAN</FormLabel>
                           <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="Ex: FR76 3000 3029 5800 0201 0936 525" data-testid="input-company-iban" />
+                            <Input {...field} value={field.value || ""} placeholder="Ex: FR76 3000 3029 5800 0201 6936 525" data-testid="input-company-iban" />
                           </FormControl>
                           <FormDescription>Affiché sur les factures pour le paiement</FormDescription>
                           <FormMessage />
@@ -685,7 +685,7 @@ export default function AdminSettings() {
                         <FormItem>
                           <FormLabel>Code SWIFT/BIC</FormLabel>
                           <FormControl>
-                            <Input {...field} value={field.value || ""} placeholder="Ex: BNPAFRPPXXX" data-testid="input-company-swift" />
+                            <Input {...field} value={field.value || ""} placeholder="Ex: SOGEFRPP" data-testid="input-company-swift" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
