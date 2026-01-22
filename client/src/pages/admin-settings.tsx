@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Settings, Users, Shield, User as UserIcon, Trash2, Upload, Building2, X } from "lucide-react";
+import { Settings, Users, Shield, User as UserIcon, Trash2, Upload, Building2, X, Database, Download } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User, ApplicationSettings } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -719,6 +719,36 @@ export default function AdminSettings() {
               </form>
             </Form>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Base de données
+          </CardTitle>
+          <CardDescription>
+            Exporter les données de la base de données
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Téléchargez une copie complète de la base de données au format SQL. 
+              Ce fichier contient toutes les tables et données de l'application.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.location.href = "/api/admin/export-database";
+              }}
+              data-testid="button-export-database"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exporter la base de données
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
