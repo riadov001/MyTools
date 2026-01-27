@@ -48,10 +48,11 @@ export class ObjectStorageService {
     const result = await this.client.uploadFromBytes(objectName, buffer);
     
     if (!result.ok) {
-      const errorMsg = typeof result.error === 'string' 
-        ? result.error 
-        : JSON.stringify(result.error);
-      console.error(`Upload failed:`, result.error);
+      const error = result as { ok: false; error: unknown };
+      const errorMsg = typeof error.error === 'string' 
+        ? error.error 
+        : JSON.stringify(error.error);
+      console.error(`Upload failed:`, error.error);
       throw new Error(`Upload failed: ${errorMsg}`);
     }
     
