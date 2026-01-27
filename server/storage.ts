@@ -291,19 +291,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(quoteData: InsertQuote): Promise<Quote> {
-    // Generate quote reference: DEV-DD-MM-NNN
+    // Generate quote reference: DEV-MM-00001
     const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     
-    // Get sequential number for today
-    const datePrefix = `DEV-${day}-${month}`;
+    // Get total count of quotes for this month to generate sequential number
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const existingQuotes = await db.select({ reference: quotes.reference })
       .from(quotes)
-      .where(sql`${quotes.reference} LIKE ${datePrefix + '-%'}`);
+      .where(sql`${quotes.createdAt} >= ${startOfMonth}`);
     
     const sequentialNumber = existingQuotes.length + 1;
-    const reference = `${datePrefix}-${String(sequentialNumber).padStart(3, '0')}`;
+    const reference = `DEV-${month}-${String(sequentialNumber).padStart(5, '0')}`;
     
     const [quote] = await db.insert(quotes).values({ ...quoteData, reference }).returning();
     return quote;
@@ -377,9 +376,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
-    const paymentType = invoiceData.paymentMethod || "wire_transfer";
-    const counter = await this.incrementInvoiceCounter(paymentType);
-    const invoiceNumber = `${paymentType === "cash" ? "CV" : paymentType === "card" ? "CB" : "VI"}-${String(counter.currentNumber).padStart(6, "0")}`;
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
+    // Get total count of invoices for this month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const existingInvoices = await db.select({ invoiceNumber: invoices.invoiceNumber })
+      .from(invoices)
+      .where(sql`${invoices.createdAt} >= ${startOfMonth}`);
+    
+    const sequentialNumber = existingInvoices.length + 1;
+    const invoiceNumber = `DEV-${month}-${String(sequentialNumber).padStart(5, '0')}`;
     
     const [invoice] = await db.insert(invoices).values([{
       ...invoiceData,

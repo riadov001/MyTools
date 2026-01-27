@@ -413,7 +413,7 @@ export default function AdminInvoices() {
   };
 
   const handleCreateInvoice = () => {
-    const invoiceNumber = `INV-${Date.now()}`;
+    const invoiceNumber = `DEV-${new Date().getMonth() + 1}-${String(Date.now()).slice(-5)}`;
     createInvoiceMutation.mutate({
       quoteId: formData.quoteId,
       clientId: formData.clientId,

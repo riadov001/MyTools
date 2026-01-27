@@ -423,17 +423,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Generate reference: DEV-DD-MM-XXX
+      // Generate reference: DEV-MM-00001
       const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
       const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const allQuotes = await storage.getQuotes();
       const count = allQuotes.filter(q => {
         const qDate = new Date(q.createdAt || '');
-        return qDate >= startOfDay;
+        return qDate >= startOfMonth;
       }).length + 1;
-      const reference = `DEV-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      const reference = `DEV-${mm}-${String(count).padStart(5, '0')}`;
       
       const validatedData = insertQuoteSchema.parse({
         ...quoteData,
@@ -510,17 +509,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Generate reference: DEV-DD-MM-XXX
+      // Generate reference: DEV-MM-00001
       const now = new Date();
-      const dd = String(now.getDate()).padStart(2, '0');
       const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const allQuotes = await storage.getQuotes();
       const count = allQuotes.filter(q => {
         const qDate = new Date(q.createdAt || '');
-        return qDate >= startOfDay;
+        return qDate >= startOfMonth;
       }).length + 1;
-      const reference = `DEV-${dd}-${mm}-${String(count).padStart(3, '0')}`;
+      const reference = `DEV-${mm}-${String(count).padStart(5, '0')}`;
       
       const validatedData = insertQuoteSchema.parse({
         ...quoteData,

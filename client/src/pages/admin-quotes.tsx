@@ -338,7 +338,7 @@ export default function AdminQuotes() {
 
   const getDefaultEmailMessage = (quote: Quote, client: User | null) => {
     const clientName = client ? `${client.firstName || ""} ${client.lastName || ""}`.trim() || client.email : "Client";
-    const quoteNumber = quote.id.slice(0, 8).toUpperCase();
+    const quoteNumber = quote.reference || `DEV-${new Date(quote.createdAt || Date.now()).getMonth() + 1}-00001`;
     const amount = quote.quoteAmount ? parseFloat(quote.quoteAmount).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) : "0,00 €";
     
     return `Bonjour ${clientName},

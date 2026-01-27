@@ -81,7 +81,7 @@ export const services = pgTable("services", {
 // Quote requests
 export const quotes = pgTable("quotes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  reference: varchar("reference", { length: 50 }).unique(), // Format: DEV-DD-MM-YYYY-TRI-NNN
+  reference: varchar("reference", { length: 50 }).unique(), // Format: DEV-MM-00001
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
   status: varchar("status", { enum: ["pending", "approved", "rejected", "completed"] }).notNull().default("pending"),
