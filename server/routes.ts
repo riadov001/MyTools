@@ -10,6 +10,7 @@ import { sendEmail, generateVoiceDictationEmailHtml } from "./emailService";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { ObjectStorageService } from "./objectStorage";
+import { registerObjectStorageRoutes, ObjectStorageService as NewObjectStorageService } from "./replit_integrations/object_storage";
 
 // Global object storage service instance for media attachments
 const objectStorageService = new ObjectStorageService();
@@ -105,6 +106,9 @@ const entityLabels: Record<EntityType, string> = {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  
+  // Register object storage routes for persistent file uploads
+  registerObjectStorageRoutes(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -2514,21 +2518,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Only images and videos are allowed" });
       }
       
-      // Generate unique filename and save to local storage
-      const ext = file.name.split('.').pop();
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-      const uploadPath = `./uploads/${filename}`;
+      // Upload to persistent cloud storage (GCS via Object Storage)
+      const newStorageService = new NewObjectStorageService();
       
-      // Save file locally
-      await file.mv(uploadPath);
+      // Get presigned URL for upload
+      const uploadURL = await newStorageService.getObjectEntityUploadURL();
       
-      console.log(`File uploaded: ${uploadPath}`);
+      // Upload file directly to GCS using presigned URL
+      const uploadResponse = await fetch(uploadURL, {
+        method: "PUT",
+        body: file.data,
+        headers: {
+          "Content-Type": mimetype,
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Cloud upload failed: ${uploadResponse.status}`);
+      }
+      
+      // Normalize the path for serving
+      const objectPath = newStorageService.normalizeObjectEntityPath(uploadURL);
+      
+      // Set ACL policy for access control
+      const userId = (req as any).user?.id;
+      if (userId) {
+        await newStorageService.trySetObjectEntityAclPolicy(objectPath, {
+          owner: userId,
+          visibility: "public",
+        });
+      }
+      
+      console.log(`File uploaded to cloud storage: ${objectPath}`);
       
       res.json({ 
         success: true,
         message: "Upload OK",
-        objectPath: `/uploads/${filename}`,
-        filename: filename,
+        objectPath: objectPath,
+        filename: file.name,
         originalName: file.name,
         size: file.size,
         mimetype: file.mimetype
