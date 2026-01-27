@@ -85,7 +85,6 @@ export const quotes = pgTable("quotes", {
   clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   serviceId: varchar("service_id").notNull().references(() => services.id, { onDelete: 'cascade' }),
   status: varchar("status", { enum: ["pending", "approved", "rejected", "completed"] }).notNull().default("pending"),
-  paymentMethod: varchar("payment_method", { enum: ["cash", "wire_transfer", "card"] }).notNull().default("wire_transfer"),
   requestDetails: jsonb("request_details"), // Custom form data from client
   quoteAmount: decimal("quote_amount", { precision: 10, scale: 2 }),
   wheelCount: integer("wheel_count"), // Number of wheels: 1, 2, 3, or 4

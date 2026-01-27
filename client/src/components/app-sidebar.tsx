@@ -1,7 +1,8 @@
-import { Home, FileText, DollarSign, Calendar, CalendarCheck, Settings, Package, Users, Briefcase, Wrench, ClipboardList, GitBranch, History, MessageCircle } from "lucide-react";
+import { Home, FileText, DollarSign, Calendar, CalendarCheck, Settings, Package, Users, Briefcase, Wrench, ClipboardList, GitBranch, History, MessageCircle, LifeBuoy } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -122,6 +123,18 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-4 border-t">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild data-testid="button-support">
+              <a href="mailto:contact@myjantes.com">
+                <LifeBuoy className="h-4 w-4" />
+                <span>Support</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

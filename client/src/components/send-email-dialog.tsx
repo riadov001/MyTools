@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Mail, Plus, X } from "lucide-react";
+import { Loader2, Mail, Plus, X, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { VoiceDictationDialog } from "./voice-dictation-dialog";
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -25,6 +26,11 @@ interface SendEmailDialogProps {
   type: "quote" | "invoice";
   documentNumber: string;
   amount: string;
+  clientId?: string;
+  clientName?: string;
+  prestations?: string[];
+  technicalDetails?: string;
+  documentId?: string;
 }
 
 export interface EmailParams {
@@ -46,6 +52,11 @@ export function SendEmailDialog({
   type,
   documentNumber,
   amount,
+  clientId,
+  clientName,
+  prestations = [],
+  technicalDetails = "",
+  documentId = "",
 }: SendEmailDialogProps) {
   const [recipient, setRecipient] = useState(defaultRecipient);
   const [subject, setSubject] = useState(defaultSubject);
@@ -54,6 +65,7 @@ export function SendEmailDialog({
   const [newRecipient, setNewRecipient] = useState("");
   const [sendCopy, setSendCopy] = useState(false);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [showVoiceDictation, setShowVoiceDictation] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -177,7 +189,20 @@ export function SendEmailDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="message">Message au destinataire</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="message">Message au destinataire</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-2"
+                onClick={() => setShowVoiceDictation(true)}
+                data-testid="button-voice-dictation-email"
+              >
+                <Mic className="h-4 w-4" />
+                Dicter
+              </Button>
+            </div>
             <Textarea
               id="message"
               value={message}
@@ -213,6 +238,20 @@ export function SendEmailDialog({
             />
           </div>
         </div>
+
+        <VoiceDictationDialog
+          open={showVoiceDictation}
+          onOpenChange={setShowVoiceDictation}
+          clientEmail={recipient}
+          clientName={clientName || "Client"}
+          prestations={prestations}
+          technicalDetails={technicalDetails}
+          attachments={[type === "quote" ? "Devis PDF" : "Facture PDF"]}
+          documentType={type}
+          documentNumber={documentNumber}
+          documentId={documentId}
+          onEmailSent={() => onOpenChange(false)}
+        />
 
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button
