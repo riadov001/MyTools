@@ -2514,24 +2514,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Only images and videos are allowed" });
       }
       
-      // Upload to Object Storage (persistent cloud storage)
-      const storageService = new ObjectStorageService();
-      const { objectPath } = await storageService.uploadFileBuffer(file.data, mimetype);
+      // Generate unique filename and save to local storage
+      const ext = file.name.split('.').pop();
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const uploadPath = `./uploads/${filename}`;
       
-      // Set ACL policy so authenticated users can access the file
-      const userId = (req as any).user?.id;
-      await storageService.trySetObjectEntityAclPolicy(objectPath, {
-        owner: userId,
-        visibility: "public", // Make uploads publicly accessible
-      });
+      // Save file locally
+      await file.mv(uploadPath);
       
-      console.log(`File uploaded to Object Storage: ${objectPath}`);
+      console.log(`File uploaded: ${uploadPath}`);
       
       res.json({ 
         success: true,
         message: "Upload OK",
-        objectPath: objectPath,
-        filename: file.name,
+        objectPath: `/uploads/${filename}`,
+        filename: filename,
         originalName: file.name,
         size: file.size,
         mimetype: file.mimetype
