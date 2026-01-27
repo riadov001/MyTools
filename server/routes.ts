@@ -953,8 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!quote) {
           return res.status(404).json({ message: "Quote not found" });
         }
-        // Copy quote details
-        paymentType = quote.paymentMethod;
+        // Copy quote details (paymentMethod comes from validatedData, not quote)
         wheelCount = quote.wheelCount;
         diameter = quote.diameter;
         priceExcludingTax = quote.priceExcludingTax ?? "0";

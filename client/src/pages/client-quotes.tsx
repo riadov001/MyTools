@@ -148,12 +148,6 @@ export default function ClientQuotes() {
                       <p className="font-medium font-mono">{parseFloat(quote.quoteAmount).toFixed(2)} €</p>
                     </div>
                   )}
-                  {quote.paymentMethod && (
-                    <div>
-                      <p className="text-muted-foreground">Paiement</p>
-                      <p className="font-medium capitalize">{quote.paymentMethod === "cash" ? "Espèces" : "Autre"}</p>
-                    </div>
-                  )}
                 </div>
 
                 {quote.notes && (

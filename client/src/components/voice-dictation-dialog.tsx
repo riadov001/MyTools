@@ -30,6 +30,8 @@ interface VoiceDictationDialogProps {
   documentNumber: string;
   documentId: string;
   onEmailSent?: () => void;
+  onEmailGenerated?: (emailContent: string) => void;
+  mode?: "standalone" | "inline";
 }
 
 export function VoiceDictationDialog({
@@ -44,6 +46,8 @@ export function VoiceDictationDialog({
   documentNumber,
   documentId,
   onEmailSent,
+  onEmailGenerated,
+  mode = "standalone",
 }: VoiceDictationDialogProps) {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
@@ -348,7 +352,20 @@ export function VoiceDictationDialog({
           <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto" data-testid="button-cancel-dictation">
             Annuler
           </Button>
-          {generatedEmail && (
+          {generatedEmail && mode === "inline" && (
+            <Button
+              onClick={() => {
+                onEmailGenerated?.(generatedEmail);
+                handleClose();
+              }}
+              disabled={!generatedEmail.trim()}
+              className="gap-2 w-full sm:w-auto"
+              data-testid="button-use-content"
+            >
+              Utiliser ce contenu
+            </Button>
+          )}
+          {generatedEmail && mode === "standalone" && (
             <Button
               onClick={() => sendEmailMutation.mutate()}
               disabled={sendEmailMutation.isPending || !generatedEmail.trim() || !hasConfirmedReview}

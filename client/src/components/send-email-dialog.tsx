@@ -251,6 +251,8 @@ export function SendEmailDialog({
           documentNumber={documentNumber}
           documentId={documentId}
           onEmailSent={() => onOpenChange(false)}
+          mode="inline"
+          onEmailGenerated={(content) => setMessage(content)}
         />
 
         <DialogFooter className="flex-shrink-0 pt-4 border-t">

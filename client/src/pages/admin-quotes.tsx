@@ -63,7 +63,6 @@ export default function AdminQuotes() {
     quantity: string;
     unitPrice: string;
   }>>([]);
-  const [newQuotePaymentMethod, setNewQuotePaymentMethod] = useState<"cash" | "wire_transfer" | "card">("wire_transfer");
   const [newQuoteDetails, setNewQuoteDetails] = useState("");
   const [newQuoteWheelCount, setNewQuoteWheelCount] = useState<string>("4");
   const [newQuoteDiameter, setNewQuoteDiameter] = useState("");
@@ -495,7 +494,6 @@ L'équipe MyJantes`;
     mutationFn: async (data: { 
       clientId: string; 
       serviceId: string; 
-      paymentMethod: string; 
       requestDetails?: any; 
       mediaFiles?: Array<{key: string; type: string; name: string}>;
       wheelCount?: number;
@@ -524,7 +522,6 @@ L'équipe MyJantes`;
       setSelectedClientName("");
       setSelectedServiceId("");
       setSelectedServices([]);
-      setNewQuotePaymentMethod("wire_transfer");
       setNewQuoteDetails("");
       setNewQuoteWheelCount("4");
       setNewQuoteDiameter("");
@@ -639,7 +636,6 @@ L'équipe MyJantes`;
     createNewQuoteMutation.mutate({
       clientId: newQuoteClientId,
       serviceId: mainServiceId,
-      paymentMethod: newQuotePaymentMethod,
       requestDetails: newQuoteDetails ? { notes: newQuoteDetails } : undefined,
       mediaFiles: quoteMediaFiles,
       wheelCount: parseInt(newQuoteWheelCount),
@@ -1285,19 +1281,6 @@ L'équipe MyJantes`;
               )}
               
               </div>
-            <div>
-              <Label htmlFor="new-quote-payment-method">Moyen de paiement</Label>
-              <Select value={newQuotePaymentMethod} onValueChange={(v) => setNewQuotePaymentMethod(v as "cash" | "wire_transfer" | "card")}>
-                <SelectTrigger className="mt-2" data-testid="select-new-quote-payment-method">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Espèces</SelectItem>
-                  <SelectItem value="wire_transfer">Virement</SelectItem>
-                  <SelectItem value="card">Carte bleue</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="new-quote-wheel-count">Nombre de jantes</Label>
